@@ -1,22 +1,23 @@
-🧠 Prometheus: Decode Your Cognitive Engine 
-Why fit in when you were born to be different?... This project isn't just a survey; it’s a diagnostic scan for the way your brain actually functions. If to be 'rich' you just needed to work hard, laborers would be rich! School is not about studying harder, but smarter. 
+# 🧠 LUMEN | COGNITIVE_ENGINE_V1.0
+> STATUS: [ACTIVE] | TARGET: PROMETHEUS_JULY_AI_HACKATHON
+> CORE: NO_FLUFF | BY A STUDENT FOR STUDENTS | GOAL: OPTIMIZATION
 
-🔍 The "Why" 
-Education is built for an average that doesn't exist. We’re all forced through the same cookie-cutter pipeline, ignoring the fact that some brains are "Adrenaline Seeker" while others are "Structured thinker." I built that project for the Prometheus July AI to stop the guessing game and start the optimization phase.
+---
 
-🚀 The "What"
-I tried to build a precision 'map of your brain' engine that maps your 'neurones' Signature. It breaks down how you intake data, how you crush (or crash under) pressure, and how you really interact with complex systems. No fluff, just raw, data-driven insights to help you hack your own productivity.
+### 🚨 [CRITICAL_FAILURE]: THE EDUCATION CRISIS
+The current educational system has been created during the industrialisation era, and the goal was clear : creating futur perfect worker (obedient sheep). It forces heterogeneous brains into a monolithic structure. 
+* Result: Low throughput, high mental entropy.And the world is sorely lacking solutions, drowning in tons of problems.
+* Reality: If working hard were enough, laborers would be rich. We need to optimize our society at its foundation: education.
 
-🛠 The "Under the Hood" (tools)
-Engine: Pure Python 3.14, built with speed in mind.
+### 🚀 [CORE_OBJECTIVE]: THE SOLUTION
+We created something ! LUMEN ! This helps individuals understand themselves, enabling them to work more intelligently.
+It maps **Neuronal Signatures** by vectorizing cognitive traits:
+`BANDWIDTH` | `RIGOR` | `CHAOS` | `ENDURANCE`
 
-Brain: Streamlit for high-fidelity state management.
+---
 
-Vibe: Minimalist, efficient, and data-centric.
-
-Tools: VS Code, Git, and a lot of caffeine.
-
-How did we built : LUMEN?
-Artificial Intelligence: We usued AI to make this project, and we implemented ai inside it!
-
-
+### 🛠 [SYSTEM_ARCHITECTURE]
+```diff
++ [ENGINE]   : Python 3.14 / Optimized State Management
++ [BRAIN]    : LLM-Prompt-Engineering / Recursive Context
++ [UI_LAYER] : Streamlit / High-Fidelity Telemetry
