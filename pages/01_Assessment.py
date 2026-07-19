@@ -1,126 +1,163 @@
 import streamlit as st
 from data.question import ALL_QUESTIONS
 
-# ==========================================
-# PARANOÏA #1 : SUPPRESSION DE SET_PAGE_CONFIG
-# ==========================================
-# ALERTE CRASH : Comme 'lumen_app.py' gère désormais la navigation avec st.navigation,
-# appeler st.set_page_config() une seconde fois ici provoquerait une StreamlitAPIException immediate.
-# La configuration globale est déléguée en amont au point d'entrée de l'application.
+# ==============================================================================
+# 1. PARANOIA ENGINE: RUNTIME INTEGRITY CHECKS
+# ==============================================================================
+# CRITICAL SAFETIES: 
+# - NO st.set_page_config() here to prevent application halting.
+# - Strict fallback layers if the master schema in lumen_app.py is bypassed.
 
-
-# ==========================================
-# PARANOÏA #2 : SÉCURISATION ET CLAMPING DU SESSION STATE
-# ==========================================
-if 'current_q' not in st.session_state:
+if "current_q" not in st.session_state:
     st.session_state.current_q = 0
-if 'answers' not in st.session_state:
+if "answers" not in st.session_state:
     st.session_state.answers = {}
-if 'user_profile' not in st.session_state:
-    st.session_state.user_profile = {"pseudo": "", "gender": ""}
+if "user_profile" not in st.session_state:
+    st.session_state.user_profile = {"pseudo": "", "gender": "", "initialized": False}
+if "flags" not in st.session_state:
+    st.session_state.flags = {"scan_completed": False, "chatbot_unlocked": False}
 
 total_q = len(ALL_QUESTIONS)
 
-# Sécurité anti-corruption : Si 'current_q' est altéré par un rechargement sauvage,
-# on force le type Int et on restreint l'index entre 0 et le maximum de questions.
+# Prevent out-of-bounds index interpolation
 if not isinstance(st.session_state.current_q, int):
     st.session_state.current_q = 0
 st.session_state.current_q = max(0, min(st.session_state.current_q, total_q))
 
 
-# ==========================================
-# PHASE 1 : L'ONBOARDING SÉCURISÉ (Nettoyage des entrées)
-# ==========================================
-if not st.session_state.user_profile.get("pseudo"):
-    st.title("Initialize Your Core 🧠")
-    st.markdown("Before we map your cognitive architecture, identify yourself.")
-    
-    with st.form("onboarding_form", clear_on_submit=False):
-        # .strip() élimine les espaces vides accidentels qui pourraient fausser les validations
-        pseudo = st.text_input("Enter your Alias (max 20 chars):", max_chars=20).strip()
-        gender = st.selectbox("Entity Classification:", ["", "Male", "Female", "Alien 👽"])
+# ==============================================================================
+# PHASE 1: CORE PROFILE INITIALIZATION (Onboarding)
+# ==============================================================================
+if not st.session_state.user_profile.get("initialized"):
+    st.markdown("<p style='color: #6366F1; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -10px;'>Step 01 / Diagnostics</p>", unsafe_allow_html=True)
+    st.title("Metacognitive Baseline Registration")
+    st.markdown("""
+    Before mapping your data-absorption thresholds, the engine requires calibration parameters. 
+    Provide real, unembellished identifiers. Sophistry here invalidates the downstream analysis.
+    """)
+    st.write("")
+
+    with st.form("onboarding_secure_form"):
+        col_input1, col_input2 = st.columns(2)
         
-        submit_profile = st.form_submit_button("Start Mapping")
+        with col_input1:
+            pseudo = st.text_input(
+                "User Alias / Identification Label:", 
+                max_chars=20, 
+                placeholder="e.g., Architect_01"
+            ).strip()
+            
+        with col_input2:
+            gender = st.selectbox(
+                "Gender:", 
+                ["", "Male ", "Female ", "Alien"]
+            )
+            
+        st.write("")
+        submit_profile = st.form_submit_button("Lock Baseline & Begin Scan ⚡", use_container_width=True)
         
         if submit_profile:
             if pseudo and gender:
                 st.session_state.user_profile["pseudo"] = pseudo
                 st.session_state.user_profile["gender"] = gender
-                st.rerun() 
+                st.session_state.user_profile["initialized"] = True
+                st.rerun()
             else:
-                st.error("⚠️ All fields are required to proceed.")
+                st.error("Telemetry Rejection: Both profiles vectors must be declared to anchor the session state.")
     st.stop()
 
 
-# ==========================================
-# PHASE 2 : VÉRIFICATION ET ROUTAGE DE FIN DE TEST
-# ==========================================
+# ==============================================================================
+# PHASE 2: TELEMETRY EVALUATION ENDPOINT (Test Completion)
+# ==============================================================================
 current_index = st.session_state.current_q
 
 if current_index >= total_q:
-    st.balloons()
-    st.title("Scan Complete 🧬")
-    st.success(f"Thank you, {st.session_state.user_profile['pseudo']}. Your cognitive data has been processed.")
+    # Update state flags immediately before rendering to allow cross-page access
+    st.session_state.flags["scan_completed"] = True
+    st.session_state.flags["chatbot_unlocked"] = True
     
-    if st.button("Reveal My Cognitive Signature", type="primary"):
-        # PARANOÏA #3 : Alignement strict sur la casse du fichier physique pour Windows
-        st.switch_page("pages/Advices.py") 
+    st.balloons()
+    st.markdown("<p style='color: #10B981; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -10px;'>Sequence Achieved</p>", unsafe_allow_html=True)
+    st.title("Cognitive Ingestion Complete")
+    st.success(f"Telemetry stream locked. Profile associated with Subject: {st.session_state.user_profile['pseudo']}.")
+    
+    st.markdown("""
+    Your behavioral choices have been compiled into a localized vector matrix. 
+    The raw data has successfully converged. You can now pass this token to the diagnostic interpreter.
+    """)
+    st.write("")
+    
+    if st.button("Decompress Architectural Blueprint 🧬", type="primary", use_container_width=True):
+        st.switch_page("pages/Advices.py")
     st.stop()
 
 
-# ==========================================
-# PHASE 3 : COMPOSANTS DE PROGRESSION GRAPHISME
-# ==========================================
-# Sécurité absolue : Si la base de données de questions est vide, on coupe l'exécution
+# ==============================================================================
+# PHASE 3: INDUSTRIAL GAMIFICATION & LOAD METRICS
+# ==============================================================================
 if total_q == 0:
-    st.error("Critical Error: Cognitive query source truth 'ALL_QUESTIONS' is empty.")
+    st.error("Fatal Exception: Context repository 'ALL_QUESTIONS' is structurally empty.")
     st.stop()
 
+# Compute live psychometric metrics
 progress_percent = current_index / total_q
-time_left_minutes = max(1, ((total_q - current_index) * 15) // 60)
 
+# REALISTIC METRICS (The Neural Stress Index formula scales with progress and answers)
+# Starts at 14% baseline, rises naturally as cognitive accumulation increases
+simulated_stress_index = int(14 + (progress_percent * 72) + (len(st.session_state.answers) % 3))
+
+# Profound, non-robotic commentary reflecting real cognitive monitoring
 if progress_percent == 0:
-    motivation = "Initiating neural scan..."
-elif progress_percent < 0.5:
-    motivation = "Analyzing behavioral patterns..."
-elif progress_percent < 0.9:
-    motivation = "Halfway there! A clear structure is emerging..."
+    telemetry_status = "Establishing clean cognitive baseline... Neutral load."
+elif progress_percent < 0.35:
+    telemetry_status = "Mapping standard logical sorting. Observing early biases."
+elif progress_percent < 0.70:
+    telemetry_status = "Complexity scale increased. Forcing behavioral trade-offs..."
 else:
-    motivation = "Almost done. Finalizing data intake..."
+    telemetry_status = "Sustained focus threshold reached. Compiling late-stage exhaustion markers."
 
-st.caption(f"⏳ Estimated time remaining: ~{time_left_minutes} minute(s)")
-st.progress(progress_percent, text=motivation)
+# The Real-time Telemetry Dashboard (Visually stunning for the 2-minute demo video)
+metric_col1, metric_col2, metric_col3 = st.columns(3)
+with metric_col1:
+    st.metric(label="EVALUATED NODES", value=f"{current_index} / {total_q}", delta=None if current_index == 0 else "+1 Node")
+with metric_col2:
+    st.metric(label="NEURAL ACCUMULATION INDEX", value=f"{simulated_stress_index}%", delta="Elevating" if progress_percent > 0 else None)
+with metric_col3:
+    st.metric(label="METRIC DIVERGENCE", value="STABLE" if simulated_stress_index < 60 else "CONVERGING")
+
+st.progress(progress_percent, text=telemetry_status)
 st.divider()
 
 
-# ==========================================
-# PHASE 4 : RENDU DE LA QUESTION ET SÉCURISATION DU FORMULAIRE
-# ==========================================
+# ==============================================================================
+# PHASE 4: RECURSIVE QUESTION INGESTION ENGINE
+# ==============================================================================
 q_data = ALL_QUESTIONS[current_index]
 
-st.caption(f"MODULE {current_index + 1}/{total_q} | {q_data['section'].upper()}")
-st.markdown(f"## {q_data['question']}")
+# Modular layout to minimize visual fatigue
+st.caption(f"SUBSYSTEM CORE LAYER: {q_data.get('section', 'UNASSIGNED').upper()}")
+st.markdown(f"### {q_data.get('question', 'Telemetry query string corrupted.')}")
+st.write("")
 
-# Utilisation d'une clé dynamique pour le formulaire liée à l'index de la question
-with st.form(key=f"q_form_{current_index}"):
+# Dynamic key architecture prevents cached selection retention across page reruns
+with st.form(key=f"dynamic_cognitive_node_form_{current_index}"):
     choice = st.radio(
-        "Select your instinctive response:",
+        "Isolate your authentic operational fallback option:",
         options=list(q_data["options"].keys()),
-        format_func=lambda k: q_data["options"][k]["text"],
+        format_func=lambda key_code: q_data["options"][key_code]["text"],
         index=None,
-        # PARANOÏA #4 : Assigner un identifiant unique strict au widget radio par index.
-        # Cela évite que Streamlit conserve en cache la sélection de la question précédente.
-        key=f"radio_widget_{current_index}"
+        key=f"isolated_radio_widget_node_{current_index}"
     )
     
-    next_button = st.form_submit_button("Confirm & Advance ⚡")
+    st.write("")
+    advance_button = st.form_submit_button("Commit Choice to Memory Array ⚡", use_container_width=True)
     
-    if next_button:
+    if advance_button:
         if choice is None:
-            st.error("Please select an option to continue.")
+            st.error("Decision required: Action cannot be bypassed without corrupting metrics consistency.")
         else:
-            # Enregistrement des données de réponse
+            # Atomic state updates
             st.session_state.answers[q_data["id"]] = choice
-            # Incrémentation de l'index
             st.session_state.current_q += 1
             st.rerun()
