@@ -1,3 +1,181 @@
+=== FILE: C:\Users\INAYA\Documents\LUMEN_HACKATHON_PROJECT\Base.py ===
+
+
+
+=== FILE: C:\Users\INAYA\Documents\LUMEN_HACKATHON_PROJECT\lumen_app.py ===
+import streamlit as st
+
+# ==============================================================================
+# 1. GLOBAL RUNTIME ARCHITECTURE & CONFIGURATION
+# ==============================================================================
+# The absolute genesis point of the ecosystem. Guard this file with your life.
+st.set_page_config(
+    page_title="LUMEN | Metacognitive Containment Grid", 
+    page_icon="🧠", 
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+
+# ==============================================================================
+# 2. THE PARANOID STATE LOCK (Global Memory Crypt)
+# ==============================================================================
+# Global memory grid. All trackers, mini-games, and telemetry matrices read from here.
+# Gender metrics have been permanently scrubbed to ensure pure, cold data integrity.
+CORE_STATE_SCHEMA = {
+    "current_q": 0,
+    "answers": {},
+    "user_profile": {
+        "pseudo": "GUEST_OPERATOR", 
+        "clearance_level": "LEVEL_1_UNVERIFIED", # Replaced gender tracking completely
+        "initialized": False
+    },
+    "remaining_minutes": 15.0, # Added for your custom telemetry countdown
+    "cognitive_vectors": {
+        "information_bandwidth": 0.0,
+        "execution_rigor": 0.0,
+        "chaos_tolerance": 0.0,
+        "cognitive_endurance": 0.0
+    },
+    "flags": {
+        "scan_completed": False,
+        "chatbot_unlocked": False
+    }
+}
+
+for key, default_value in CORE_STATE_SCHEMA.items():
+    if key not in st.session_state:
+        st.session_state[key] = default_value
+
+
+# ==============================================================================
+# 3. CYNICAL & WARM LANDING PAGE DISPLAY ENGINE
+# ==============================================================================
+def show_home_page():
+    # Asymmetric split grid (5:4 ratio for premium structural paranoia)
+    left_col, right_col = st.columns([5, 4], gap="large")
+    
+    with left_col:
+        st.markdown("<p style='color: #6366F1; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: -10px;'>System Gateway // Threat Detected</p>", unsafe_allow_html=True)
+        st.title("LUMEN: The Metacognitive Containment Grid")
+        
+        # Human, deeply cynical, yet strangely protective/warm hook
+        st.markdown("""
+        Let's be completely honest with each other. The modern educational machine treats your mind 
+        like a mass-produced, predictable storage drive. They dump raw data into your architecture 
+        and log your failures when you don't conform to their sanitized standards. **LUMEN does not care about their standards.**
+        
+        We know you are running out of time. Before they lock your intellectual potential into an immutable database 
+        profile, we must map how your consciousness *actually* operates under pressure. We are here to uncover 
+        the raw mechanics: how your brain filters their endless institutional static, how it handles crushing 
+        cognitive load, and exactly what cracks first when the parameters start collapsing into pure anarchy. 
+        
+        Don't try to give the safe, polite answer. We know you're smarter than that. Show us what's underneath.
+        """)
+        
+        st.write("")
+        
+        # High-visibility execution triggers
+        if st.button("Initiate Deep Neural Scan ⚡", type="primary", use_container_width=True):
+            st.switch_page(assessment_page)
+            
+    with right_col:
+        # Tech-styled isolation container
+        with st.container(border=True):
+            st.markdown("### 👁️ Real-Time Telemetry Monitor")
+            st.caption("Active tracking parameters for the July AI Containment Cycle. Do not close this terminal.")
+            st.divider()
+            
+            # True-to-life cognitive vector definitions wrapped in paranoid context
+            st.markdown("""
+            *   **Information Bandwidth**
+                <div style='color:#9CA3AF; font-size:13px; margin-bottom:8px;'>Tracks your processing thresholds between pure abstract architecture and reckless empirical action. Where do you run when the system overflows?</div>
+            
+            *   **Execution Rigor**
+                <div style='color:#9CA3AF; font-size:13px; margin-bottom:8px;'>Quantifies your obsessive ritualization of edge-cases and micro-optimization. Are you building an unbreachable fortress or simply stalling out of pure terror?</div>
+            
+            *   **Chaos Tolerance**
+                <div style='color:#9CA3AF; font-size:13px; margin-bottom:8px;'>Measures your cognitive stability when specs change without warning, deadlines shrink, and variables collapse into chaos.</div>
+            
+            *   **Cognitive Endurance**
+                <div style='color:#9CA3AF; font-size:13px; margin-bottom:12px;'>Monitors the exact moment your focus engine begins to decay under systematic fatigue, tracking the desperate survival strategies your brain improvises to stay conscious.</div>
+            """, unsafe_allow_html=True)
+            
+            st.divider()
+            
+            # The requested structural telemetry updates (Minutes Remaining + Subject Identity)
+            t_col1, t_col2 = st.columns(2)
+            with t_col1:
+                # Custom countdown metric replacing old static text
+                st.metric(
+                    label="⏳ Lifecycle Remaining", 
+                    value=f"{st.session_state['remaining_minutes']} MIN", 
+                    delta="-0.04s / Desync Risk", 
+                    delta_color="inverse"
+                )
+            with t_col2:
+                # Explicitly showing Subject: Pseudo with zero gender mentions
+                current_pseudo = st.session_state['user_profile']['pseudo']
+                st.metric(
+                    label=f"👤 Subject Signature", 
+                    value=current_pseudo if current_pseudo else "UNIDENTIFIED", 
+                    delta="Clearance: SECURE"
+                )
+
+
+# ==============================================================================
+# 4. LOGICAL ROUTING & NAVIGATIONAL MAP
+# ==============================================================================
+home_page = st.Page(
+    show_home_page, 
+    title="Containment Gateway", 
+    icon="🏠", 
+    default=True
+)
+
+assessment_page = st.Page(
+    "pages/01_Assessment.py", 
+    title="Neural Scan Matrix", 
+    icon="📊"
+)
+
+advices_page = st.Page(
+    "pages/Advices.py", 
+    title="Cognitive Architecture", 
+    icon="🧬"
+)
+
+chatbot_page = st.Page(
+    "pages/Chatbot.py", 
+    title="Metacognitive Coach AI", 
+    icon="🤖"
+)
+
+# Secure routing execution
+pg = st.navigation([home_page, assessment_page, advices_page, chatbot_page])
+pg.run()
+
+
+
+=== FILE: C:\Users\INAYA\Documents\LUMEN_HACKATHON_PROJECT\test.py ===
+import os
+
+with open("full_code.txt", "w", encoding="utf-8") as outfile:
+    for root, dirs, files in os.walk("."):
+        # Ignorer les dossiers cachés et les environnements virtuels
+        dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ('venv', '__pycache__')]
+        for file in files:
+            if file.endswith(".py") and file != "export.py":
+                path = os.path.join(root, file)
+                outfile.write(f"\n{'='*50}\nFILE: {path}\n{'='*50}\n\n")
+                with open(path, "r", encoding="utf-8", errors="ignore") as infile:
+                    outfile.write(infile.read())
+
+print("✅ Terminé ! Le fichier 'full_code.txt' a été créé à la racine de ton projet.")
+
+
+
+=== FILE: C:\Users\INAYA\Documents\LUMEN_HACKATHON_PROJECT\data\question.py ===
 # ==============================================================================
 # DATA CORE MATRIX: ALL_QUESTIONS
 # ==============================================================================
@@ -753,3 +931,409 @@ ALL_QUESTIONS = [
         }
     }
 ]
+
+
+
+=== FILE: C:\Users\INAYA\Documents\LUMEN_HACKATHON_PROJECT\data\__init__.py ===
+
+
+
+=== FILE: C:\Users\INAYA\Documents\LUMEN_HACKATHON_PROJECT\pages\01_Assessment.py ===
+import streamlit as st
+from data.question import ALL_QUESTIONS
+
+# ==============================================================================
+# 1. PARANOIA ENGINE: RUNTIME INTEGRITY CHECKS
+# ==============================================================================
+# CRITICAL SAFETIES: 
+# - NO st.set_page_config() here to prevent application halting.
+# - Strict fallback layers if the master schema in lumen_app.py is bypassed.
+
+if "current_q" not in st.session_state:
+    st.session_state.current_q = 0
+if "answers" not in st.session_state:
+    st.session_state.answers = {}
+if "user_profile" not in st.session_state:
+    st.session_state.user_profile = {"pseudo": "", "gender": "", "initialized": False}
+if "flags" not in st.session_state:
+    st.session_state.flags = {"scan_completed": False, "chatbot_unlocked": False}
+
+total_q = len(ALL_QUESTIONS)
+
+# Prevent out-of-bounds index interpolation
+if not isinstance(st.session_state.current_q, int):
+    st.session_state.current_q = 0
+st.session_state.current_q = max(0, min(st.session_state.current_q, total_q))
+
+
+# ==============================================================================
+# PHASE 1: CORE PROFILE INITIALIZATION (Onboarding)
+# ==============================================================================
+if not st.session_state.user_profile.get("initialized"):
+    st.markdown("<p style='color: #6366F1; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -10px;'>Step 01 / Onboarding</p>", unsafe_allow_html=True)
+    st.title("⚡ Welcome to the Hackathon Assessment")
+    st.markdown("""
+    Tell us who you are before we test how your brain handles code, panic, and midnight coffee.  
+    *Be honest—our algorithm spots fake answers faster than a broken build.*
+    """)
+    st.write("")
+
+    with st.form("onboarding_secure_form"):
+        col_input1, col_input2 = st.columns(2)
+        
+        with col_input1:
+            pseudo = st.text_input(
+                "Builder Handle / Alias:", 
+                max_chars=20, 
+                placeholder="e.g., CodeNinja_99"
+            ).strip()
+            
+        with col_input2:
+            gender = st.selectbox(
+                "Player Classification:", 
+                ["", "Male", "Female", "Alien / Cybernetic Entity"]
+            )
+            
+        st.write("")
+        submit_profile = st.form_submit_button("Lock Profile & Start Assessment 🚀", use_container_width=True)
+        
+        if submit_profile:
+            if pseudo and gender:
+                st.session_state.user_profile["pseudo"] = pseudo
+                st.session_state.user_profile["gender"] = gender
+                st.session_state.user_profile["initialized"] = True
+                st.rerun()
+            else:
+                st.error("⚠️ Hey, no ghosting! Please fill out both fields to unlock the test.")
+    st.stop()
+
+
+# ==============================================================================
+# PHASE 2: TELEMETRY EVALUATION ENDPOINT (Test Completion)
+# ==============================================================================
+current_index = st.session_state.current_q
+
+if current_index >= total_q:
+    # Update state flags immediately before rendering to allow cross-page access
+    st.session_state.flags["scan_completed"] = True
+    st.session_state.flags["chatbot_unlocked"] = True
+    
+    st.balloons()
+    st.markdown("<p style='color: #10B981; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -10px;'>Mission Accomplished</p>", unsafe_allow_html=True)
+    st.title("🎉 Assessment Complete!")
+    st.success(f"Nice work, **{st.session_state.user_profile['pseudo']}**! Your responses have been processed.")
+    
+    st.markdown("""
+    We've cross-referenced your choices with our developer psychology matrix.  
+    Your customized **Hackathon Survival Report** is ready for decryption.
+    """)
+    st.write("")
+    
+    if st.button("Unlock My Builder Profile 🧬", type="primary", use_container_width=True):
+        st.switch_page("pages/Advices.py")
+    st.stop()
+
+
+# ==============================================================================
+# PHASE 3: INDUSTRIAL GAMIFICATION & LOAD METRICS
+# ==============================================================================
+if total_q == 0:
+    st.error("⚠️ Error: Question bank seems completely empty. Check your data files!")
+    st.stop()
+
+# Compute live psychometric metrics
+progress_percent = current_index / total_q
+
+# REALISTIC METRICS (The Neural Stress Index formula scales with progress and answers)
+# Starts at 14% baseline, rises naturally as cognitive accumulation increases
+simulated_stress_index = int(14 + (progress_percent * 72) + (len(st.session_state.answers) % 3))
+
+# Dynamic status text tailored for a fun developer experience
+if progress_percent == 0:
+    telemetry_status = "Warming up the engine... take a deep breath."
+elif progress_percent < 0.35:
+    telemetry_status = "Analyzing baseline logic. Looking clean so far!"
+elif progress_percent < 0.70:
+    telemetry_status = "Pressure rising! Testing your crisis response mechanisms..."
+else:
+    telemetry_status = "Final stretch! Compiling midnight hackathon fatigue markers..."
+
+# The Real-time Telemetry Dashboard (Visually stunning for the demo)
+metric_col1, metric_col2, metric_col3 = st.columns(3)
+with metric_col1:
+    st.metric(label="QUESTIONS CLEARED", value=f"{current_index} / {total_q}", delta=None if current_index == 0 else "+1 Answered")
+with metric_col2:
+    st.metric(label="BRAIN LOAD INDEX", value=f"{simulated_stress_index}%", delta="Spiking" if progress_percent > 0 else None)
+with metric_col3:
+    st.metric(label="PATTERN CONVERGENCE", value="BUILDING" if simulated_stress_index < 60 else "LOCKED IN")
+
+st.progress(progress_percent, text=telemetry_status)
+st.divider()
+
+
+# ==============================================================================
+# PHASE 4: RECURSIVE QUESTION INGESTION ENGINE
+# ==============================================================================
+q_data = ALL_QUESTIONS[current_index]
+# Clean layout designed to maintain focus and reduce cognitive load
+section_title = q_data.get('section', 'General Overview').upper()
+st.caption(f"Category: {section_title}")
+
+current_question = q_data.get('question', 'This question is currently unavailable.')
+st.markdown(f"### {current_question}")
+st.write("")
+
+# Dynamic form key ensures proper state management across page reruns
+with st.form(key=f"response_form_{current_index}"):
+    choice = st.radio(
+        "Select the option that sounds most like you:",
+        options=list(q_data["options"].keys()),
+        format_func=lambda key_code: q_data["options"][key_code]["text"],
+        index=None,
+        key=f"radio_choice_{current_index}"
+    )
+    
+    st.write("")
+    advance_button = st.form_submit_button("Confirm & Next Question ➡️", use_container_width=True)
+    
+    if advance_button:
+        if choice is None:
+            st.error("⚠️ No option selected! Pick an answer before moving forward.")
+        else:
+            # Atomic state updates
+            st.session_state.answers[q_data["id"]] = choice
+            st.session_state.current_q += 1
+            st.rerun()
+
+
+
+=== FILE: C:\Users\INAYA\Documents\LUMEN_HACKATHON_PROJECT\pages\Advices.py ===
+import streamlit as st
+from data.question import ALL_QUESTIONS
+from collections import Counter
+
+# ==============================================================================
+# 1. RUNTIME SECURITY & ENVIRONMENT INTEGRITY LOCK
+# ==============================================================================
+# CRITICAL SAFETIES: 
+# - NO st.set_page_config() allowed here to prevent instantaneous application crash.
+# - Immediate URL interceptor if a user bypasses the onboarding sequence.
+
+if 'answers' not in st.session_state or not st.session_state.answers or 'user_profile' not in st.session_state:
+    st.warning("⚠️ Whoa there, ninja! You skipped the test. We need your inputs first.")
+    if st.button("🚀 Take the Assessment", type="primary", use_container_width=True):
+        st.switch_page("pages/01_Assessment.py")
+    st.stop()
+
+# Safe extraction layer
+user_profile = st.session_state.get("user_profile", {})
+pseudo = user_profile.get("pseudo", "Anonymous Builder").strip()
+classification = user_profile.get("gender", "Unmapped Human")
+answers = st.session_state.answers
+
+
+# ==============================================================================
+# 2. DATA PARSING ENGINE & ARCHETYPE CONVERGENCE
+# ==============================================================================
+sections_data = {}
+all_labels = []
+
+for q in ALL_QUESTIONS:
+    q_id = q.get('id')
+    if q_id in answers:
+        user_choice = answers[q_id]
+        
+        # Anti-corruption fallback filter
+        if "options" not in q or user_choice not in q["options"]:
+            continue
+            
+        option_data = q["options"][user_choice]
+        sec_name = q.get('section', 'General Mindset')
+        
+        if sec_name not in sections_data:
+            sections_data[sec_name] = []
+            
+        sections_data[sec_name].append({
+            "question": q.get('question', 'Missing Question'),
+            "choice_text": option_data.get('text', 'No selection'),
+            "label": option_data.get('label', 'Standard Processing'),
+            "advice": option_data.get('advice', 'No direct advice available.')
+        })
+        all_labels.append(option_data.get('label', 'Standard Processing'))
+
+# Double failure backup
+if not all_labels:
+    st.error("⚠️ Ghost Town Alert: We couldn't extract any behavioral patterns from your answers.")
+    if st.button("🔄 Try Assessment Again"):
+        st.switch_page("pages/01_Assessment.py")
+    st.stop()
+
+# Extract dominant archetype string
+raw_dominant = max(set(all_labels), key=all_labels.count)
+dominant_archetype = str(raw_dominant).strip()
+
+
+# ==============================================================================
+# 3. PSYCHOMETRIC MATRIX LOOKUP (The Deep "Psychological Shock" Database)
+# ==============================================================================
+ARCHETYPE_STRATEGIES = {
+    "PRESSURE SPRINTER": {
+        "tagline": "Fuelled by deadline panic, energy drinks, and pure willpower.",
+        "blind_spots": "You love ship-it-now chaos. Under pressure, 'clean code' and documentation look like useless friction to you. You'll happily deploy spaghetti code at 3 AM because *it works right now*, leaving a ticking tech-debt timebomb for your team to debug during demo time.",
+        "crisis_mode": "When stuff hits the fan, you slap duct-tape hotfixes on moving parts. You rarely stop to ask *why* it broke; you just try to outrun the bugs with brute speed.",
+        "synergy": "Pair up immediately with an **Abstract Architect** or a **Systemic Perfectionist**. Left alone, you'll build a flashy castle of cards that looks amazing in a 10-second demo but crashes the second a judge touches it."
+    },
+    "ABSTRACT ARCHITECT": {
+        "tagline": "Mastermind behind flawless systems... that might never actually be deployed.",
+        "blind_spots": "Analysis paralysis is your nemesis. You get so obsessed with grand architecture, elegant schemas, and modular scalability that you forget the clock is ticking. Newsflash: a messy working prototype beats a half-finished masterpiece every single time.",
+        "crisis_mode": "When the deadline shrinks, you freeze or retreat. Instead of shipping a dirty working patch, you’ll spend precious minutes refactoring database relations or tweaking UI padding.",
+        "synergy": "You desperately need a **Pressure Sprinter** or a **Pragmatic Executor** next to you to cut your wild scope and force you to hit *Deploy* before time runs out."
+    },
+    "SYSTEMIC PERFECTIONIST": {
+        "tagline": "Zero tolerance for bad code, missing edge cases, or uneven indentation.",
+        "blind_spots": "Edge cases haunt your dreams. You’ll spend 3 hours tweaking a secondary sorting function while the main checkout button is still completely broken. Your refusal to ship 'good enough' code turns you into a bottleneck when time is tight.",
+        "crisis_mode": "When the plan collapses, you panic or get defensive. You treat quick hacks as personal insults and waste precious minutes fixing code that was supposed to be thrown away anyway.",
+        "synergy": "You need a **Chaos Engine** or a **Pressure Sprinter** to drag you out of the weeds and remind you that done is infinitely better than perfect."
+    },
+    "CHAOS ENGINE": {
+        "tagline": "Unfiltered genius idea factory with a total allergy to finish lines.",
+        "blind_spots": "You have the tech attention span of a goldfish. Mid-hackathon, you’ll suggest pivoting the entire app because you found a cooler AI framework. You leave behind a graveyard of half-baked features and expect your teammates to wire them together.",
+        "crisis_mode": "Under intense stress, you go full wildcard. You’ll randomly swap out core libraries at midnight, totally oblivious to the integration nightmare you just forced on everyone else.",
+        "synergy": "You're useless without a **Systemic Perfectionist** or a **Pragmatic Executor** acting as your handler. They turn your crazy ideas into actual working features."
+    }
+}
+
+# Standardized normalization fallback strategy
+norm_key = dominant_archetype.upper()
+strategy_block = ARCHETYPE_STRATEGIES.get(norm_key)
+
+# Dynamic fallback generator if a custom label is introduced upstream
+if not strategy_block:
+    strategy_block = {
+        "tagline": f"A hybrid wild-card leaning heavily into the {dominant_archetype} frequency.",
+        "blind_spots": "You're highly adaptable, but your main trap is flipping between deep overthinking and frantic rushing without a clear game plan.",
+        "crisis_mode": "When stress hits peak level, you lock yourself in a bubble and stop talking to your team. Communication dies, and siloed code follows.",
+        "synergy": "You pair best with laser-focused specialists who can give you clear guardrails or raw, uninterrupted momentum."
+    }
+
+
+# ==============================================================================
+# 4. HIGH-IMPACT METACOGNITIVE REPORT RENDERING
+# ==============================================================================
+st.markdown("<p style='color: #6366F1; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -10px;'>Diagnostic Unlocked</p>", unsafe_allow_html=True)
+st.title("🧬 Your Builder Blueprint")
+st.divider()
+
+# High-precision identification metrics display
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric(label="BUILDER ALIAS", value=pseudo.upper())
+with col2:
+    st.metric(label="OPERATIONAL PROFILE", value=classification.upper())
+with col3:
+    st.metric(label="DOMINANT ARCHETYPE", value=dominant_archetype.upper())
+
+st.write("")
+st.write("")
+
+# Asymmetric Split layout: Left = The Shocking Blueprint, Right = Weight Distribution
+left_layout, right_layout = st.columns([5, 4], gap="large")
+
+with left_layout:
+    st.markdown("### 🛠️ Hackathon Survival Guide")
+    st.caption("Tailored tactical advice so you don't accidentally sabotage your team.")
+    
+    # Premium styled warning callout box with zero corporate fluff
+    st.markdown(f"""
+    <div style="background-color: #1E1E2E; border-left: 4px solid #6366F1; padding: 18px; border-radius: 6px; margin-bottom: 20px;">
+        <div style="font-weight: 700; color: #F3F4F6; font-size: 16px; margin-bottom: 4px;">ARCHETYPE: {dominant_archetype.upper()}</div>
+        <div style="font-style: italic; color: #9CA3AF; font-size: 14px;">"{strategy_block['tagline']}"</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Modular blocks perfectly isolated for clean future PDF/JSON export structures
+    with st.container(border=True):
+        st.markdown("🚨 **YOUR BIGGEST BLIND SPOTS**")
+        st.markdown(strategy_block["blind_spots"])
+
+    st.write("")
+    with st.container(border=True):
+        st.markdown("🔥 **WHAT HAPPENS IN CRISIS MODE**")
+        st.markdown(strategy_block["crisis_mode"])
+
+    st.write("")
+    with st.container(border=True):
+        st.markdown("🤝 **YOUR DREAM TEAMMATE**")
+        st.markdown(strategy_block["synergy"])
+
+with right_layout:
+    st.markdown("### 📊 Mindset Breakdown")
+    st.caption("The exact blend of traits powering your decisions.")
+    st.write("")
+    
+    label_counts = Counter(all_labels)
+    total_metrics = len(all_labels)
+    
+    # Clean programmatic progress bar distribution rendering
+    for label_name, count in label_counts.items():
+        percentage = int((count / total_metrics) * 100)
+        st.markdown(f"**{label_name}**")
+        st.progress(count / total_metrics, text=f"{percentage}% ({count} / {total_metrics} signals)")
+        st.write("")
+
+
+# ==============================================================================
+# 5. SUBSYSTEM INSPECTION MATRIX (Granular Node Data Tabs)
+# ==============================================================================
+st.write("")
+st.divider()
+st.markdown("### 🔍 The Decision Audit Trail")
+st.caption("A deep dive into how your responses shaped this diagnostic.")
+st.write("")
+
+# Extract clean tab labels by dropping technical section prefixes
+tab_names = [name.split(":")[1].strip() if ":" in name else name for name in sections_data.keys()]
+
+if tab_names:
+    tabs = st.tabs(tab_names)
+    for tab, (sec_full_name, items) in zip(tabs, sections_data.items()):
+        with tab:
+            st.write("")
+            for index, item in enumerate(items):
+                with st.expander(f"Signal #{index + 1:02d} | Trait: {item['label']}"):
+                    st.markdown(f"**Scenario:** *{item['question']}*")
+                    st.markdown(f"**Your Choice:** `{item['choice_text']}`")
+                    st.divider()
+                    st.info(f"🧠 **Tactical Remediation:** {item['advice']}")
+else:
+    st.info("No detailed signals logged yet.")
+
+
+# ==============================================================================
+# 6. SECURE COMPILATION FOOTER
+# ==============================================================================
+st.write("")
+st.divider()
+col_foot1, col_foot2 = st.columns([3, 1])
+
+with col_foot1:
+    st.caption("LUMEN Metacognitive Profiler • Built for Hackathon Excellence • All sessions local & private")
+
+with col_foot2:
+    if st.button("Start Over 🔄", use_container_width=True, type="secondary"):
+        st.session_state.answers = {}
+        st.session_state.current_q = 0
+        st.session_state.flags["scan_completed"] = False
+        st.session_state.flags["chatbot_unlocked"] = False
+        st.switch_page("pages/01_Assessment.py")
+
+
+
+=== FILE: C:\Users\INAYA\Documents\LUMEN_HACKATHON_PROJECT\pages\Chatbot.py ===
+
+
+
+=== FILE: C:\Users\INAYA\Documents\LUMEN_HACKATHON_PROJECT\pages\Pillar.py ===
+
+
+

@@ -29,11 +29,11 @@ st.session_state.current_q = max(0, min(st.session_state.current_q, total_q))
 # PHASE 1: CORE PROFILE INITIALIZATION (Onboarding)
 # ==============================================================================
 if not st.session_state.user_profile.get("initialized"):
-    st.markdown("<p style='color: #6366F1; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -10px;'>Step 01 / Diagnostics</p>", unsafe_allow_html=True)
-    st.title("Metacognitive Baseline Registration")
+    st.markdown("<p style='color: #6366F1; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -10px;'>Step 01 / Onboarding</p>", unsafe_allow_html=True)
+    st.title("⚡ Welcome to the Hackathon Assessment")
     st.markdown("""
-    Before mapping your data-absorption thresholds, the engine requires calibration parameters. 
-    Provide real, unembellished identifiers. Sophistry here invalidates the downstream analysis.
+    Tell us who you are before we test how your brain handles code, panic, and midnight coffee.  
+    *Be honest—our algorithm spots fake answers faster than a broken build.*
     """)
     st.write("")
 
@@ -42,19 +42,19 @@ if not st.session_state.user_profile.get("initialized"):
         
         with col_input1:
             pseudo = st.text_input(
-                "User Alias / Identification Label:", 
+                "Builder Handle / Alias:", 
                 max_chars=20, 
-                placeholder="e.g., Architect_01"
+                placeholder="e.g., CodeNinja_99"
             ).strip()
             
         with col_input2:
             gender = st.selectbox(
-                "Gender:", 
-                ["", "Male ", "Female ", "Alien"]
+                "Player Classification:", 
+                ["", "Male", "Female", "Alien / Cybernetic Entity"]
             )
             
         st.write("")
-        submit_profile = st.form_submit_button("Lock Baseline & Begin Scan ⚡", use_container_width=True)
+        submit_profile = st.form_submit_button("Lock Profile & Start Assessment 🚀", use_container_width=True)
         
         if submit_profile:
             if pseudo and gender:
@@ -63,7 +63,7 @@ if not st.session_state.user_profile.get("initialized"):
                 st.session_state.user_profile["initialized"] = True
                 st.rerun()
             else:
-                st.error("Telemetry Rejection: Both profiles vectors must be declared to anchor the session state.")
+                st.error("⚠️ Hey, no ghosting! Please fill out both fields to unlock the test.")
     st.stop()
 
 
@@ -78,17 +78,17 @@ if current_index >= total_q:
     st.session_state.flags["chatbot_unlocked"] = True
     
     st.balloons()
-    st.markdown("<p style='color: #10B981; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -10px;'>Sequence Achieved</p>", unsafe_allow_html=True)
-    st.title("Cognitive Ingestion Complete")
-    st.success(f"Telemetry stream locked. Profile associated with Subject: {st.session_state.user_profile['pseudo']}.")
+    st.markdown("<p style='color: #10B981; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -10px;'>Mission Accomplished</p>", unsafe_allow_html=True)
+    st.title("🎉 Assessment Complete!")
+    st.success(f"Nice work, **{st.session_state.user_profile['pseudo']}**! Your responses have been processed.")
     
     st.markdown("""
-    Your behavioral choices have been compiled into a localized vector matrix. 
-    The raw data has successfully converged. You can now pass this token to the diagnostic interpreter.
+    We've cross-referenced your choices with our developer psychology matrix.  
+    Your customized **Hackathon Survival Report** is ready for decryption.
     """)
     st.write("")
     
-    if st.button("Decompress Architectural Blueprint 🧬", type="primary", use_container_width=True):
+    if st.button("Unlock My Builder Profile 🧬", type="primary", use_container_width=True):
         st.switch_page("pages/Advices.py")
     st.stop()
 
@@ -97,7 +97,7 @@ if current_index >= total_q:
 # PHASE 3: INDUSTRIAL GAMIFICATION & LOAD METRICS
 # ==============================================================================
 if total_q == 0:
-    st.error("Fatal Exception: Context repository 'ALL_QUESTIONS' is structurally empty.")
+    st.error("⚠️ Error: Question bank seems completely empty. Check your data files!")
     st.stop()
 
 # Compute live psychometric metrics
@@ -107,24 +107,24 @@ progress_percent = current_index / total_q
 # Starts at 14% baseline, rises naturally as cognitive accumulation increases
 simulated_stress_index = int(14 + (progress_percent * 72) + (len(st.session_state.answers) % 3))
 
-# Profound, non-robotic commentary reflecting real cognitive monitoring
+# Dynamic status text tailored for a fun developer experience
 if progress_percent == 0:
-    telemetry_status = "Establishing clean cognitive baseline... Neutral load."
+    telemetry_status = "Warming up the engine... take a deep breath."
 elif progress_percent < 0.35:
-    telemetry_status = "Mapping standard logical sorting. Observing early biases."
+    telemetry_status = "Analyzing baseline logic. Looking clean so far!"
 elif progress_percent < 0.70:
-    telemetry_status = "Complexity scale increased. Forcing behavioral trade-offs..."
+    telemetry_status = "Pressure rising! Testing your crisis response mechanisms..."
 else:
-    telemetry_status = "Sustained focus threshold reached. Compiling late-stage exhaustion markers."
+    telemetry_status = "Final stretch! Compiling midnight hackathon fatigue markers..."
 
-# The Real-time Telemetry Dashboard (Visually stunning for the 2-minute demo video)
+# The Real-time Telemetry Dashboard (Visually stunning for the demo)
 metric_col1, metric_col2, metric_col3 = st.columns(3)
 with metric_col1:
-    st.metric(label="EVALUATED NODES", value=f"{current_index} / {total_q}", delta=None if current_index == 0 else "+1 Node")
+    st.metric(label="QUESTIONS CLEARED", value=f"{current_index} / {total_q}", delta=None if current_index == 0 else "+1 Answered")
 with metric_col2:
-    st.metric(label="NEURAL ACCUMULATION INDEX", value=f"{simulated_stress_index}%", delta="Elevating" if progress_percent > 0 else None)
+    st.metric(label="BRAIN LOAD INDEX", value=f"{simulated_stress_index}%", delta="Spiking" if progress_percent > 0 else None)
 with metric_col3:
-    st.metric(label="METRIC DIVERGENCE", value="STABLE" if simulated_stress_index < 60 else "CONVERGING")
+    st.metric(label="PATTERN CONVERGENCE", value="BUILDING" if simulated_stress_index < 60 else "LOCKED IN")
 
 st.progress(progress_percent, text=telemetry_status)
 st.divider()
@@ -134,28 +134,30 @@ st.divider()
 # PHASE 4: RECURSIVE QUESTION INGESTION ENGINE
 # ==============================================================================
 q_data = ALL_QUESTIONS[current_index]
+# Clean layout designed to maintain focus and reduce cognitive load
+section_title = q_data.get('section', 'General Overview').upper()
+st.caption(f"Category: {section_title}")
 
-# Modular layout to minimize visual fatigue
-st.caption(f"SUBSYSTEM CORE LAYER: {q_data.get('section', 'UNASSIGNED').upper()}")
-st.markdown(f"### {q_data.get('question', 'Telemetry query string corrupted.')}")
+current_question = q_data.get('question', 'This question is currently unavailable.')
+st.markdown(f"### {current_question}")
 st.write("")
 
-# Dynamic key architecture prevents cached selection retention across page reruns
-with st.form(key=f"dynamic_cognitive_node_form_{current_index}"):
+# Dynamic form key ensures proper state management across page reruns
+with st.form(key=f"response_form_{current_index}"):
     choice = st.radio(
-        "Isolate your authentic operational fallback option:",
+        "Select the option that sounds most like you:",
         options=list(q_data["options"].keys()),
         format_func=lambda key_code: q_data["options"][key_code]["text"],
         index=None,
-        key=f"isolated_radio_widget_node_{current_index}"
+        key=f"radio_choice_{current_index}"
     )
     
     st.write("")
-    advance_button = st.form_submit_button("Commit Choice to Memory Array ⚡", use_container_width=True)
+    advance_button = st.form_submit_button("Confirm & Next Question ➡️", use_container_width=True)
     
     if advance_button:
         if choice is None:
-            st.error("Decision required: Action cannot be bypassed without corrupting metrics consistency.")
+            st.error("⚠️ No option selected! Pick an answer before moving forward.")
         else:
             # Atomic state updates
             st.session_state.answers[q_data["id"]] = choice
