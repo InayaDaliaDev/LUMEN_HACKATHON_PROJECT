@@ -1,319 +1,519 @@
 # ==============================================================================
 # DATA CORE MATRIX: ALL_QUESTIONS
 # ==============================================================================
-# This is the master database for the metacognitive profiling array.
-# Each choice injects explicit text indicators and micro-quantified vector weights.
+# Master question bank for the learning/work-style profiling quiz.
+# NOTE: 'vectors' are internal app weights, not a scientifically validated
+# psychometric scale. Advice text intentionally avoids diagnostic/clinical
+# language.
 
-ALL_QUESTIONS = [   
-   
-    
+ALL_QUESTIONS = [
     {
         "id": "q1",
         "section": "Phase 01: The Execution Engine",
-        "question": "A major launch is creeping up in 14 days. Honestly, how do you handle the pressure?",
+        "question": "You’re facing an overwhelming exam or thesis deadline in 14 days. Your energy is low and the pressure is rising. What do you do?",
         "options": {
             "A": {
-                "text": "I immediately break down the specs into bite-sized tasks and write clean code on a strict daily schedule.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "You're wonderfully predictable (in a good way!), but watch out—you might waste precious hours polishing underlying layers for features that get scrapped before launch.",
-                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 2.0, "chaos_tolerance": -0.5, "cognitive_endurance": 1.5}
+                "text": "I force myself to map out every single day into precise study blocks, sticking to the structure to keep my anxiety at bay.",
+                "label": "ORDERLY ARCHITECT",
+                "advice": "Structuring your time this tightly is a real strength, but watch the line between planning and actually learning: two hours building a perfect schedule can feel productive while your brain hasn't touched the material yet. Next time, deliberately make the plan a little messy and move faster into real practice — that's where the learning actually happens.",
+                "vectors": {
+                    "information_bandwidth": 1.5,
+                    "execution_rigor": 2.0,
+                    "chaos_tolerance": -0.5,
+                    "cognitive_endurance": 1.5
+                }
             },
             "B": {
-                "text": "I procrastinate for 12 days, then let the panic kick in to fuel a massive 36-hour coding marathon.",
+                "text": "I freeze or distract myself for 12 days, relying on a brutal, adrenaline-fueled 36-hour all-nighter right before the deadline. I am a procrastinator, but I thrive under extreme pressure!",
                 "label": "PRESSURE SPRINTER",
-                "advice": "You thrive on that adrenaline rush. You'll ship something that works, but you leave behind a scary trail of technical debt and messy logic.",
-                "vectors": {"information_bandwidth": 0.5, "execution_rigor": -1.0, "chaos_tolerance": 2.0, "cognitive_endurance": 0.5}
+                "advice": "You can produce real focus under pressure, and that's a genuine skill. The issue isn't time management — it's starting something when success isn't guaranteed, and cramming rarely leaves anything in long-term memory. Next time, commit to just five minutes on the task with no goal of finishing it — that's usually enough to break the initial resistance.",
+                "vectors": {
+                    "information_bandwidth": 0.5,
+                    "execution_rigor": -1.0,
+                    "chaos_tolerance": 2.0,
+                    "cognitive_endurance": 0.5
+                }
             },
             "C": {
-                "text": "I spend 11 days obsessively analyzing edge cases and comparing tech stacks, leaving myself 3 days of purely anxious coding.",
+                "text": "I spend days obsessing over finding the 'best' study methodology, gathering endless resources, and feeling too paralyzed to actually start.",
                 "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "Analysis paralysis is your kryptonite. Your fear of building something imperfect turns you into a bottleneck when time is tight.",
-                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.5, "chaos_tolerance": -1.5, "cognitive_endurance": 0.0}
+                "advice": "Looking for the 'best' method comes from a good place, but it can quietly become a way to delay facing the material, where getting something wrong feels risky. Give yourself permission to write a rough, imperfect first attempt — a flawed method you actually use beats a perfect one you never try.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": 1.5,
+                    "chaos_tolerance": -1.5,
+                    "cognitive_endurance": 0.0
+                }
             },
             "D": {
-                "text": "I hack together a wild, experimental base on day one, then spend two weeks changing my mind whenever a cooler idea pops up.",
+                "text": "I jump randomly between subjects whenever I get bored, following my curiosity rather than any linear study guide.",
                 "label": "CHAOS ENGINE",
-                "advice": "Your adaptability is off the charts, but your total lack of boundaries leads to endless feature creep and a fragile final product.",
-                "vectors": {"information_bandwidth": 1.0, "execution_rigor": -1.5, "chaos_tolerance": 2.5, "cognitive_endurance": 1.0}
+                "advice": "Your brain grasps big ideas fast through novelty, but topics that need repetition lose you quickly. That's not a lack of discipline, it's a real need for stimulation. Try 25-minute timed sprints on a single subject before switching — it gives you an external constraint without having to fight the urge to jump around alone.",
+                "vectors": {
+                    "information_bandwidth": 1.0,
+                    "execution_rigor": -1.5,
+                    "chaos_tolerance": 2.5,
+                    "cognitive_endurance": 1.0
+                }
             }
         }
     },
     {
         "id": "q2",
-        "section": "Phase 01: The Execution Engine",
-        "question": "The client just changed their mind, totally wrecking your current sprint. What’s your gut reaction?",
+        "section": "Category 01: Attention Architecture",
+        "question": "You are sitting down for a mandatory 4-hour self-study session on a dry, dense topic. How does your attention span naturally unfold over time?",
         "options": {
             "A": {
-                "text": "Mild annoyance, but I immediately pause to update the docs and redraw the architecture maps.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "You treat chaos like just another math problem. But remember, jumping straight to documentation instead of adapting the code can slow you down.",
-                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 1.5, "chaos_tolerance": 0.0, "cognitive_endurance": 1.0}
+                "text": "I lock in instantly for 3 hours straight, completely losing track of time, physical posture, and bodily needs until the entire module is finished.",
+                "label": "HYPERFOCUS ISOLATIONIST",
+                "advice": "You can go deep into a subject for hours, and that's valuable. The flip side is ignoring fatigue signals until you crash. Set an alarm every 90 minutes for a 5-minute break — not to break your focus, but to make it last.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": 1.0,
+                    "chaos_tolerance": -0.5,
+                    "cognitive_endurance": 2.0
+                }
             },
             "B": {
-                "text": "Couldn't care less. I instantly trash the old code and start hacking out the new solution from scratch.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "You pivot lightning fast, but your instinct for raw speed means you often throw away perfectly reusable code.",
-                "vectors": {"information_bandwidth": 0.0, "execution_rigor": -1.0, "chaos_tolerance": 2.0, "cognitive_endurance": 0.5}
+                "text": "My mind begins drifting after 20 minutes unless I am constantly switching tasks, pacing around the room, or playing ambient background sound.",
+                "label": "STIMULUS-SEEKING EXPLORER",
+                "advice": "Your attention needs movement and novelty to stay active — that's not a lack of willpower, just how you're wired. Passive reading will almost never work for you. Turn chapters into quick self-quizzes, and give yourself permission to move physically between 15-minute sprints.",
+                "vectors": {
+                    "information_bandwidth": 0.5,
+                    "execution_rigor": -1.5,
+                    "chaos_tolerance": 2.0,
+                    "cognitive_endurance": -0.5
+                }
             },
             "C": {
-                "text": "Pure frustration. This kind of disruption makes the whole project feel completely mismanaged and broken.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "You need external order to stay sane. When the plan falls apart, your internal logic stalls, and you risk burning out.",
-                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 2.0, "chaos_tolerance": -2.0, "cognitive_endurance": -0.5}
+                "text": "I can comfortably sustain focus for 45 to 60 minutes at a time, but only if I have a clear syllabus and zero unexpected interruptions.",
+                "label": "SYSTEMIC PLANNER",
+                "advice": "You hold focus well as long as the setup is clear and predictable — that's real stability. Your weak point is the unexpected: a noise, a vague instruction, a shift in plan throws you off more than fatigue does. Prep your space in advance, but also practice absorbing a small surprise without stopping everything.",
+                "vectors": {
+                    "information_bandwidth": 1.0,
+                    "execution_rigor": 2.0,
+                    "chaos_tolerance": -1.5,
+                    "cognitive_endurance": 1.5
+                }
             },
             "D": {
-                "text": "Sweet validation! I hated those strict rules anyway. Bring on the chaos, let's build something new.",
-                "label": "CHAOS ENGINE",
-                "advice": "You run on chaotic energy. Just be careful not to mistake a messy situation for a genius strategic pivot.",
-                "vectors": {"information_bandwidth": 1.0, "execution_rigor": -2.0, "chaos_tolerance": 2.5, "cognitive_endurance": 1.0}
+                "text": "I struggle to focus at all in total isolation, but my attention skyrockets the moment I am discussing the material out loud or studying near others.",
+                "label": "SOCIAL CATALYST",
+                "advice": "You retain information better when it passes through a conversation — working alone in silence drains your motivation. That's not a weakness, your brain just processes things better out loud. Actively look for a study partner or small group instead of a quiet library corner: it will genuinely work better for you.",
+                "vectors": {
+                    "information_bandwidth": 1.5,
+                    "execution_rigor": -0.5,
+                    "chaos_tolerance": 1.5,
+                    "cognitive_endurance": 1.0
+                }
             }
         }
     },
     {
         "id": "q3",
-        "section": "Phase 01: The Execution Engine",
-        "question": "You're stuck in a massive, multi-hour technical meeting. How do you keep your brain from shutting down?",
+        "section": "Category 02: Processing Channels",
+        "question": "You are handed an abstract, theoretical concept with zero real-world examples. What is your mind's immediate translation mechanism?",
         "options": {
             "A": {
-                "text": "I draw up perfectly structured, color-coded mind maps to organize everything the speaker is saying.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "You process info by building a mental framework. But if the speaker is all over the place, your brain just rejects the input.",
-                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.0, "chaos_tolerance": -0.5, "cognitive_endurance": 1.5}
+                "text": "I instantly translate the theory into visual structures—spatial diagrams, color-coded hierarchies, or mental flowcharts.",
+                "label": "VISUO-SPATIAL ARCHITECT",
+                "advice": "You naturally turn abstract ideas into visual structures, which gives you a fast overview. The trap: assessments usually want a precise written or spoken explanation, not a diagram. After sketching it out, force yourself to restate it in a full sentence, as if explaining it with no drawing allowed.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": 1.5,
+                    "chaos_tolerance": 0.0,
+                    "cognitive_endurance": 1.0
+                }
             },
             "B": {
-                "text": "I tune out 80% of the fluff and only take notes when someone explicitly gives me a task or a deadline.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "You're aggressively pragmatic, which saves time. But by filtering out the 'noise,' you often miss the big-picture insights.",
-                "vectors": {"information_bandwidth": -0.5, "execution_rigor": 0.5, "chaos_tolerance": 1.0, "cognitive_endurance": 1.0}
+                "text": "I need to talk through the logic out loud, record myself explaining it, or debate the steps sequentially until it sounds right.",
+                "label": "AUDITORY SEQUENCER",
+                "advice": "A concept doesn't feel real to you until you can say it out loud or debate it — silent reading is probably your worst method. Record yourself explaining it to an imaginary audience, or find a group where debate is welcome. In a silent exam, run an internal monologue that walks through the logic step by step.",
+                "vectors": {
+                    "information_bandwidth": 1.0,
+                    "execution_rigor": 0.5,
+                    "chaos_tolerance": 0.5,
+                    "cognitive_endurance": 1.5
+                }
             },
             "C": {
-                "text": "I sit frozen, trying to write down exact definitions word-for-word because missing a nuance feels like a crime.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "Your need for high-fidelity data means your brain overloads the second the speaker talks faster than you can type.",
-                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 2.0, "chaos_tolerance": -1.0, "cognitive_endurance": 0.5}
+                "text": "I cannot grasp it theoretically; I have to physically write out problems by hand, manipulate tangible variables, or build a concrete model.",
+                "label": "KINESTHETIC PRAGMATIST",
+                "advice": "You need to physically handle things — write by hand, build, test — before an abstract idea becomes real to you. Typing or passive reading leaves little trace. Keep a physical notepad within reach, and move from theory to practice as fast as you can.",
+                "vectors": {
+                    "information_bandwidth": 0.0,
+                    "execution_rigor": 1.0,
+                    "chaos_tolerance": 1.0,
+                    "cognitive_endurance": 1.0
+                }
             },
             "D": {
-                "text": "I'm aggressively switching tabs, looking up totally unrelated code, and letting my mind wander across three side projects.",
-                "label": "CHAOS ENGINE",
-                "advice": "You thrive on lateral thinking. It sparks cool cross-disciplinary ideas, but it totally kills your ability to follow a sequential logic flow.",
-                "vectors": {"information_bandwidth": 2.5, "execution_rigor": -1.5, "chaos_tolerance": 2.0, "cognitive_endurance": 0.0}
+                "text": "I look for underlying patterns and intuitive metaphors, connecting the concept to totally different fields or real-life analogies.",
+                "label": "LATERAL SYNTHESIZER",
+                "advice": "You connect a concept to other fields through metaphor, which gives you a fast, creative grip on it. Just remember that grading rubrics rarely accept a nice analogy instead of the exact expected definition. Use your metaphor to understand it, then still learn the precise academic wording for the exam.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": -1.5,
+                    "chaos_tolerance": 2.0,
+                    "cognitive_endurance": 0.5
+                }
             }
         }
     },
     {
         "id": "q4",
-        "section": "Phase 01: The Execution Engine",
-        "question": "Take a look at your workspace right now while you're deep in a project. What does it look like?",
+        "section": "Category 03: Executive Regulation",
+        "question": "You have a major assignment due in two weeks, but the prompt is extremely vague and open-ended. What triggers your initial delay or action?",
         "options": {
             "A": {
-                "text": "Meticulously organized. Strict folder hierarchies, clear tags, and absolutely zero stray files.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "Your tidy setup removes friction and clears your head. You rely on external structure so your brain doesn't have to remember everything.",
-                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 1.5, "chaos_tolerance": -1.0, "cognitive_endurance": 1.5}
+                "text": "I delay starting because the lack of clear criteria triggers intense perfectionist anxiety—I fear wasting effort on the wrong direction.",
+                "label": "PERFECTIONIST FREEZER",
+                "advice": "This isn't laziness: the lack of clear criteria triggers real fear of aiming in the wrong direction, and that delays starting. Lower the stakes on purpose by giving yourself permission to write a deliberately rough first draft — its only job is to give you raw material to improve later, not to be good right away.",
+                "vectors": {
+                    "information_bandwidth": 1.0,
+                    "execution_rigor": 2.0,
+                    "chaos_tolerance": -2.0,
+                    "cognitive_endurance": -0.5
+                }
             },
             "B": {
-                "text": "A total disaster zone of 'temp' files and unsaved scripts that I swear I'll delete as soon as this ships.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "Your space gets the immediate job done. But trying to track down a bug across 15 files named 'test_final_v2' is a nightmare.",
-                "vectors": {"information_bandwidth": 0.0, "execution_rigor": -0.5, "chaos_tolerance": 1.5, "cognitive_endurance": 1.0}
+                "text": "I put it off simply because it's boring, only working when the panic of an impending deadline creates enough dopamine to force action.",
+                "label": "REACTIVE SPRINTER",
+                "advice": "You rely on urgency to get moving, and it works short-term — but it caps how deeply you can actually learn, since solid memory isn't built in 24 hours of panic. Try setting artificial mini-deadlines with a friend or teacher well before the real one, to trigger action earlier without burning out.",
+                "vectors": {
+                    "information_bandwidth": -0.5,
+                    "execution_rigor": -1.5,
+                    "chaos_tolerance": 2.0,
+                    "cognitive_endurance": 0.5
+                }
             },
             "C": {
-                "text": "Spotlessly clean. Honestly, if my desk is messy, I'll spend three hours cleaning it just to avoid starting the actual work.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "Ah, productive procrastination. You drain your brain's energy organizing your tools before you write a single line of actual code.",
-                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 2.0, "chaos_tolerance": -1.5, "cognitive_endurance": -0.5}
+                "text": "I break the ambiguous prompt down into structured sub-tasks and create my own rigid operational framework before writing anything.",
+                "label": "SYSTEMIC PLANNER",
+                "advice": "You handle ambiguity well by imposing your own structure on it — a real organizational strength. The risk is spending 80% of your time polishing the plan and only 20% actually producing. Set a hard time limit on the planning phase, then move to execution even if the plan isn't perfect yet.",
+                "vectors": {
+                    "information_bandwidth": 1.5,
+                    "execution_rigor": 2.0,
+                    "chaos_tolerance": 0.0,
+                    "cognitive_endurance": 1.5
+                }
             },
             "D": {
-                "text": "Pure, unadulterated anarchy. It makes other people panic, but I know exactly where everything is.",
-                "label": "CHAOS ENGINE",
-                "advice": "You're totally fine in the mess. It works perfectly for you—until you need to collaborate and your team has a collective meltdown.",
-                "vectors": {"information_bandwidth": 1.5, "execution_rigor": -2.0, "chaos_tolerance": 2.0, "cognitive_endurance": 0.5}
+                "text": "I start exploring three radically different interpretations at once, enjoying the freedom until I am forced to pick one at the last minute.",
+                "label": "HYPERACTIVE EXPLORER",
+                "advice": "You explore several directions at once with real creativity, which generates original ideas. The danger is spreading your time across too many paths and having to rush everything together at the end. Set an early limit on how many directions you chase in parallel (two max), to leave room to actually finish.",
+                "vectors": {
+                    "information_bandwidth": 2.5,
+                    "execution_rigor": -2.0,
+                    "chaos_tolerance": 2.5,
+                    "cognitive_endurance": 0.0
+                }
             }
         }
     },
     {
         "id": "q5",
-        "section": "Phase 01: The Execution Engine",
-        "question": "You have to read a super dense, dry technical documentation page. What's your strategy?",
+        "section": "Category 03: Executive Regulation",
+        "question": "Midway through solving a complex problem or writing a long paper, your initial strategy completely falls apart. How do you pivot?",
         "options": {
             "A": {
-                "text": "I read it straight through, highlighting key terms to build my own little glossary of how it all works.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "You respect structure, which makes you great at extracting logic. Just don't waste too much time reading introductions that don't actually matter.",
-                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 1.5, "chaos_tolerance": -0.5, "cognitive_endurance": 2.0}
+                "text": "I feel deeply demoralized, wipe the slate clean, and start from step one with a completely new methodical framework.",
+                "label": "SYSTEMIC PLANNER",
+                "advice": "Wiping the slate clean and starting fresh feels reassuring when a plan collapses, but it costs you real time. Try instead to spot what's still usable in your previous work — a partial failure isn't a total one.",
+                "vectors": {
+                    "information_bandwidth": 1.0,
+                    "execution_rigor": 1.5,
+                    "chaos_tolerance": -1.5,
+                    "cognitive_endurance": 0.5
+                }
             },
             "B": {
-                "text": "I aggressively scan for bold words, code snippets, and the final result. I completely skip the theoretical fluff.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "You grab what you need at lightning speed. Just watch out—skipping the fundamentals often leaves weird blind spots in your final code.",
-                "vectors": {"information_bandwidth": -0.5, "execution_rigor": -0.5, "chaos_tolerance": 1.0, "cognitive_endurance": 1.0}
+                "text": "I don't panic at all—I immediately patch together a quick, improvised alternative using whatever partial data or logic I have on hand.",
+                "label": "EMPIRICAL PRAGMATIST",
+                "advice": "You adapt well under pressure without panicking, patching together a working solution from whatever you have — a genuine strength. The flip side is that quick fixes can hide an unresolved underlying issue. Once the fire's out, take a few minutes to understand why the original plan broke, so it doesn't happen again.",
+                "vectors": {
+                    "information_bandwidth": 0.0,
+                    "execution_rigor": -1.0,
+                    "chaos_tolerance": 2.0,
+                    "cognitive_endurance": 1.0
+                }
             },
             "C": {
-                "text": "I get stuck re-reading one slightly confusing sentence five times because a tiny logical gap breaks my entire flow.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "You demand absolute precision. It makes your work rock-solid, but one badly written paragraph can completely derail your day.",
-                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 2.0, "chaos_tolerance": -1.5, "cognitive_endurance": 0.0}
+                "text": "I freeze up completely, second-guessing my baseline intelligence and needing to step away for hours before I can face the problem again.",
+                "label": "PERFECTIONIST FREEZER",
+                "advice": "A mistake can hit harder than expected and make you need to step back before continuing — that's a human reaction. Try treating the error as neutral information about what didn't work, rather than a verdict on your ability: that's still the fastest path to real mastery.",
+                "vectors": {
+                    "information_bandwidth": 0.5,
+                    "execution_rigor": 1.0,
+                    "chaos_tolerance": -2.0,
+                    "cognitive_endurance": -1.0
+                }
             },
             "D": {
-                "text": "I skip around randomly, or just jump straight into forums to see how other people broke it down.",
-                "label": "CHAOS ENGINE",
-                "advice": "You love crowd-sourced shortcuts. It gets you multiple perspectives quickly, but you often miss out on grasping the core principles yourself.",
-                "vectors": {"information_bandwidth": 2.0, "execution_rigor": -1.5, "chaos_tolerance": 1.5, "cognitive_endurance": 0.5}
+                "text": "I view the failure as an exciting pivot point, using it as an excuse to take a radically creative, non-conventional detour.",
+                "label": "HYPERACTIVE EXPLORER",
+                "advice": "You bounce back from setbacks by exploring a completely different direction, which shows real creative resilience. Just check that the new path still answers the actual question being asked — originality only counts if it stays relevant to the assignment.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": -2.0,
+                    "chaos_tolerance": 2.5,
+                    "cognitive_endurance": 0.5
+                }
             }
         }
     },
     {
         "id": "q6",
-        "section": "Phase 02: Information Ingestion",
-        "question": "You're trying to set up a super complex local environment or build a piece of hardware. What's your first move?",
+        "section": "Category 04: Environment & Ecosystem",
+        "question": "You have spent 5 consecutive hours working in a bustling study group or crowded classroom. What state is your internal system in?",
         "options": {
             "A": {
-                "text": "I study the docs and diagrams first to build a mental map before I even touch a single key or part.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "Your planning is top-tier and you rarely make fatal errors. The downside? It takes you forever just to get started.",
-                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.0, "chaos_tolerance": -0.5, "cognitive_endurance": 1.5}
+                "text": "I am completely drained and sensory-overloaded. I need immediate, silent isolation in a dark, quiet room to restore my energy.",
+                "label": "DEEP FOCUS ISOLATIONIST",
+                "advice": "Noise and crowding genuinely drain you — part of your brain's energy goes into filtering the environment, leaving less for actual thinking. That's not a preference to override: treat a quiet space as a real work tool, and noise-canceling headphones as worth the investment.",
+                "vectors": {
+                    "information_bandwidth": 1.5,
+                    "execution_rigor": 1.0,
+                    "chaos_tolerance": -2.0,
+                    "cognitive_endurance": -0.5
+                }
             },
             "B": {
-                "text": "I toss the manual in the trash, start plugging things in based on vibes, and only read the docs when it crashes.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "Your trial-and-error speed is impressive, but you risk breaking things permanently or completely missing silent bugs.",
-                "vectors": {"information_bandwidth": -1.0, "execution_rigor": -1.0, "chaos_tolerance": 2.0, "cognitive_endurance": 1.0}
+                "text": "I feel highly energized and sharp—the social momentum and active exchanges kept my brain fully stimulated and awake.",
+                "label": "SOCIAL CATALYST",
+                "advice": "Group energy keeps you sharp and awake — it saves you from passive boredom. Just make sure those group sessions stay productive and not purely social: surround yourself with people who actually challenge you rather than distract you.",
+                "vectors": {
+                    "information_bandwidth": 0.5,
+                    "execution_rigor": -0.5,
+                    "chaos_tolerance": 1.5,
+                    "cognitive_endurance": 2.0
+                }
             },
             "C": {
-                "text": "I lay out and sort absolutely every single component, dependency, and file by size and type before doing anything else.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "Your quality control is amazing. But you waste a lot of prime brainpower doing busywork that doesn't actually get the project built.",
-                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 2.5, "chaos_tolerance": -1.5, "cognitive_endurance": 1.0}
+                "text": "I feel okay physically, but mentally frustrated if the group spent time on off-topic chatter instead of strictly executing the work.",
+                "label": "SYSTEMIC PLANNER",
+                "advice": "You judge an environment by how efficient it is, and off-topic chatter bothers you fast. That's a valuable discipline, but don't discount unstructured discussion entirely — some of the best insights come from a tangent. If you run a group, take on the role of timekeeper to stay on track without frustration.",
+                "vectors": {
+                    "information_bandwidth": 1.0,
+                    "execution_rigor": 2.0,
+                    "chaos_tolerance": -1.0,
+                    "cognitive_endurance": 1.0
+                }
             },
             "D": {
-                "text": "I just start slapping pieces together to see if I can invent a cooler, weirder way to build it than the creator intended.",
-                "label": "CHAOS ENGINE",
-                "advice": "You're a natural innovator! But your total lack of respect for standard rules is a great way to introduce massive security flaws.",
-                "vectors": {"information_bandwidth": 1.5, "execution_rigor": -2.0, "chaos_tolerance": 2.5, "cognitive_endurance": 0.5}
+                "text": "I barely noticed the people or noise at all; I was locked inside my own head playing with ideas the entire time.",
+                "label": "HYPERFOCUS ISOLATIONIST",
+                "advice": "You have a real internal filter that keeps you focused even in noise or chaos — a rare skill. The trade-off is missing important announcements or a group decision because you tuned the environment out completely. Build in short check-ins to reconnect with what's happening around you.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": -1.0,
+                    "chaos_tolerance": 2.0,
+                    "cognitive_endurance": 1.5
+                }
             }
         }
     },
     {
         "id": "q7",
-        "section": "Phase 02: Information Ingestion",
-        "question": "You need to instantly memorize a random, messy string of characters (like an API key). How does your brain handle it?",
+        "section": "Category 04: Environment & Ecosystem",
+        "question": "If you could design your ideal academic framework, what ratio of external authority vs. personal autonomy would you demand?",
         "options": {
             "A": {
-                "text": "I memorize the geometric pattern my fingers make as they type it out on the keyboard.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "Turning data into spatial coordinates is a neat trick. But the second you switch to a different keyboard layout, you're toast.",
-                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 0.5, "chaos_tolerance": 0.5, "cognitive_endurance": 1.0}
+                "text": "Complete autonomy (CNED / Independent study)—give me the full syllabus and exam dates, then leave me entirely alone to manage my time.",
+                "label": "AUTONOMOUS ARCHITECT",
+                "advice": "You need to control your own pace and resent being micromanaged — autonomy is what gets you moving. The risk of total freedom is the absence of outside feedback: without it, blind spots can build up without you noticing. Deliberately seek external checkpoints (a teacher, a mentor, a peer) to validate your progress now and then.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": 1.0,
+                    "chaos_tolerance": 0.5,
+                    "cognitive_endurance": 2.0
+                }
             },
             "B": {
-                "text": "I just repeat the exact sounds of the letters in my head on a loop until I type it, then instantly forget it.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "It's the perfect short-term buffer for quick tasks, but it leaves absolutely zero long-term memory.",
-                "vectors": {"information_bandwidth": -0.5, "execution_rigor": 0.5, "chaos_tolerance": 1.0, "cognitive_endurance": 0.5}
+                "text": "A structured, highly disciplined environment with clear professor expectations, weekly mandatory deadlines, and strict accountability.",
+                "label": "SYSTEMIC PLANNER",
+                "advice": "You perform best inside a clear framework, with explicit expectations and fixed deadlines — structure is what makes you feel safe enough to focus. Without those guardrails, open-ended freedom can lead to decision fatigue. Look for structured programs, but also practice setting your own deadlines little by little to build autonomy.",
+                "vectors": {
+                    "information_bandwidth": 0.5,
+                    "execution_rigor": 2.5,
+                    "chaos_tolerance": -1.5,
+                    "cognitive_endurance": 1.0
+                }
             },
             "C": {
-                "text": "I try to find a logical connection, like spotting math patterns or associating parts of the string with historical dates.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "You crave semantic meaning. Data can't just 'exist' in your head—it has to be perfectly filed into an existing mental database.",
-                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 2.0, "chaos_tolerance": -1.0, "cognitive_endurance": 1.5}
+                "text": "A mentorship-driven framework—a dedicated tutor or coach who provides high-level guidance, but lets me execute my own projects.",
+                "label": "SOCIAL CATALYST",
+                "advice": "You make the most progress with a mentor who guides you without locking you into rigid bureaucracy — you need quality feedback, not constant oversight. If your current setting is too institutional, actively seek out office hours or mentors who can offer that closer feedback loop.",
+                "vectors": {
+                    "information_bandwidth": 1.5,
+                    "execution_rigor": 0.5,
+                    "chaos_tolerance": 1.0,
+                    "cognitive_endurance": 1.5
+                }
             },
             "D": {
-                "text": "I link the characters to a completely unhinged, abstract story or a chaotic burst of random imagery.",
-                "label": "CHAOS ENGINE",
-                "advice": "Your creative associations make things stick long-term, but man, it takes a ton of mental energy to invent a story for a password.",
-                "vectors": {"information_bandwidth": 2.0, "execution_rigor": -1.0, "chaos_tolerance": 1.5, "cognitive_endurance": 0.0}
+                "text": "A fast-paced, high-stakes competition model (Olympiads / Hackathons) where I am pushed to my limit by elite peers.",
+                "label": "COMPETITIVE SPRINTER",
+                "advice": "Competition and stakes push you to give your best — a slow academic pace bores you fast. That drive leads to real peak performances, but be careful not to turn every learning situation into a fight to win — it can wear you out over time.",
+                "vectors": {
+                    "information_bandwidth": 1.0,
+                    "execution_rigor": -0.5,
+                    "chaos_tolerance": 2.0,
+                    "cognitive_endurance": 1.0
+                }
             }
         }
     },
     {
         "id": "q8",
-        "section": "Phase 03: Ecosystem Friction",
-        "question": "You just got assigned to a massive group project with totally random teammates. What are you secretly thinking?",
+        "section": "Category 04: Environment & Ecosystem",
+        "question": "How does your processing performance shift when you are exposed to micro-distractions (blaring light, background noise, messy desk)?",
         "options": {
             "A": {
-                "text": "I'm taking charge immediately, setting the rules, and forcing everyone into a highly organized workflow.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "You're great at designing systems, but you treat people like predictable algorithms. Expect friction when human emotions get involved.",
-                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 1.5, "chaos_tolerance": -0.5, "cognitive_endurance": 1.0}
+                "text": "My performance plummets. I waste huge amounts of cognitive energy feeling irritated by the environment, making deep work impossible.",
+                "label": "DEEP FOCUS ISOLATIONIST",
+                "advice": "Your brain processes background noise at nearly the same priority as the material itself, which makes chaotic spaces genuinely exhausting for you. That's not a discipline problem to fix: treat a quiet, tidy space as an essential tool, not an optional comfort.",
+                "vectors": {
+                    "information_bandwidth": 1.0,
+                    "execution_rigor": 1.5,
+                    "chaos_tolerance": -2.5,
+                    "cognitive_endurance": -0.5
+                }
             },
             "B": {
-                "text": "I'll call dibs on one specific feature, disappear into the void, and code it up at the very last second.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "You keep team drama to a minimum, but going completely rogue makes you a pretty terrifying person to collaborate with.",
-                "vectors": {"information_bandwidth": -0.5, "execution_rigor": -0.5, "chaos_tolerance": 1.5, "cognitive_endurance": 1.0}
+                "text": "I actually need a baseline level of environmental activity—a coffee shop background or music—to keep my brain engaged.",
+                "label": "STIMULUS-SEEKING EXPLORER",
+                "advice": "Complete silence sometimes pushes you to generate your own internal distractions; a controlled background (music, café noise) actually helps you stay engaged. Keep using this, just make sure the background stays constant rather than becoming distracting itself.",
+                "vectors": {
+                    "information_bandwidth": 0.0,
+                    "execution_rigor": -1.0,
+                    "chaos_tolerance": 2.0,
+                    "cognitive_endurance": 1.5
+                }
             },
             "C": {
-                "text": "Absolute panic. I already know they're going to mess it up, so I'll probably just build 90% of it myself to ensure it's perfect.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "Your inability to trust others is a direct one-way ticket to burnout. You have to learn how to let go of the reins.",
-                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 2.5, "chaos_tolerance": -1.5, "cognitive_endurance": 0.5}
+                "text": "I am bothered by visual clutter, so I must clean, organize, and align my desk completely before I can process a single page.",
+                "label": "SYSTEMIC PLANNER",
+                "advice": "Visual clutter really weighs on you, and tidying up helps you get started. Just watch that this reset doesn't become a polished way of delaying the real work — cap it at two minutes before you dive in.",
+                "vectors": {
+                    "information_bandwidth": 0.5,
+                    "execution_rigor": 2.0,
+                    "chaos_tolerance": -1.5,
+                    "cognitive_endurance": 0.5
+                }
             },
             "D": {
-                "text": "I'm gonna use this group as my personal laboratory, constantly pitching weird new tech stacks and pivoting the idea daily.",
-                "label": "CHAOS ENGINE",
-                "advice": "You bring amazing energy, but your teammates will probably want to throttle you for constantly resetting their progress.",
-                "vectors": {"information_bandwidth": 2.0, "execution_rigor": -2.0, "chaos_tolerance": 2.0, "cognitive_endurance": 0.0}
+                "text": "I possess complete sensory immunity. Once my brain finds an interesting problem, the physical world completely fades out.",
+                "label": "HYPERFOCUS ISOLATIONIST",
+                "advice": "Once you're locked into an interesting problem, the outside world disappears for you — a real asset in noisy or chaotic places. Keep an eye on your physical fatigue anyway: tuning out noise doesn't mean your body isn't absorbing stress from bad posture or lighting.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": -0.5,
+                    "chaos_tolerance": 2.5,
+                    "cognitive_endurance": 2.0
+                }
             }
         }
     },
     {
         "id": "q9",
-        "section": "Phase 03: Ecosystem Friction",
-        "question": "If you could redesign an entire coding degree to fit your exact learning style, what would it look like?",
+        "section": "Category 05: Motivational Engine",
+        "question": "What is the primary internal engine that keeps you studying late into the night when nobody is watching?",
         "options": {
             "A": {
-                "text": "Highly structured lectures paired with deep, comprehensive textbooks that explain everything from the ground up.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "You crush it in academic settings. Just be careful not to become a pure theorist who freezes up when dropped into a messy, real-world codebase.",
-                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.5, "chaos_tolerance": -1.0, "cognitive_endurance": 2.0}
+                "text": "Pure, unadulterated intellectual curiosity—I get obsessed with uncovering how the system works, regardless of grades.",
+                "label": "INTRINSIC ARCHITECT",
+                "advice": "You're driven by genuine curiosity — understanding how something works is motivation enough, grades aside. That's a real, sustainable energy. The risk is spending hours on fascinating but off-syllabus rabbit holes while neglecting the required basics. Remember that clearing the required work is what buys you the freedom to keep exploring what you actually love.",
+                "vectors": {
+                    "information_bandwidth": 2.5,
+                    "execution_rigor": 0.5,
+                    "chaos_tolerance": 1.0,
+                    "cognitive_endurance": 2.0
+                }
             },
             "B": {
-                "text": "No lectures at all. Just drop us into a caffeine-fueled 48-hour hackathon with a vague problem and let us fight it out.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "You thrive in high-intensity execution environments. Just remember that skipping the fundamentals puts a ceiling on how deep your expertise can go.",
-                "vectors": {"information_bandwidth": -1.0, "execution_rigor": -0.5, "chaos_tolerance": 2.5, "cognitive_endurance": 1.5}
+                "text": "A relentless drive for performance, high ranking, and tangible proof that I am at the top of my field.",
+                "label": "COMPETITIVE SPRINTER",
+                "advice": "Ranking and recognition push you to perform, and that competitive drive gets real short-term results. Just be careful not to tie your whole confidence to a ranking or grade — a bad result or a stronger rival can hit hard. Try building an internal standard of excellence that doesn't depend on the scoreboard.",
+                "vectors": {
+                    "information_bandwidth": 0.5,
+                    "execution_rigor": 1.5,
+                    "chaos_tolerance": 0.5,
+                    "cognitive_endurance": 1.0
+                }
             },
             "C": {
-                "text": "A solo track where my code is judged exclusively by an automated, completely flawless testing suite. No human opinions allowed.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "You love pure, binary feedback. It makes you a razor-sharp coder, but leaves you completely unprepared for navigating office politics.",
-                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 2.5, "chaos_tolerance": -1.5, "cognitive_endurance": 1.0}
+                "text": "The intense fear of failure or falling behind.",
+                "label": "ANXIETY DRIVER",
+                "advice": "Working from fear of failing or falling behind gets things done, but it's a costly, hard-to-sustain kind of fuel. Try to find one thing you're genuinely curious about in what you're studying, even something small — it can gradually become a steadier engine than fear.",
+                "vectors": {
+                    "information_bandwidth": 0.0,
+                    "execution_rigor": 1.0,
+                    "chaos_tolerance": -1.0,
+                    "cognitive_endurance": 1.0
+                }
             },
             "D": {
-                "text": "A giant, open-ended sandbox where 'failure' doesn't exist and I can switch to a brand new project every week.",
-                "label": "CHAOS ENGINE",
-                "advice": "You need absolute freedom to shine. But without any structure, your GitHub will just become a graveyard of half-finished ideas.",
-                "vectors": {"information_bandwidth": 2.5, "execution_rigor": -2.5, "chaos_tolerance": 2.0, "cognitive_endurance": -0.5}
+                "text": "A desire to prove myself and push past my limits.",
+                "label": "SELF-OVERCOMER",
+                "advice": "Wanting to prove to yourself that you can push past your limits is a healthy, self-directed motivation, not dependent on anyone else's opinion. To keep it sustainable, set clear, reachable goals rather than a vague, ever-rising bar — otherwise this drive can wear you down too.",
+                "vectors": {
+                    "information_bandwidth": 1.0,
+                    "execution_rigor": 1.0,
+                    "chaos_tolerance": 0.0,
+                    "cognitive_endurance": 1.5
+                }
             }
         }
     },
     {
         "id": "q10",
-        "section": "Phase 03: Ecosystem Friction",
-        "question": "You're trying to solve a brutal logic problem in your room. How does background noise (like traffic or people talking) affect you?",
+        "section": "Category 05: Motivational Engine",
+        "question": "You are given a choice between two academic tracks for the upcoming year. Which path does your brain instinctively select?",
         "options": {
             "A": {
-                "text": "It destroys my flow. I absolutely need premium noise-canceling headphones or complete silence to function.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "Your focus runs incredibly deep, but it's fragile. Since you can't naturally filter out noise, you're at the mercy of your environment.",
-                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 1.0, "chaos_tolerance": -1.5, "cognitive_endurance": 1.0}
+                "text": "An ultra-challenging, elite track (e.g., Olympiad-level problems, advanced honors thesis) with a high risk of failure but massive growth.",
+                "label": "INTRINSIC ARCHITECT",
+                "advice": "You seek out challenge and avoid comfort zones — you'd rather struggle with something hard than coast to an easy grade. That pushes you toward real mastery. Just don't take on too many demanding commitments at once: mastery needs focus and actual recovery time.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": 1.0,
+                    "chaos_tolerance": 1.5,
+                    "cognitive_endurance": 2.0
+                }
             },
             "B": {
-                "text": "I actually need it. Give me aggressive EDM or a noisy café to keep my brain awake and energized.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "You use sensory overload to create an artificial focus bubble. It works, but it often masks how exhausted your brain actually is.",
-                "vectors": {"information_bandwidth": -0.5, "execution_rigor": 0.0, "chaos_tolerance": 1.5, "cognitive_endurance": 1.5}
+                "text": "A clear, well-structured, predictable track where consistent, linear effort guarantees top grades and a secure outcome.",
+                "label": "SYSTEMIC PLANNER",
+                "advice": "You value efficiency and predictability, building a solid track record with managed risk — a real strategic strength. Just don't play it so safe that you avoid every uncertain challenge: real growth often happens exactly where failure is possible.",
+                "vectors": {
+                    "information_bandwidth": 0.5,
+                    "execution_rigor": 2.5,
+                    "chaos_tolerance": -1.5,
+                    "cognitive_endurance": 1.5
+                }
             },
             "C": {
-                "text": "It infuriates me. I get so fixated on the noise that I start actively resenting whoever is making it.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "You waste a massive amount of mental energy wishing the world would be quiet instead of just adapting to the chaos.",
-                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 2.0, "chaos_tolerance": -2.0, "cognitive_endurance": 0.0}
+                "text": "A highly practical, fast-paced track focused on direct skill acquisition, real-world case studies, and rapid portfolio building.",
+                "label": "EMPIRICAL PRAGMATIST",
+                "advice": "You prefer skills you can use right away over theory for its own sake — a real edge in applied fields. Just don't shortchange the fundamentals: the strongest problem-solvers combine solid theory with practical execution.",
+                "vectors": {
+                    "information_bandwidth": 0.0,
+                    "execution_rigor": -0.5,
+                    "chaos_tolerance": 1.5,
+                    "cognitive_endurance": 1.0
+                }
             },
             "D": {
-                "text": "I literally don't even hear it. Once a problem hooks my brain, the physical world stops existing.",
-                "label": "CHAOS ENGINE",
-                "advice": "Your hyper-focus is a superpower. Just remember to eat, sleep, and blink occasionally so you don't spontaneously combust.",
-                "vectors": {"information_bandwidth": 2.0, "execution_rigor": -1.0, "chaos_tolerance": 2.0, "cognitive_endurance": 2.0}
+                "text": "A completely flexible, interdisciplinary track where I can design my own curriculum and jump between different domains freely.",
+                "label": "HYPERACTIVE EXPLORER",
+                "advice": "You refuse to be boxed into one lane, and you spot connections across fields that specialists miss. Your real challenge is proving depth: make sure your exploration lands on one finished, concrete result — not just a pile of scattered ideas.",
+                "vectors": {
+                    "information_bandwidth": 2.5,
+                    "execution_rigor": -2.0,
+                    "chaos_tolerance": 2.5,
+                    "cognitive_endurance": 0.5
+                }
             }
         }
     },
@@ -324,27 +524,47 @@ ALL_QUESTIONS = [
         "options": {
             "A": {
                 "text": "They're just gatekeepers. I figure out exactly what they want to see and optimize my work to easily pass their checks.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "You're great at playing the game. Just make sure you aren't sacrificing your own creative soul just to get a good grade or a thumbs-up.",
-                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 1.5, "chaos_tolerance": -0.5, "cognitive_endurance": 1.5}
+                "label": "Pragmatic System-Adaptor",
+                "advice": "You separate your own motivation from what an evaluator expects, and optimize your work to clear their checks — a real strategic efficiency. The risk is eventually suppressing what genuinely interests you just to pass the bar. Every so often, allow yourself a project made for you, not for the grade.",
+                "vectors": {
+                    "information_bandwidth": 1.0,
+                    "execution_rigor": 1.5,
+                    "chaos_tolerance": -0.5,
+                    "cognitive_endurance": 1.5
+                }
             },
             "B": {
                 "text": "I mostly ignore their rules. I bank on delivering a super flashy final demo that makes them forget I broke all their policies.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "You know how to wow a crowd, but you're building a reputation as a total wildcard who can't be trusted with daily operations.",
-                "vectors": {"information_bandwidth": -0.5, "execution_rigor": -1.0, "chaos_tolerance": 2.0, "cognitive_endurance": 0.5}
+                "label": "Reward-Driven Disruptor",
+                "advice": "You count on a strong final result to make up for cutting corners along the way — it can work, but it's a real gamble if the process gets evaluated too. Document at least a minimum of your reasoning, in case the final output alone doesn't fully convince.",
+                "vectors": {
+                    "information_bandwidth": -0.5,
+                    "execution_rigor": -1.0,
+                    "chaos_tolerance": 2.0,
+                    "cognitive_endurance": 0.5
+                }
             },
             "C": {
                 "text": "I clash with them constantly. If their rules or feedback don't make perfect logical sense, I will argue with them.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "You value the truth over kissing up to authority. It's honorable, but fighting over every minor detail makes you exhausting to manage.",
-                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 2.0, "chaos_tolerance": -1.5, "cognitive_endurance": 0.0}
+                "label": "Coherence-Seeking Dissident",
+                "advice": "You need rules and feedback to actually make logical sense, or you'll push back — a real demand for intellectual consistency. It does drain energy you could spend elsewhere though. Pick your battles: save the arguing for what really matters, and let the rest go.",
+                "vectors": {
+                    "information_bandwidth": 1.5,
+                    "execution_rigor": 2.0,
+                    "chaos_tolerance": -1.5,
+                    "cognitive_endurance": 0.0
+                }
             },
             "D": {
                 "text": "I avoid them like the plague. I don't care about their validation; I just want them to leave me alone so I can build cool stuff.",
-                "label": "CHAOS ENGINE",
-                "advice": "You're wonderfully independent. But by cutting yourself off, you're missing out on vital mentorship and resources that could actually help you scale.",
-                "vectors": {"information_bandwidth": 2.0, "execution_rigor": -2.0, "chaos_tolerance": 1.5, "cognitive_endurance": 1.0}
+                "label": "Autonomous Insular Mind",
+                "advice": "You'd rather be left alone to build, without chasing outside validation — that protects your focus well. The flip side is that your instincts resist collaboration or external feedback. Every so often, force yourself to share unfinished work, just to get used to feedback along the way rather than only at the end.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": -2.0,
+                    "chaos_tolerance": 1.5,
+                    "cognitive_endurance": 1.0
+                }
             }
         }
     },
@@ -355,31 +575,50 @@ ALL_QUESTIONS = [
         "options": {
             "A": {
                 "text": "A heavy, multi-stage theoretical exam that tests deep concepts with perfectly phrased, unambiguous questions.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "You excel when things are complex but perfectly structured. But real-world engineering requires messy compromises that exams never teach you.",
-                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.5, "chaos_tolerance": -1.0, "cognitive_endurance": 1.5}
+                "label": "Axiomatic Depth-Processor",
+                "advice": "You excel at building complex mental models inside a clearly defined, noise-free space — you want real conceptual rigor. The flip side is possible freezing when reality gets messy or ambiguous. Deliberately practice on fuzzy, no-single-answer cases to build that flexibility.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": 1.5,
+                    "chaos_tolerance": -1.0,
+                    "cognitive_endurance": 1.5
+                }
             },
             "B": {
                 "text": "A high-stakes live coding challenge. Judge me on my raw speed, debugging under fire, and getting it done before the buzzer.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "Your rapid-fire processing is unmatched. But this format completely hides the fact that you have zero patience for long-term maintenance.",
-                "vectors": {"information_bandwidth": -0.5, "execution_rigor": -0.5, "chaos_tolerance": 2.0, "cognitive_endurance": 1.0}
+                "label": "High-Arousal Speed-Processor",
+                "advice": "Your working memory peaks under pressure with tight feedback loops — you thrive in the moment. That mode favors speed over long-term maintainability. Get in the habit of coming back afterward to clean up what you built in a rush.",
+                "vectors": {
+                    "information_bandwidth": -0.5,
+                    "execution_rigor": -0.5,
+                    "chaos_tolerance": 2.0,
+                    "cognitive_endurance": 1.0
+                }
             },
             "C": {
                 "text": "A massive, heavily audited portfolio built over months, showing off perfectly optimized code with zero vulnerabilities.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "You're all about endurance and high quality. The danger is that you never know when to stop polishing, trapping yourself in an endless loop.",
-                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 2.5, "chaos_tolerance": -1.5, "cognitive_endurance": 2.5}
+                "label": "Endurance-Oriented Refiner",
+                "advice": "You go the distance, refining relentlessly until it's close to perfect — real endurance. Your actual challenge is recognizing when something is 'good enough,' so you don't fall into an endless refinement loop.",
+                "vectors": {
+                    "information_bandwidth": 1.0,
+                    "execution_rigor": 2.5,
+                    "chaos_tolerance": -1.5,
+                    "cognitive_endurance": 2.5
+                }
             },
             "D": {
                 "text": "Drop me into a broken, undocumented legacy codebase and tell me to fix a crisis using whatever unhinged methods I want.",
-                "label": "CHAOS ENGINE",
-                "advice": "You're the ultimate emergency responder. You shine when everything is on fire, but you get incredibly bored once the system is finally stable.",
-                "vectors": {"information_bandwidth": 1.5, "execution_rigor": -2.0, "chaos_tolerance": 2.5, "cognitive_endurance": 0.5}
+                "label": "Entropy-Thriving Navigator",
+                "advice": "You're comfortable in the chaos of a broken, undocumented system where the usual rules no longer apply — a real asset in a crisis. Outside of urgency, on routine tasks, your focus can drop fast. Look for small irregularities or challenges inside repetitive work to keep your attention engaged.",
+                "vectors": {
+                    "information_bandwidth": 1.5,
+                    "execution_rigor": -2.0,
+                    "chaos_tolerance": 2.5,
+                    "cognitive_endurance": 0.5
+                }
             }
         }
     },
-
     {
         "id": "q13",
         "section": "Subsystem 04: The Internal Drive",
@@ -387,27 +626,47 @@ ALL_QUESTIONS = [
         "options": {
             "A": {
                 "text": "I immediately look at the exact grading criteria, pinpoint the specific technical flaws, and adjust my approach for the next run.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "You treat failure purely as an informational feedback loop. This detachment protects your ego, but it can make you completely blind to unfair biases or subjective evaluation.",
-                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 1.0, "chaos_tolerance": 0.5, "cognitive_endurance": 1.5}
+                "label": "Analytical Telemetry-Filter",
+                "advice": "You turn negative feedback into concrete technical data rather than a personal blow — a real asset for improving fast. Just watch that this very analytical process doesn't filter out qualitative or human feedback that also matters.",
+                "vectors": {
+                    "information_bandwidth": 1.5,
+                    "execution_rigor": 1.0,
+                    "chaos_tolerance": 0.5,
+                    "cognitive_endurance": 1.5
+                }
             },
             "B": {
                 "text": "A quick flash of intense frustration, which I bury by immediately jumping into a completely different project to forget the failure.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "You use task-switching to escape negative feelings. While it keeps your momentum high, you risk running away from deep, chronic technical flaws that you actually need to face.",
-                "vectors": {"information_bandwidth": -0.5, "execution_rigor": -0.5, "chaos_tolerance": 1.5, "cognitive_endurance": 1.0}
+                "label": "Affect-Regulating Task-Switcher",
+                "advice": "You handle frustration by quickly switching to a different project — it protects your energy in the moment, but it can skip real reflection on what went wrong. Before switching, take two minutes to jot down what you're taking away from that setback.",
+                "vectors": {
+                    "information_bandwidth": -0.5,
+                    "execution_rigor": -0.5,
+                    "chaos_tolerance": 1.5,
+                    "cognitive_endurance": 1.0
+                }
             },
             "C": {
                 "text": "It feels like a devastating blow to my self-worth. I obsessively dissect my work to prove the reviewer is completely wrong.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "Your identity is dangerously fused with your performance. A bad review feels like a personal attack, triggering defensive over-analysis and burnout.",
-                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 2.0, "chaos_tolerance": -2.0, "cognitive_endurance": -0.5}
+                "label": "Ego-Integrated Perfectionist",
+                "advice": "A bad evaluation can hit you hard and make you want to prove the reviewer wrong — a very human reaction to something you put real effort into. Try to separate the critique of the work from your own worth: it's the work being judged, not you.",
+                "vectors": {
+                    "information_bandwidth": 1.0,
+                    "execution_rigor": 2.0,
+                    "chaos_tolerance": -2.0,
+                    "cognitive_endurance": -0.5
+                }
             },
             "D": {
                 "text": "Total detachment. The grading system is arbitrary and broken anyway; I know my worth, and external opinions don't matter.",
-                "label": "CHAOS ENGINE",
-                "advice": "Your mental shield protects your creative confidence. However, completely rejecting external feedback will isolate you and stunt your actual growth.",
-                "vectors": {"information_bandwidth": 2.0, "execution_rigor": -1.5, "chaos_tolerance": 2.0, "cognitive_endurance": 0.5}
+                "label": "Self-Referential Shield",
+                "advice": "You hold your course by trusting your own judgment over a grading system you see as arbitrary — that protects your creative confidence. Just be careful not to shut out outside feedback entirely: it can sometimes point to a real blind spot.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": -1.5,
+                    "chaos_tolerance": 2.0,
+                    "cognitive_endurance": 0.5
+                }
             }
         }
     },
@@ -418,27 +677,47 @@ ALL_QUESTIONS = [
         "options": {
             "A": {
                 "text": "Instantly seeing the underlying abstract pattern that connects several seemingly unrelated bugs.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "You excel at high-level conceptual sorting. You map out the architecture in your head, bypassing the need for slow, tedious troubleshooting.",
-                "vectors": {"information_bandwidth": 2.5, "execution_rigor": 1.0, "chaos_tolerance": 0.0, "cognitive_endurance": 1.0}
+                "label": "Top-Down Pattern Recognizer",
+                "advice": "You quickly spot the link between several seemingly unrelated bugs, which lets you get to the real cause without tracing everything step by step — a real strength in synthesis. Keep trusting that instinct, while double-checking the details when the stakes are high.",
+                "vectors": {
+                    "information_bandwidth": 2.5,
+                    "execution_rigor": 1.0,
+                    "chaos_tolerance": 0.0,
+                    "cognitive_endurance": 1.0
+                }
             },
             "B": {
                 "text": "Staying completely calm and keeping your focus when everyone else around you is panicking.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "Your nervous system stays steady under high stress. You are the perfect frontline operator when deadlines or systems are actively crashing.",
-                "vectors": {"information_bandwidth": -0.5, "execution_rigor": 0.0, "chaos_tolerance": 2.5, "cognitive_endurance": 1.5}
+                "label": "Low-Reactivity Operator",
+                "advice": "You stay emotionally steady while everyone around you panics, which keeps your thinking clear in the middle of a crisis — a genuinely valuable trait in any team. That's a real strength worth highlighting.",
+                "vectors": {
+                    "information_bandwidth": -0.5,
+                    "execution_rigor": 0.0,
+                    "chaos_tolerance": 2.5,
+                    "cognitive_endurance": 1.5
+                }
             },
             "C": {
                 "text": "Finding a tiny, well-hidden error deep inside thousands of lines of messy legacy code through pure stubborn focus.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "Your attention to detail is unmatched. You spot the critical needle in the haystack that everyone else missed in a rush.",
-                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 3.0, "chaos_tolerance": -1.0, "cognitive_endurance": 2.0}
+                "label": "Sustained Micro-Auditor",
+                "advice": "You can track down a tiny hidden error in a massive, messy codebase with impressive patience — real sustained attention. That's a valuable skill, as long as you don't burn out on it without taking breaks.",
+                "vectors": {
+                    "information_bandwidth": 0.5,
+                    "execution_rigor": 3.0,
+                    "chaos_tolerance": -1.0,
+                    "cognitive_endurance": 2.0
+                }
             },
             "D": {
                 "text": "Coming up with ten wild, unconventional workarounds that break the rules but somehow save the day.",
-                "label": "CHAOS ENGINE",
-                "advice": "Your creative thinking thrives in unstable situations. You save the team with out-of-the-box insights that linear minds would never think of.",
-                "vectors": {"information_bandwidth": 2.0, "execution_rigor": -2.0, "chaos_tolerance": 2.5, "cognitive_endurance": 0.5}
+                "label": "Lateral Heuristic Explorer",
+                "advice": "Facing a broken system, you quickly propose several unconventional solutions outside the standard playbook — real creativity under pressure. Just make sure to document those quick fixes once the crisis is over, so others can understand and maintain the result.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": -2.0,
+                    "chaos_tolerance": 2.5,
+                    "cognitive_endurance": 0.5
+                }
             }
         }
     },
@@ -449,27 +728,47 @@ ALL_QUESTIONS = [
         "options": {
             "A": {
                 "text": "The interesting conceptual problems are solved, and now it's just boring optimization, tweaking, and cleanup.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "You lose interest once the intellectual challenge drops. You are great at starting complex systems, but terrible at pushing them across the finish line.",
-                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 0.0, "chaos_tolerance": 0.5, "cognitive_endurance": -0.5}
+                "label": "Concept-Satiated Mind",
+                "advice": "Once the interesting conceptual problem is solved, the optimizing and cleanup that's left bores you fast — your motivation comes mainly from discovery. That's normal, but try treating the finishing phase as its own skill worth building, not just a chore.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": 0.0,
+                    "chaos_tolerance": 0.5,
+                    "cognitive_endurance": -0.5
+                }
             },
             "B": {
                 "text": "The feedback loops are too slow; I need to see quick results and frequent validation to stay engaged.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "Your drive depends heavily on rapid feedback. If you don't see immediate results, your attention span drops drastically.",
-                "vectors": {"information_bandwidth": -0.5, "execution_rigor": -0.5, "chaos_tolerance": 1.5, "cognitive_endurance": 0.5}
+                "label": "Feedback-Dependent Processor",
+                "advice": "You need quick results and frequent feedback to stay engaged — a long project with a slow feedback loop can make you disengage. Deliberately break big projects into small steps with a visible result each time, even on something that takes a while overall.",
+                "vectors": {
+                    "information_bandwidth": -0.5,
+                    "execution_rigor": -0.5,
+                    "chaos_tolerance": 1.5,
+                    "cognitive_endurance": 0.5
+                }
             },
             "C": {
                 "text": "I make one foundational mistake or fall slightly behind schedule, making the whole project feel 'ruined' in my eyes.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "You suffer from all-or-nothing thinking. If your implementation isn't absolutely flawless, your brain wants to completely abandon it.",
-                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 2.0, "chaos_tolerance": -2.0, "cognitive_endurance": 0.0}
+                "label": "Binary Perfectionist",
+                "advice": "One mistake or a small delay can make the whole project feel ruined to you — a very high standard for yourself. Try seeing a project as a sum of independent parts: one flawed piece doesn't erase the value of the rest.",
+                "vectors": {
+                    "information_bandwidth": 0.5,
+                    "execution_rigor": 2.0,
+                    "chaos_tolerance": -2.0,
+                    "cognitive_endurance": 0.0
+                }
             },
             "D": {
                 "text": "The constraints are too rigid. I'm locked into a strict framework and forbidden from experimenting with new tools.",
-                "label": "CHAOS ENGINE",
-                "advice": "Strict rules kill your focus. You mistake necessary guardrails for a personal cage, leading you to check out early.",
-                "vectors": {"information_bandwidth": 1.5, "execution_rigor": -1.5, "chaos_tolerance": 2.0, "cognitive_endurance": 0.5}
+                "label": "Autonomy-Seeking Mind",
+                "advice": "A framework that's too rigid, with no room to experiment, kills your motivation — you need freedom to really invest yourself. When the framework is imposed, look for a small margin (a tool, a method) you can still choose yourself: it's often enough to bring the drive back.",
+                "vectors": {
+                    "information_bandwidth": 1.5,
+                    "execution_rigor": -1.5,
+                    "chaos_tolerance": 2.0,
+                    "cognitive_endurance": 0.5
+                }
             }
         }
     },
@@ -480,27 +779,47 @@ ALL_QUESTIONS = [
         "options": {
             "A": {
                 "text": "Zone out, grit your teeth, and just push through the work mechanically until it is finished.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "You have strong discipline for low-stimulation tasks, but make sure you aren't wasting hours on things that could easily be automated.",
-                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 1.5, "chaos_tolerance": -0.5, "cognitive_endurance": 2.0}
+                "label": "Volitional Task-Sustainer",
+                "advice": "You can push through a repetitive, boring task by gritting your teeth to the end — real self-control. Just check now and then whether that task could actually be automated: your energy might be better spent elsewhere.",
+                "vectors": {
+                    "information_bandwidth": 0.5,
+                    "execution_rigor": 1.5,
+                    "chaos_tolerance": -0.5,
+                    "cognitive_endurance": 2.0
+                }
             },
             "B": {
                 "text": "Rush through it as fast as possible, accepting typos and sloppy mistakes just to get it off your plate.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "Your obsession with speed backfires here. Rushing through boring tasks creates silent mistakes that your team has to clean up later.",
-                "vectors": {"information_bandwidth": -1.0, "execution_rigor": -1.5, "chaos_tolerance": 1.5, "cognitive_endurance": 1.0}
+                "label": "Low-Stimulation Truncator",
+                "advice": "You'd rather rush through a boring task, even at the cost of some mistakes, than spend real time on it — understandable, but it can introduce quiet errors. Build in a quick 2-minute review right after, specifically for this kind of task.",
+                "vectors": {
+                    "information_bandwidth": -1.0,
+                    "execution_rigor": -1.5,
+                    "chaos_tolerance": 1.5,
+                    "cognitive_endurance": 1.0
+                }
             },
             "C": {
                 "text": "Spend four hours writing a complex automation script, even if doing it manually would have only taken an hour.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "You would rather expend massive creative energy building an elegant system than endure an hour of brainless repetition.",
-                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 2.0, "chaos_tolerance": -1.0, "cognitive_endurance": 0.5}
+                "label": "Abstraction-Seeking Automator",
+                "advice": "Faced with a repetitive task, you'd rather build a tool to automate it, even if it takes longer than doing it by hand — a real engineer's instinct. Just make sure this isn't sometimes an elegant way of avoiding a harder task instead.",
+                "vectors": {
+                    "information_bandwidth": 1.5,
+                    "execution_rigor": 2.0,
+                    "chaos_tolerance": -1.0,
+                    "cognitive_endurance": 0.5
+                }
             },
             "D": {
                 "text": "Procrastinate endlessly and make careless mistakes because your brain absolutely rebels against boring work.",
-                "label": "CHAOS ENGINE",
-                "advice": "Your focus is heavily dopamine-driven. When a task lacks novelty, your internal control shuts down, leading to functional procrastination.",
-                "vectors": {"information_bandwidth": 1.0, "execution_rigor": -2.0, "chaos_tolerance": 1.0, "cognitive_endurance": -1.0}
+                "label": "Novelty-Gated Focus",
+                "advice": "Repetitive work really makes you check out, to the point of careless mistakes — your brain needs novelty to stay engaged. Try turning the task into a small game or a timed challenge, just enough to add a bit of stimulation.",
+                "vectors": {
+                    "information_bandwidth": 1.0,
+                    "execution_rigor": -2.0,
+                    "chaos_tolerance": 1.0,
+                    "cognitive_endurance": -1.0
+                }
             }
         }
     },
@@ -511,27 +830,47 @@ ALL_QUESTIONS = [
         "options": {
             "A": {
                 "text": "Anxious paralysis. You spend days trying to design the perfect scope and system boundaries before writing any code.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "Infinite choice overwhelms your analytical mind. You need clear parameters to anchor your thinking, or you drown in theory.",
-                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 1.5, "chaos_tolerance": -1.0, "cognitive_endurance": 0.5}
+                "label": "Unbounded-Scope Deliberator",
+                "advice": "A completely open-ended assignment can freeze you: without clear limits, you spend a lot of time trying to define the perfect scope before starting. Set a hard time limit on that planning stage, then start even if the scope isn't 100% locked down.",
+                "vectors": {
+                    "information_bandwidth": 1.5,
+                    "execution_rigor": 1.5,
+                    "chaos_tolerance": -1.0,
+                    "cognitive_endurance": 0.5
+                }
             },
             "B": {
                 "text": "Immediate action. You pick the very first idea that crosses your mind and start building it without weighing options.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "You prioritize momentum over strategy. You escape choice paralysis quickly, but you often waste days building the wrong feature path.",
-                "vectors": {"information_bandwidth": -0.5, "execution_rigor": -0.5, "chaos_tolerance": 1.5, "cognitive_endurance": 1.0}
+                "label": "Choice-Reduction Executer",
+                "advice": "Given total freedom, you quickly pick the first idea that comes to mind and get moving — that avoids paralysis and builds momentum. Just take ten minutes before diving in to check that this first idea actually answers the real question.",
+                "vectors": {
+                    "information_bandwidth": -0.5,
+                    "execution_rigor": -0.5,
+                    "chaos_tolerance": 1.5,
+                    "cognitive_endurance": 1.0
+                }
             },
             "C": {
                 "text": "Over-analyzing the grader. You try to reverse-engineer what the evaluator secretly wants so you can perfectly match their hidden criteria.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "You treat freedom as a trap. Instead of exploring creatively, you waste cycles trying to read the minds of authority figures.",
-                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 2.5, "chaos_tolerance": -1.0, "cognitive_endurance": 1.0}
+                "label": "Intent-Decoding Mind",
+                "advice": "You spend time trying to guess what the evaluator really wants behind a vague prompt — a real analytical skill. Just watch that this search for the 'hidden right answer' doesn't stop you from exploring an idea you actually care about.",
+                "vectors": {
+                    "information_bandwidth": 0.5,
+                    "execution_rigor": 2.5,
+                    "chaos_tolerance": -1.0,
+                    "cognitive_endurance": 1.0
+                }
             },
             "D": {
                 "text": "Total creative freedom. You brainstorm dozens of wild paths and pick the most unconventional tools just to experiment.",
-                "label": "CHAOS ENGINE",
-                "advice": "This is your natural environment. You are an excellent innovator, but your urge to show off complexity can make your code unmaintainable for others.",
-                "vectors": {"information_bandwidth": 2.5, "execution_rigor": -2.0, "chaos_tolerance": 2.5, "cognitive_endurance": 0.0}
+                "label": "Divergent Mind-Explorer",
+                "advice": "An open prompt genuinely energizes you and you explore plenty of original directions. The risk is spreading yourself too thin and over-complicating the project. Once you've picked an idea, set a clear scope so the project doesn't keep expanding endlessly.",
+                "vectors": {
+                    "information_bandwidth": 2.5,
+                    "execution_rigor": -2.0,
+                    "chaos_tolerance": 2.5,
+                    "cognitive_endurance": 0.0
+                }
             }
         }
     },
@@ -542,27 +881,47 @@ ALL_QUESTIONS = [
         "options": {
             "A": {
                 "text": "Perfect, highly organized folders sorted by year, topic, and priority, using strict naming rules.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "Your organized setup minimizes friction. You rely heavily on clean external structures to keep your mental landscape clear and unburdened.",
-                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 2.0, "chaos_tolerance": -1.5, "cognitive_endurance": 1.5}
+                "label": "The Structural Shield",
+                "advice": "Perfectly organized folders give you real mental clarity and lower your day-to-day stress. Just check that this tidying doesn't become, over time, a comfortable way to avoid harder intellectual work.",
+                "vectors": {
+                    "information_bandwidth": 1.0,
+                    "execution_rigor": 2.0,
+                    "chaos_tolerance": -1.5,
+                    "cognitive_endurance": 1.5
+                }
             },
             "B": {
                 "text": "A massive, chaotic 'Downloads' folder and a messy desktop. You rely entirely on the search bar to find anything.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "You save time by avoiding administrative upkeep. This shortcut works fine until bad naming conventions cause you to lose an old file version during a rush.",
-                "vectors": {"information_bandwidth": -0.5, "execution_rigor": -1.0, "chaos_tolerance": 2.0, "cognitive_endurance": 1.0}
+                "label": "The Fluid Searcher",
+                "advice": "You move fast without spending time filing things, trusting the search bar to find anything — a real time-saver day to day. Still, keep a minimal backup or structure so you're not stuck if an important file becomes hard to find right when it matters.",
+                "vectors": {
+                    "information_bandwidth": -0.5,
+                    "execution_rigor": -1.0,
+                    "chaos_tolerance": 2.0,
+                    "cognitive_endurance": 1.0
+                }
             },
             "C": {
                 "text": "A highly detailed personal wiki or Obsidian vault filled with interconnected notes and clean markdown syntax.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "You construct comprehensive mental maps. Just be careful not to turn into a hoarder who collects data maps but never actually builds anything.",
-                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.5, "chaos_tolerance": -0.5, "cognitive_endurance": 1.5}
+                "label": "The Conceptual Weaver",
+                "advice": "You naturally think in webs of connected ideas rather than lists — a real strength in synthesis. Make sure now and then to turn those connections into an actual concrete output, not just notes that keep piling up.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": 1.5,
+                    "chaos_tolerance": -0.5,
+                    "cognitive_endurance": 1.5
+                }
             },
             "D": {
                 "text": "A total digital wasteland. Files are scattered randomly across different drives, clouds, and desktops with zero system.",
-                "label": "CHAOS ENGINE",
-                "advice": "Your lack of digital organization is a serious liability. This chaotic approach will inevitably trigger a crisis when you lose critical files under a tight deadline.",
-                "vectors": {"information_bandwidth": 1.0, "execution_rigor": -2.5, "chaos_tolerance": 1.5, "cognitive_endurance": -0.5}
+                "label": "The Pure Present",
+                "advice": "Your files are scattered around with no real system — you live in the present, with no filing overhead weighing on you. Set up a minimal safety net, so you don't lose valuable time hunting for an important file right when you're under pressure.",
+                "vectors": {
+                    "information_bandwidth": 1.0,
+                    "execution_rigor": -2.5,
+                    "chaos_tolerance": 1.5,
+                    "cognitive_endurance": -0.5
+                }
             }
         }
     },
@@ -573,27 +932,47 @@ ALL_QUESTIONS = [
         "options": {
             "A": {
                 "text": "Finally clicking with a highly complex, abstract concept and integrating it into how you see things.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "You seek conceptual mastery. A day spent without resolving deep theoretical puzzles feels empty and incomplete to your mind.",
-                "vectors": {"information_bandwidth": 2.5, "execution_rigor": 1.0, "chaos_tolerance": 0.0, "cognitive_endurance": 1.5}
+                "label": "The Epiphany Junkie",
+                "advice": "What genuinely satisfies you is the click of finally understanding a complex idea — your reward is mostly intellectual. Protect that curiosity, while remembering that even the best idea needs to be put into practice to have real impact.",
+                "vectors": {
+                    "information_bandwidth": 2.5,
+                    "execution_rigor": 1.0,
+                    "chaos_tolerance": 0.0,
+                    "cognitive_endurance": 1.5
+                }
             },
             "B": {
                 "text": "Crossing off 15 different tasks from your to-do list, seeing clear, rapid progress.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "Your satisfaction is purely task-driven. You measure success by volume, but remember to look up and check the long-term strategic direction of your effort.",
-                "vectors": {"information_bandwidth": -0.5, "execution_rigor": 0.5, "chaos_tolerance": 1.5, "cognitive_endurance": 1.5}
+                "label": "The Velocity Engine",
+                "advice": "Seeing a long list of tasks checked off gives you a real sense of fast, visible progress. Just watch that these small wins don't pull your attention away from a bigger goal that takes longer to reach.",
+                "vectors": {
+                    "information_bandwidth": -0.5,
+                    "execution_rigor": 0.5,
+                    "chaos_tolerance": 1.5,
+                    "cognitive_endurance": 1.5
+                }
             },
             "C": {
                 "text": "Spending 8 hours of pure, uninterrupted focus at your desk without breaking character or wasting a single minute.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "You mistake raw time at your desk for high-value output. You judge your worth by sheer endurance and suffering rather than actual achievements.",
-                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 2.5, "chaos_tolerance": -1.0, "cognitive_endurance": 2.5}
+                "label": "The Endurance Monotrope",
+                "advice": "Staying focused for hours without a break gives you a real sense of accomplishment through sheer effort. Just be careful not to confuse the physical exhaustion of sitting a long time with actual strategic productivity.",
+                "vectors": {
+                    "information_bandwidth": 0.5,
+                    "execution_rigor": 2.5,
+                    "chaos_tolerance": -1.0,
+                    "cognitive_endurance": 2.5
+                }
             },
             "D": {
                 "text": "Building a concrete, functional tool or standalone module completely from scratch.",
-                "label": "CHAOS ENGINE",
-                "advice": "You need tangible results to validate your day. You are a true builder, but you might struggle on days dedicated to upkeep or code reviews.",
-                "vectors": {"information_bandwidth": 1.5, "execution_rigor": -1.0, "chaos_tolerance": 2.0, "cognitive_endurance": 1.0}
+                "label": "The Artifact Creator",
+                "advice": "Building something concrete and functional from scratch gives you a real sense of tangible usefulness. Build some patience too for the less exciting maintenance and fixing that comes with the same work.",
+                "vectors": {
+                    "information_bandwidth": 1.5,
+                    "execution_rigor": -1.0,
+                    "chaos_tolerance": 2.0,
+                    "cognitive_endurance": 1.0
+                }
             }
         }
     },
@@ -604,27 +983,47 @@ ALL_QUESTIONS = [
         "options": {
             "A": {
                 "text": "You become intensely logical and structured. You recall facts perfectly but sound cold and lose all conversational warmth.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "Your brain detaches from the emotional stress to protect your thinking. It keeps you accurate, but you can come across as cold or robotic to your audience.",
-                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.5, "chaos_tolerance": -0.5, "cognitive_endurance": 1.0}
+                "label": "The Ice-Cold Logic",
+                "advice": "Under the pressure of an oral evaluation, you get very logical and structured, even if it comes across as cold and less warm. Your facts stay solid, but try to deliberately add a bit of warmth so you don't lose your audience.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": 1.5,
+                    "chaos_tolerance": -0.5,
+                    "cognitive_endurance": 1.0
+                }
             },
             "B": {
                 "text": "Your mind sharpens aggressively. You retrieve obscure facts and make brilliant, quick comebacks you didn't know you had in you.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "You thrive in high-stakes environments. The stress adrenaline actually clears your head, allowing you to adapt beautifully in real time.",
-                "vectors": {"information_bandwidth": 0.0, "execution_rigor": -0.5, "chaos_tolerance": 2.5, "cognitive_endurance": 1.5}
+                "label": "The Crisis Catalyst",
+                "advice": "Acute pressure sharpens you rather than blocking you: you find answers and ideas you didn't know you had. Enjoy that energy, but plan real recovery time afterward to avoid exhaustion once the pressure lifts.",
+                "vectors": {
+                    "information_bandwidth": 0.0,
+                    "execution_rigor": -0.5,
+                    "chaos_tolerance": 2.5,
+                    "cognitive_endurance": 1.5
+                }
             },
             "C": {
                 "text": "You blank out completely under pressure, getting stuck in a mental freeze until the stressful situation is over.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "You need environmental predictability. When high anxiety hits, your working memory locks up, causing you to temporarily forget what you know.",
-                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 2.0, "chaos_tolerance": -2.5, "cognitive_endurance": -0.5}
+                "label": "The Overload Freeze",
+                "advice": "Intense stress can freeze you completely until the situation passes — a common reaction to high stakes, not a lack of skill. Build a small pre-performance ritual (breathing, reviewing one key point) to give yourself an anchor before it starts.",
+                "vectors": {
+                    "information_bandwidth": 0.5,
+                    "execution_rigor": 2.0,
+                    "chaos_tolerance": -2.5,
+                    "cognitive_endurance": -0.5
+                }
             },
             "D": {
                 "text": "You get intense tunnel vision, hyper-focusing on one tiny detail while completely losing track of your main point.",
-                "label": "CHAOS ENGINE",
-                "advice": "Stress narrows your focus down to a fault. You will spend all your energy defending a single point while the bigger picture falls apart.",
-                "vectors": {"information_bandwidth": 1.0, "execution_rigor": -1.5, "chaos_tolerance": 1.5, "cognitive_endurance": 0.5}
+                "label": "The Micro-Lock",
+                "advice": "Anxiety sometimes makes you zoom in on one detail and lose sight of your main point. Practice deliberately pausing now and then to reconnect with the bigger picture of what you're saying.",
+                "vectors": {
+                    "information_bandwidth": 1.0,
+                    "execution_rigor": -1.5,
+                    "chaos_tolerance": 1.5,
+                    "cognitive_endurance": 0.5
+                }
             }
         }
     },
@@ -635,27 +1034,47 @@ ALL_QUESTIONS = [
         "options": {
             "A": {
                 "text": "A high-speed train locked onto fixed rails. Incredibly fast and efficient, but completely lost if forced off the tracks.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "You optimize linear thinking perfectly. However, you face massive confusion when forced to operate in unpredictable, lawless environments.",
-                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 2.0, "chaos_tolerance": -1.5, "cognitive_endurance": 1.5}
+                "label": "The Sequential Train",
+                "advice": "You move fast and efficiently along a well-defined path, but can feel lost the moment you're pushed off it. When facing an unclear or uncertain area, deliberately build small intermediate steps to recreate a sense of a marked path.",
+                "vectors": {
+                    "information_bandwidth": 1.5,
+                    "execution_rigor": 2.0,
+                    "chaos_tolerance": -1.5,
+                    "cognitive_endurance": 1.5
+                }
             },
             "B": {
                 "text": "An overclocked computer with 70 open browser tabs, where three are frozen and the fan is screaming.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "You thrive on multitasking and mental chaos. You can handle extreme parallel tracks, but you live perpetually on the edge of a crash.",
-                "vectors": {"information_bandwidth": 0.5, "execution_rigor": -1.0, "chaos_tolerance": 2.0, "cognitive_endurance": 1.0}
+                "label": "The Concurrent Overclocker",
+                "advice": "You run several ideas in parallel in your head, which lets you handle complex environments. Watch your mental load, and batch similar tasks together to limit the fatigue that comes from switching context too often.",
+                "vectors": {
+                    "information_bandwidth": 0.5,
+                    "execution_rigor": -1.0,
+                    "chaos_tolerance": 2.0,
+                    "cognitive_endurance": 1.0
+                }
             },
             "C": {
                 "text": "A deep-sea submarine exploring a single trench for weeks, completely cut off from the surface weather.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "Your ability to focus deeply on one specific problem is incredible. But this extreme isolation can make you slow to adapt when priorities shift around you.",
-                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 2.5, "chaos_tolerance": -1.0, "cognitive_endurance": 2.5}
+                "label": "The Deep Trench Diver",
+                "advice": "You go deep into one subject, cut off from everything else, to produce dense work — a real strength in concentration. Set up regular check-ins with the outside world so you're not caught off guard if priorities shift while you're deep in it.",
+                "vectors": {
+                    "information_bandwidth": 1.0,
+                    "execution_rigor": 2.5,
+                    "chaos_tolerance": -1.0,
+                    "cognitive_endurance": 2.5
+                }
             },
             "D": {
                 "text": "A customized multi-tool with a few bizarre attachments that don't fit the standard frame but solve weird, rare problems.",
-                "label": "CHAOS ENGINE",
-                "advice": "You are the ultimate unconventional troubleshooter. You lack standardization, but you are irreplaceable when normal methods fail.",
-                "vectors": {"information_bandwidth": 2.0, "execution_rigor": -2.0, "chaos_tolerance": 2.5, "cognitive_endurance": 0.0}
+                "label": "The Edge-Case Alchemist",
+                "advice": "You use unconventional methods to solve rare problems that standard approaches don't cover — a real edge on edge cases. That talent is even more valuable paired with solid rigor on the more standard cases too.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": -2.0,
+                    "chaos_tolerance": 2.5,
+                    "cognitive_endurance": 0.0
+                }
             }
         }
     },
@@ -666,27 +1085,47 @@ ALL_QUESTIONS = [
         "options": {
             "A": {
                 "text": "Getting stuck in a mind-numbing routine, working on simple, repetitive projects that require no deep architectural thinking.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "Boredom is your intellectual death sentence. You need heavy conceptual puzzles and complex design challenges to feel motivated.",
-                "vectors": {"information_bandwidth": 2.5, "execution_rigor": 1.0, "chaos_tolerance": 0.0, "cognitive_endurance": 1.0}
+                "label": "The Stagnation Phobia",
+                "advice": "Your biggest fear is getting stuck in a routine with no real intellectual stimulation. Choose, as much as you can, projects and environments that guarantee some regular complexity and novelty.",
+                "vectors": {
+                    "information_bandwidth": 2.5,
+                    "execution_rigor": 1.0,
+                    "chaos_tolerance": 0.0,
+                    "cognitive_endurance": 1.0
+                }
             },
             "B": {
                 "text": "Slowing down, losing your execution speed, and getting outperformed by younger, faster peers who spot your mistakes.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "Your insecurity is tied directly to physical speed and output volume. Focus on building deep theoretical foundations so you don't rely solely on raw speed.",
-                "vectors": {"information_bandwidth": -0.5, "execution_rigor": -0.5, "chaos_tolerance": 1.5, "cognitive_endurance": 1.5}
+                "label": "The Velocity Anxiety",
+                "advice": "You measure your worth by how fast you move, and the idea of slowing down worries you. Try grounding your confidence in deep expertise too — the kind that's built over time and doesn't depend on speed alone.",
+                "vectors": {
+                    "information_bandwidth": -0.5,
+                    "execution_rigor": -0.5,
+                    "chaos_tolerance": 1.5,
+                    "cognitive_endurance": 1.5
+                }
             },
             "C": {
                 "text": "Realizing after months of intense development that your polished, flawless creation solves a problem that absolutely nobody in the real world cares about.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "You fear useless optimization. Force yourself out of your shell early and share rough prototypes to make sure there's actual market demand for what you're building.",
-                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 2.0, "chaos_tolerance": -1.5, "cognitive_endurance": 2.0}
+                "label": "The Phantom Effort Dread",
+                "advice": "You worry about pouring a lot of energy into a technically flawless project that, in the end, answers no real need. Test your ideas early, even roughly, with real people before polishing further.",
+                "vectors": {
+                    "information_bandwidth": 1.0,
+                    "execution_rigor": 2.0,
+                    "chaos_tolerance": -1.5,
+                    "cognitive_endurance": 2.0
+                }
             },
             "D": {
                 "text": "Being locked into a single narrow specialization for a decade, permanently losing the ability to pivot to other fields.",
-                "label": "CHAOS ENGINE",
-                "advice": "You have chronic generalist anxiety. You view picking a lane as a cage, forgetting that mastering one field gives you the tools to learn any other.",
-                "vectors": {"information_bandwidth": 2.0, "execution_rigor": -1.5, "chaos_tolerance": 2.0, "cognitive_endurance": 0.5}
+                "label": "The Confinement Panic",
+                "advice": "The idea of specializing in one field for a long time feels more like a trap than an expertise to you. Keep in mind that real mastery in one area often gives you the keys to understand other areas more easily later.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": -1.5,
+                    "chaos_tolerance": 2.0,
+                    "cognitive_endurance": 0.5
+                }
             }
         }
     },
@@ -697,27 +1136,47 @@ ALL_QUESTIONS = [
         "options": {
             "A": {
                 "text": "Open a blank file and immediately map out the entire system architecture, database schema, and flowcharts.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "You anchor abstract energy into clean structures. Just make sure you don't spend weeks designing perfect setups before testing if the core idea even works.",
-                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.5, "chaos_tolerance": -0.5, "cognitive_endurance": 1.0}
+                "label": "The Upfront Architect",
+                "advice": "Faced with a new idea, your instinct is to map out the whole system before writing any code — that reduces your uncertainty. Set a hard time limit on that design phase, so you don't wear yourself out before ever testing it against reality.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": 1.5,
+                    "chaos_tolerance": -0.5,
+                    "cognitive_endurance": 1.0
+                }
             },
             "B": {
                 "text": "Open your code editor and hack together a messy, raw prototype in two hours just to see it work.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "Your fast execution gets things moving instantly. But refusing to sketch out a plan first means you'll likely have to tear it all down and restart later.",
-                "vectors": {"information_bandwidth": -0.5, "execution_rigor": -0.5, "chaos_tolerance": 2.0, "cognitive_endurance": 1.0}
+                "label": "The Empirical Hacker",
+                "advice": "You'd rather hack together a working prototype in a couple of hours to see if the idea holds up — a real learning-by-doing instinct. Keep a running note of your design choices along the way, so you don't get lost in technical debt later.",
+                "vectors": {
+                    "information_bandwidth": -0.5,
+                    "execution_rigor": -0.5,
+                    "chaos_tolerance": 2.0,
+                    "cognitive_endurance": 1.0
+                }
             },
             "C": {
                 "text": "Search GitHub and research indices immediately to see if anyone else has already built it, ensuring it's completely original.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "You approach validation with intense academic rigor. You often talk yourself out of great ideas just because someone did something slightly similar.",
-                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 2.5, "chaos_tolerance": -1.0, "cognitive_endurance": 1.5}
+                "label": "The Novelty Guard",
+                "advice": "Before diving in, you check whether the idea already exists elsewhere, to make sure it's genuinely original. Just watch that this check doesn't become an excuse to drop an idea simply because something similar already exists.",
+                "vectors": {
+                    "information_bandwidth": 1.5,
+                    "execution_rigor": 2.5,
+                    "chaos_tolerance": -1.0,
+                    "cognitive_endurance": 1.5
+                }
             },
             "D": {
                 "text": "Keep the idea completely inside your head for weeks, letting it mix and mutate with other random thoughts before sharing it.",
-                "label": "CHAOS ENGINE",
-                "advice": "You rely on deep mental incubation. Your ideas come out highly mature, but you risk someone else launching the same concept while you're still mulling it over.",
-                "vectors": {"information_bandwidth": 2.5, "execution_rigor": -2.0, "chaos_tolerance": 1.5, "cognitive_endurance": 0.0}
+                "label": "The Silent Incubator",
+                "advice": "You let an idea sit quietly for a while before sharing it, which often leads to more thought-out projects. Still, try sharing a checkpoint now and then, to keep your momentum and get outside feedback.",
+                "vectors": {
+                    "information_bandwidth": 2.5,
+                    "execution_rigor": -2.0,
+                    "chaos_tolerance": 1.5,
+                    "cognitive_endurance": 0.0
+                }
             }
         }
     },
@@ -728,27 +1187,47 @@ ALL_QUESTIONS = [
         "options": {
             "A": {
                 "text": "Architectural Elegance: Designing clean, scalable systems that grow beautifully without needing messy patches.",
-                "label": "ABSTRACT ARCHITECT",
-                "advice": "You build for the long haul. Just make sure your love for beautiful design doesn't stop you from delivering practical features when people need them today.",
-                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.5, "chaos_tolerance": -0.5, "cognitive_endurance": 1.5}
+                "label": "The Coherence Purist",
+                "advice": "What matters most to you is a clean system built to last. Just watch that this pursuit of elegance doesn't delay delivery when the situation actually calls for a working compromise.",
+                "vectors": {
+                    "information_bandwidth": 2.0,
+                    "execution_rigor": 1.5,
+                    "chaos_tolerance": -0.5,
+                    "cognitive_endurance": 1.5
+                }
             },
             "B": {
                 "text": "Pure Execution: Shipping working code on time, beating the deadline, and getting the job done no matter what.",
-                "label": "PRESSURE SPRINTER",
-                "advice": "You are the ultimate finisher. You survive under high pressure, but you must learn to clean up your messy quick-fixes if you want to grow into a master engineer.",
-                "vectors": {"information_bandwidth": -0.5, "execution_rigor": -0.5, "chaos_tolerance": 2.5, "cognitive_endurance": 1.5}
+                "label": "The Relentless Shipper",
+                "advice": "Your priority is shipping something that works, on time, whatever it takes. Plan regular time to clean up the technical debt you pick up along the way.",
+                "vectors": {
+                    "information_bandwidth": -0.5,
+                    "execution_rigor": -0.5,
+                    "chaos_tolerance": 2.5,
+                    "cognitive_endurance": 1.5
+                }
             },
             "C": {
                 "text": "Uncompromising Quality: Hunting down every single edge case and optimizing performance until it runs with flawless precision.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "You are the ultimate protector of accuracy. Your work is rock-solid, but remember that 'done' is often better than 'perfect' under real market pressures.",
-                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 3.0, "chaos_tolerance": -1.5, "cognitive_endurance": 2.0}
+                "label": "The Precision Sentinel",
+                "advice": "You hunt down every edge case until it's fully precise — a real commitment to quality. Keep in mind that in a fast-moving environment, a working result delivered on time often beats a perfect one that arrives too late.",
+                "vectors": {
+                    "information_bandwidth": 1.0,
+                    "execution_rigor": 3.0,
+                    "chaos_tolerance": -1.5,
+                    "cognitive_endurance": 2.0
+                }
             },
             "D": {
                 "text": "Radical Innovation: Questioning the usual ways of doing things, breaking standard rules, and discovering completely unexpected solutions.",
-                "label": "CHAOS ENGINE",
-                "advice": "You are a natural disruptor. You break outdated rules effectively, but you need to team up with structured executors to prevent your projects from dissolving into chaos.",
-                "vectors": {"information_bandwidth": 2.5, "execution_rigor": -2.5, "chaos_tolerance": 2.0, "cognitive_endurance": 0.5}
+                "label": "The Paradigm Disruptor",
+                "advice": "You question the usual way of doing things in search of unexpected solutions — a real strength in innovation. Team up with people who are rigorous on execution to turn your bold ideas into something concrete.",
+                "vectors": {
+                    "information_bandwidth": 2.5,
+                    "execution_rigor": -2.5,
+                    "chaos_tolerance": 2.0,
+                    "cognitive_endurance": 0.5
+                }
             }
         }
     }
