@@ -25,11 +25,12 @@ A one-click prompt that asks the chatbot: "Given my profile, what should I expec
 
 🛠 TECH STACK
 diff
-+ [ENGINE]    Python 3.x
++ [ENGINE]    Python 3.x 
 + [UI]        Streamlit — multi-page app, session-state driven
-+ [BRAIN]     LLM prompt engineering — chatbot responses are conditioned on the user's quiz vectors + labels
++ [AI]     LLM prompt engineering (Gemini) — chatbot responses are conditioned on the user's quiz vectors + labels
 + [DATA]      Self-contained question bank (data/question.py) — 24 questions × 4 options, each mapped to a label,
               an actionable tip, and a 4-axis weight vector
+
 ▶️ RUN IT LOCALLY
 bash
 git clone <your-repo-url>

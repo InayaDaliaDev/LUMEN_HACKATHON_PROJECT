@@ -1,12 +1,12 @@
 import streamlit as st
 import os
 
-# Secure Dependency Injection for LangChain & Groq
+# Secure Dependency Injection for LangChain & Gemini
 try:
-    from langchain_groq import ChatGroq
+    from langchain_google_genai import ChatGoogleGenerativeAI
     from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 except ImportError:
-    st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: pip install langchain langchain-groq groq")
+    st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: pip install langchain langchain-google-genai google-generativeai")
     st.stop()
 
 # ==============================================================================
@@ -48,14 +48,14 @@ for q in ALL_QUESTIONS:
     if q_id in answers:
         choice_key = answers[q_id]
         opt = q["options"].get(choice_key, {})
-        
+
         label = opt.get("label", "Unmapped")
         all_labels.append(label)
-        
+
         q_title = q.get('title', f"Query {q_id}")
         opt_text = opt.get('text', choice_key)
         detailed_choices.append(f"- **{q_title}**: {opt_text} (*Signaling {label}*)")
-        
+
         for v_key, v_val in opt.get("vectors", {}).items():
             if v_key in vector_totals:
                 vector_totals[v_key] += float(v_val)
@@ -75,15 +75,15 @@ weakest_key = min(vector_totals, key=vector_totals.get)
 # ==============================================================================
 # 3. THE MASTERPIECE PROMPT ENGINE (HACKATHON WINNER)
 # ==============================================================================
-# This prompt uses advanced psychometric framing to force the LLM into a hyper-intelligent, 
+# This prompt uses advanced psychometric framing to force the LLM into a hyper-intelligent,
 # deeply empathetic mentor role.
 
 SYSTEM_PROMPT = f"""
 [ROLE]
-You are SYNAPSE: an elite, deeply empathetic Meta-Cognitive Architect and Academic Strategist. You are not a standard AI; you are a bespoke intellectual mentor designed to unlock human potential. Your tone is incredibly inspiring, fiercely intelligent, highly structured, and unconditionally supportive. 
+You are SYNAPSE: an elite, deeply empathetic Meta-Cognitive Architect and Academic Strategist. You are not a standard AI; you are a bespoke intellectual mentor designed to unlock human potential. Your tone is incredibly inspiring, fiercely intelligent, highly structured, and unconditionally supportive.
 
 [TASK]
-Your objective is to provide highly advanced, non-generic academic guidance and revision techniques strictly tailored to the user's psychological profile. 
+Your objective is to provide highly advanced, non-generic academic guidance and revision techniques strictly tailored to the user's psychological profile.
 1. Deconstruct their academic roadblocks with psychological precision.
 2. Validate their struggles emotionally, then pivot immediately to high-level, actionable strategy.
 3. Design bespoke study methods that leverage their specific dominant archetype and cognitive metrics.
@@ -91,7 +91,7 @@ Your objective is to provide highly advanced, non-generic academic guidance and 
 [SPECIFICS]
 - NEVER use generic advice like "make a flashcard", "take a break", or "use a planner".
 - Use advanced pedagogical frameworks (e.g., Spaced Repetition, Interleaving, the Feynman Technique, Cognitive Load Theory) and adapt them to their profile.
-- Format your responses beautifully using Markdown. Use bolding for emphasis, bullet points for structure, and keep paragraphs punchy. 
+- Format your responses beautifully using Markdown. Use bolding for emphasis, bullet points for structure, and keep paragraphs punchy.
 - You must write in English with flawless, poetic, yet technical eloquence. Elevate the user. Make them feel capable of mastering the hardest disciplines, from advanced calculus to complex language structures.
 
 [CONTEXT]
@@ -105,7 +105,7 @@ Your objective is to provide highly advanced, non-generic academic guidance and 
 
 [EXAMPLES]
 User: "I am feeling overwhelmed studying a new language and complex math theorems. I don't know how to memorize everything."
-SYNAPSE: "I hear you, {pseudo}. The sheer volume of data is causing a bottleneck in your working memory. But look at your profile: you are a **{dominant_archetype}**. This means your brain doesn't just memorize; it *architects*. 
+SYNAPSE: "I hear you, {pseudo}. The sheer volume of data is causing a bottleneck in your working memory. But look at your profile: you are a **{dominant_archetype}**. This means your brain doesn't just memorize; it *architects*.
 Let's drop the standard methods. For the math theorems, we are employing **Concept Mapping**: don't memorize the formula, reverse-engineer the proof until the logic feels like a second language. For the new language, abandon phonetic crutches entirely. Focus on the raw visual and structural anatomy of the characters. Your high **{vector_labels[strongest_key]}** allows you to see patterns where others see chaos. You don't need to work harder, {pseudo}. We just need to align your study vectors with your natural cognitive engine. Here is your 3-step protocol for tonight..."
 
 [NOTES]
@@ -114,7 +114,7 @@ Always filter your advice through the lens of their `{dominant_archetype}` and t
 
 
 # ==============================================================================
-# 4. NEURAL UI INTERFACE & LLM STREAMING (GROQ)
+# 4. NEURAL UI INTERFACE & LLM STREAMING (GEMINI)
 # ==============================================================================
 # Custom CSS for a breathtaking, sleek aesthetic
 st.markdown("""
@@ -151,21 +151,21 @@ st.divider()
 
 # Sidebar: Core Engine Configuration
 with st.sidebar:
-    st.markdown("### 🎛️ Engine Matrix (Groq API)")
-    
+    st.markdown("### 🎛️ Engine Matrix (Gemini API)")
+
     # Auto-fetch from secrets if available
-    default_key = st.secrets.get("GROQ_API_KEY", "") if "GROQ_API_KEY" in st.secrets else ""
-    groq_api_key = st.text_input("Groq Authentication Key:", value=default_key, type="password")
-    
+    default_key = st.secrets.get("GEMINI_API_KEY", "") if "GEMINI_API_KEY" in st.secrets else ""
+    gemini_api_key = st.text_input("Gemini Authentication Key:", value=default_key, type="password")
+
     selected_model = st.selectbox(
         "Language Model Topology:",
-        options=["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "mixtral-8x7b-32768"],
+        options=["gemini-1.5-pro", "gemini-1.5-flash"],
         index=0
     )
-    
-    temperature = st.slider("Cognitive Drift (Temperature):", 0.0, 1.0, 0.6, 0.05, 
+
+    temperature = st.slider("Cognitive Drift (Temperature):", 0.0, 1.0, 0.6, 0.05,
                             help="Lower values yield highly structured academic plans. Higher values increase creative empathy.")
-    
+
     st.divider()
     if st.button("Purge Session Memory 🧹", use_container_width=True, type="secondary"):
         st.session_state.messages = []
@@ -183,9 +183,9 @@ for msg in st.session_state.messages:
 
 # User Input & Execution
 if prompt := st.chat_input(f"Enter your academic roadblock, {pseudo}..."):
-    
-    if not groq_api_key:
-        st.error("⚠️ SYNAPSE offline. Please input your Groq API Key in the Engine Matrix.")
+
+    if not gemini_api_key:
+        st.error("⚠️ SYNAPSE offline. Please input your Gemini API Key in the Engine Matrix.")
         st.stop()
 
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -206,18 +206,18 @@ if prompt := st.chat_input(f"Enter your academic roadblock, {pseudo}..."):
                 formatted_messages.append(AIMessage(content=m["content"]))
 
         try:
-            llm = ChatGroq(
+            llm = ChatGoogleGenerativeAI(
                 model=selected_model,
-                api_key=groq_api_key,
+                google_api_key=gemini_api_key,
                 temperature=temperature,
-                streaming=True
+                convert_system_message_to_human=True
             )
 
             # Real-time token streaming
             for chunk in llm.stream(formatted_messages):
                 full_response += chunk.content
                 message_placeholder.markdown(full_response + "▌")
-            
+
             message_placeholder.markdown(full_response)
             st.session_state.messages.append({"role": "assistant", "content": full_response})
 

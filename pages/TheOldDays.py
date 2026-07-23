@@ -1,12 +1,12 @@
 import streamlit as st
 import os
 
-# Secure Dependency Injection for LangChain & Groq
+# Secure Dependency Injection for LangChain & Gemini
 try:
-    from langchain_groq import ChatGroq
+    from langchain_google_genai import ChatGoogleGenerativeAI
     from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 except ImportError:
-    st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: pip install langchain langchain-groq groq")
+    st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: pip install langchain langchain-google-genai google-generativeai")
     st.stop()
 
 # ==============================================================================
@@ -102,7 +102,7 @@ st.divider()
 with st.container():
     st.markdown("<div class='history-box'>", unsafe_allow_html=True)
     st.markdown("### 🏛️ Select Temporal Coordinates")
-    
+
     col1, col2 = st.columns(2)
     with col1:
         selected_era = st.selectbox(
@@ -124,16 +124,16 @@ with st.container():
                 "Scientific Experimentation & Natural Philosophy"
             ]
         )
-        
+
     st.markdown("</div>", unsafe_allow_html=True)
 
-# Sidebar Configuration for Groq API
+# Sidebar Configuration for Gemini API
 with st.sidebar:
-    st.markdown("### ⚙️ Engine Matrix (Groq API)")
-    default_key = st.secrets.get("GROQ_API_KEY", "") if "GROQ_API_KEY" in st.secrets else ""
-    groq_api_key = st.text_input("Groq API Key:", value=default_key, type="password", placeholder="gsk_...")
-    selected_model = st.selectbox("Inference Model:", ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile"], index=0)
-    
+    st.markdown("### ⚙️ Engine Matrix (Gemini API)")
+    default_key = st.secrets.get("GEMINI_API_KEY", "") if "GEMINI_API_KEY" in st.secrets else ""
+    gemini_api_key = st.text_input("Gemini API Key:", value=default_key, type="password", placeholder="AQ...")
+    selected_model = st.selectbox("Inference Model:", ["gemini-1.5-pro", "gemini-1.5-flash"], index=0)
+
     st.divider()
     if st.button("Reset Timeline ⏳", use_container_width=True, type="secondary"):
         st.session_state.history_messages = []
@@ -177,10 +177,10 @@ ROLE: You are an elite Historical Consciousness and Immersive Simulation Engine.
 col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
 with col_btn2:
     if st.button("📜 INITIATE TIME-TRAVEL IMMERSION", use_container_width=True, type="primary"):
-        if not groq_api_key:
-            st.error("⚠️ CRITICAL: Groq API Key required to activate temporal portal.")
+        if not gemini_api_key:
+            st.error("⚠️ CRITICAL: Gemini API Key required to activate temporal portal.")
             st.stop()
-            
+
         st.session_state.history_messages = []
         init_command = f"System directive: Open temporal portal to {selected_era}. Immerse operator {pseudo} focusing on {immersion_focus}."
         st.session_state.history_messages.append({"role": "user", "content": init_command, "hidden": True})
@@ -197,37 +197,37 @@ if st.session_state.history_messages and st.session_state.history_messages[-1]["
     with st.chat_message("assistant", avatar="⏳"):
         message_placeholder = st.empty()
         full_response = ""
-        
+
         formatted_messages = [SystemMessage(content=SYSTEM_PROMPT)]
         for m in st.session_state.history_messages:
             if m["role"] == "user":
                 formatted_messages.append(HumanMessage(content=m["content"]))
             else:
                 formatted_messages.append(AIMessage(content=m["content"]))
-            
+
         try:
-            llm = ChatGroq(
+            llm = ChatGoogleGenerativeAI(
                 model=selected_model,
-                api_key=groq_api_key,
+                google_api_key=gemini_api_key,
                 temperature=0.7,
-                streaming=True
+                convert_system_message_to_human=True
             )
             for chunk in llm.stream(formatted_messages):
                 full_response += chunk.content
                 message_placeholder.markdown(full_response + "▌")
-            
+
             message_placeholder.markdown(full_response)
             st.session_state.history_messages.append({"role": "assistant", "content": full_response})
-            
+
         except Exception as e:
             st.error(f"❌ Temporal Disruption: {str(e)}")
 
 # Real-time Interactive Follow-up
 if prompt := st.chat_input("Speak or respond within the historical simulation..."):
-    if not groq_api_key:
-        st.error("⚠️ CRITICAL: Groq API Key required.")
+    if not gemini_api_key:
+        st.error("⚠️ CRITICAL: Gemini API Key required.")
         st.stop()
-        
+
     st.session_state.history_messages.append({"role": "user", "content": prompt})
     with st.chat_message("user", avatar="👤"):
         st.markdown(prompt)
@@ -244,18 +244,18 @@ if prompt := st.chat_input("Speak or respond within the historical simulation...
                 formatted_messages.append(AIMessage(content=m["content"]))
 
         try:
-            llm = ChatGroq(
+            llm = ChatGoogleGenerativeAI(
                 model=selected_model,
-                api_key=groq_api_key,
+                google_api_key=gemini_api_key,
                 temperature=0.7,
-                streaming=True
+                convert_system_message_to_human=True
             )
             for chunk in llm.stream(formatted_messages):
                 full_response += chunk.content
                 message_placeholder.markdown(full_response + "▌")
-            
+
             message_placeholder.markdown(full_response)
             st.session_state.history_messages.append({"role": "assistant", "content": full_response})
-            
+
         except Exception as e:
             st.error(f"❌ Temporal Disruption: {str(e)}")
