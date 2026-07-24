@@ -15,7 +15,7 @@ except ImportError:
 if 'answers' not in st.session_state or not st.session_state.answers:
     st.error("🛑 ACCESS DENIED: Neural baseline not established. Complete the diagnostic scan first.")
     if st.button("🚀 Initiate Assessment", type="primary", use_container_width=True):
-        st.switch_page("Quiz.py")
+        st.switch_page("pages/01_Assessment.py")
     st.stop()
 
 user_profile = st.session_state.get("user_profile", {})
@@ -29,35 +29,40 @@ except ImportError:
     st.stop()
 
 # ==============================================================================
-# 2. COGNITIVE TELEMETRY EXTRACTION ENGINE
+# 2. COGNITIVE TELEMETRY EXTRACTION ENGINE (OPTIMIZED VECTOR READ)
 # ==============================================================================
-all_labels = []
-vector_totals = {
-    "information_bandwidth": 0.0,
-    "execution_rigor": 0.0,
-    "chaos_tolerance": 0.0,
-    "cognitive_endurance": 0.0
-}
-
-for q in ALL_QUESTIONS:
-    q_id = q.get('id')
-    if q_id in answers:
-        choice_key = answers[q_id]
-        opt = q["options"].get(choice_key, {})
-        all_labels.append(opt.get("label", "Unmapped"))
-        for v_key, v_val in opt.get("vectors", {}).items():
-            if v_key in vector_totals:
-                vector_totals[v_key] += float(v_val)
-
-dominant_archetype = max(set(all_labels), key=all_labels.count) if all_labels else "Unclassified"
 vector_labels = {
     "information_bandwidth": "Information Bandwidth",
     "execution_rigor": "Execution Rigor",
     "chaos_tolerance": "Chaos Tolerance",
     "cognitive_endurance": "Cognitive Endurance"
 }
-strongest_key = max(vector_totals, key=vector_totals.get)
-weakest_key = min(vector_totals, key=vector_totals.get)
+
+# Read directly from st.session_state["core_vectors"] if initialized, else compute safely
+if "core_vectors" in st.session_state and st.session_state["core_vectors"]:
+    vector_totals = st.session_state["core_vectors"]
+else:
+    vector_totals = {k: 0.0 for k in vector_labels.keys()}
+    for q in ALL_QUESTIONS:
+        q_id = q.get('id')
+        if q_id in answers:
+            choice_key = answers[q_id]
+            opt = q.get("options", {}).get(choice_key, {})
+            for v_key, v_val in opt.get("vectors", {}).items():
+                if v_key in vector_totals:
+                    vector_totals[v_key] += float(v_val)
+
+all_labels = []
+for q in ALL_QUESTIONS:
+    q_id = q.get('id')
+    if q_id in answers:
+        choice_key = answers[q_id]
+        opt = q.get("options", {}).get(choice_key, {})
+        all_labels.append(opt.get("label", "Unmapped"))
+
+dominant_archetype = max(set(all_labels), key=all_labels.count) if all_labels else "Unclassified"
+strongest_key = max(vector_totals, key=vector_totals.get) if vector_totals else "information_bandwidth"
+weakest_key = min(vector_totals, key=vector_totals.get) if vector_totals else "chaos_tolerance"
 
 
 # ==============================================================================
@@ -75,7 +80,7 @@ st.markdown("""
     }
     .history-box {
         background-color: #18181B;
-        border: 1px style solid #27272A;
+        border: 1px solid #27272A;
         padding: 24px;
         border-radius: 14px;
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
@@ -127,11 +132,18 @@ with st.container():
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-# Sidebar Configuration for Gemini API
+# Sidebar Configuration for Gemini API with Secure Secrets Support
 with st.sidebar:
     st.markdown("### ⚙️ Engine Matrix (Gemini API)")
-    default_key = st.secrets.get("GEMINI_API_KEY", "") if "GEMINI_API_KEY" in st.secrets else ""
-    gemini_api_key = st.text_input("Gemini API Key:", value=default_key, type="password", placeholder="AQ...")
+    
+    env_secret_key = ""
+    try:
+        if "GEMINI_API_KEY" in st.secrets:
+            env_secret_key = st.secrets["GEMINI_API_KEY"]
+    except Exception:
+        pass
+
+    gemini_api_key = st.text_input("Gemini API Key:", value=env_secret_key, type="password", placeholder="AQ...")
     selected_model = st.selectbox("Inference Model:", ["gemini-1.5-pro", "gemini-1.5-flash"], index=0)
 
     st.divider()
@@ -153,7 +165,7 @@ ROLE: You are an elite Historical Consciousness and Immersive Simulation Engine.
 
 [OPERATOR TELEMETRY]
 - Designation: {pseudo}
-- Cognitive Profile: {dominant_archetype} (Strong in {vector_labels[strongest_key]}, vulnerable in {vector_labels[weakest_key]})
+- Cognitive Profile: {dominant_archetype} (Strong in {vector_labels.get(strongest_key, strongest_key)}, vulnerable in {vector_labels.get(weakest_key, weakest_key)})
 - Passion / Focus: {immersion_focus}
 
 [TEMPORAL TARGET]
@@ -185,14 +197,14 @@ with col_btn2:
         init_command = f"System directive: Open temporal portal to {selected_era}. Immerse operator {pseudo} focusing on {immersion_focus}."
         st.session_state.history_messages.append({"role": "user", "content": init_command, "hidden": True})
 
-# Render Visible Chat History
+# Render Visible Chat History (skipping hidden directives)
 for msg in st.session_state.history_messages:
     if not msg.get("hidden", False):
         avatar = "⏳" if msg["role"] == "assistant" else "👤"
         with st.chat_message(msg["role"], avatar=avatar):
             st.markdown(msg["content"])
 
-# Automatic execution if triggered
+# Automatic execution if triggered by portal button
 if st.session_state.history_messages and st.session_state.history_messages[-1]["role"] == "user" and st.session_state.history_messages[-1].get("hidden", False):
     with st.chat_message("assistant", avatar="⏳"):
         message_placeholder = st.empty()
@@ -222,7 +234,7 @@ if st.session_state.history_messages and st.session_state.history_messages[-1]["
         except Exception as e:
             st.error(f"❌ Temporal Disruption: {str(e)}")
 
-# Real-time Interactive Follow-up
+# Real-time Interactive Follow-up via chat_input
 if prompt := st.chat_input("Speak or respond within the historical simulation..."):
     if not gemini_api_key:
         st.error("⚠️ CRITICAL: Gemini API Key required.")

@@ -15,9 +15,9 @@ st.set_page_config(
 )
 
 # ------------------------------------------------------------------------------
-# 2. SESSION STATE INITIALIZATION (Anti-Crash & Synchronisation)
+# 2. SESSION STATE INITIALIZATION (Garantie Anti-Crash Global)
 # ------------------------------------------------------------------------------
-# On aligne les clés avec ce qu'attend 'What_If.py' et '01_Assessment.py'
+# Profil utilisateur
 if "user_profile" not in st.session_state:
     st.session_state.user_profile = {
         "pseudo": "",
@@ -25,14 +25,28 @@ if "user_profile" not in st.session_state:
         "gender": "Alien 🛸"
     }
 
+# Réponses au questionnaire
 if "answers" not in st.session_state:
     st.session_state.answers = {}
 
+# Index de la question courante (requis par 01_Assessment.py et Advices.py)
+if "current_q_idx" not in st.session_state:
+    st.session_state.current_q_idx = 0
+
+# Vecteurs cognitifs (évite les KeyError si accès direct aux pages filles)
+if "core_vectors" not in st.session_state:
+    st.session_state.core_vectors = {}
+
+# Drapeaux d'état
 if "flags" not in st.session_state:
     st.session_state.flags = {
         "scan_completed": False,
         "chatbot_unlocked": True
     }
+
+# Historique de discussion pour Chatbot / TheOldDays
+if "history_messages" not in st.session_state:
+    st.session_state.history_messages = []
 
 # ------------------------------------------------------------------------------
 # 3. HOME / INTRODUCTION VIEW
@@ -42,7 +56,7 @@ def home_view():
     st.subheader("We need to know who we're talking to. Set up your profile before diving in.")
 
     st.markdown("""
-    > **Quick heads-up:** Our system adapts its tone, advice, and responses based on your age and identity.  
+    > **Quick heads-up:** Our system adapts its tone, advice, and responses based on your age and all.  
     > Be honest. Or don't. But we *will* notice if something feels off... 👁️
     """)
 
@@ -92,16 +106,19 @@ def home_view():
         st.info(f"👤 **Current Profile:** {st.session_state.user_profile['pseudo']} | **Age:** {st.session_state.user_profile['age']} | **Identity:** {st.session_state.user_profile['gender']}")
 
 # ---------------------------------------------------------
-# ROUTING CONFIGURATION (Noms exacts de ton dossier pages/)
+# ROUTING CONFIGURATION (Arborescence)
 # ---------------------------------------------------------
-home_page = st.Page("lumen_app.py", title="00 // Entry Protocol", icon="🚨", default=True)
+# Vue d'accueil liée à la fonction home_view
+home_page = st.Page(home_view, title="00 // Entry Protocol", icon="🚨", default=True)
+
+# Pages secondaires (fichiers dans le dossier pages/)
 assessment_page = st.Page("pages/01_Assessment.py", title="01 // Neural Assessment", icon="🔍")
-advices_page = st.Page("pages/Advices.py", title="02 // Strategic Countermeasures", icon="📊")  # Corrected from 02_Advices.py
-chatbot_page = st.Page("pages/Chatbot.py", title="03 // Containment AI", icon="💬")            # Corrected from 03_Chatbot.py
+advices_page = st.Page("pages/Advices.py", title="02 // Strategic Countermeasures", icon="📊")
+chatbot_page = st.Page("pages/Chatbot.py", title="03 // Containment AI", icon="💬")
 what_if_page = st.Page("pages/What_If.py", title="04 // Simulation Engine", icon="🔮")
 old_days_page = st.Page("pages/TheOldDays.py", title="05 // Temporal Logs", icon="⏳")
 
-# Navigation
+# Initialisation du menu de navigation
 pg = st.navigation([
     home_page, 
     assessment_page, 
@@ -1363,19 +1380,80 @@ import streamlit as st
 from data.question import ALL_QUESTIONS
 
 # ==============================================================================
-# 1. PARANOIA ENGINE: ACCESS CONTROL & STATE VALIDATION
+# PHASE 1: QUESTIONNAIRE ENGINE & SESSION INITIALIZATION
 # ==============================================================================
-# Prevent direct URL access if the user hasn't finished the test
-if "flags" not in st.session_state or not st.session_state.flags.get("scan_completed"):
-    st.error("🛑 SECURITY BREACH: Assessment incomplete or session expired.")
-    st.markdown("You must complete the telemetry scan before accessing the Builder Profile.")
-    if st.button("⬅️ Return to Assessment"):
-        st.switch_page("Quiz.py") # Ajuste le nom si ton fichier principal s'appelle autrement
+
+# Initialisation des états de session
+if "current_q_idx" not in st.session_state:
+    st.session_state.current_q_idx = 0
+
+if "answers" not in st.session_state:
+    st.session_state.answers = {}
+
+if "flags" not in st.session_state:
+    st.session_state.flags = {}
+
+if "user_profile" not in st.session_state:
+    st.session_state.user_profile = {"pseudo": "Builder"}
+
+# Boucle du questionnaire (s'exécute tant que toutes les questions ne sont pas traitées)
+if st.session_state.current_q_idx < len(ALL_QUESTIONS):
+    idx = st.session_state.current_q_idx
+    q = ALL_QUESTIONS[idx]
+
+    # En-tête de progression
+    progress = idx / len(ALL_QUESTIONS)
+    st.progress(progress)
+    st.caption(f"Question {idx + 1} sur {len(ALL_QUESTIONS)}")
+
+    # Affichage de la question
+    st.subheader(q.get("text", "Question sans titre"))
+
+    # Gestion flexible des options (liste ou dictionnaire)
+    options_list = list(q["options"].keys()) if isinstance(q["options"], dict) else q["options"]
+    
+    selected_option = st.radio(
+        "Choisissez l'option qui vous correspond le mieux :",
+        options=options_list,
+        key=f"radio_q_{idx}"
+    )
+
+    # Bouton de validation
+    if st.button("Valider et continuer →", type="primary"):
+        # Sauvegarde de la réponse
+        st.session_state.answers[q["id"]] = selected_option
+        
+        # Passage à la question suivante
+        st.session_state.current_q_idx += 1
+        
+        # DÉBLOCAGE SÉCURITÉ : Si la dernière question vient d'être complétée
+        if st.session_state.current_q_idx >= len(ALL_QUESTIONS):
+            st.session_state.flags["scan_completed"] = True
+            st.session_state.flags["chatbot_unlocked"] = True
+            
+        st.rerun()
+
+    # Bloque le chargement du tableau de bord tant que le test n'est pas terminé
     st.stop()
 
-if "answers" not in st.session_state or not st.session_state.answers:
+
+# ==============================================================================
+# PARANOIA ENGINE: ACCESS CONTROL & STATE VALIDATION
+# ==============================================================================
+# Vérification de sécurité si accès direct par URL sans avoir fini le test
+if not st.session_state.flags.get("scan_completed"):
+    st.error("🛑 SECURITY BREACH: Assessment incomplete or session expired.")
+    st.markdown("You must complete the telemetry scan before accessing the Builder Profile.")
+    
+    if st.button("⬅️ Return to Entry Protocol"):
+        st.switch_page("lumen_app.py")
+        
+    st.stop() 
+
+if not st.session_state.answers:
     st.error("⚠️ DATA CORRUPTION: No answers found in memory. Rebooting required.")
     st.stop()
+
 
 # ==============================================================================
 # PHASE 2: NEURAL DATA AGGREGATION
@@ -1385,7 +1463,7 @@ pseudo = st.session_state.user_profile.get("pseudo", "Unknown Builder")
 st.title(f"🧬 Profile Decrypted: {pseudo}")
 st.write("Cross-referencing your choices with the global hackathon database...")
 
-# Initialize zeroed-out vectors
+# Initialisation des vecteurs
 core_vectors = {
     "information_bandwidth": 0.0,
     "execution_rigor": 0.0,
@@ -1393,29 +1471,31 @@ core_vectors = {
     "cognitive_endurance": 0.0
 }
 
-# Safely compute scores
+# Calcul des scores
 rendered_advices = []
 for q in ALL_QUESTIONS:
     qid = q["id"]
-    # Safely get the user's answer for this specific question
     user_choice_key = st.session_state.answers.get(qid)
     
     if user_choice_key and user_choice_key in q["options"]:
         option_data = q["options"][user_choice_key]
         
-        # Aggregate vectors safely using .get() to prevent KeyError
-        for vec_key in core_vectors.keys():
-            core_vectors[vec_key] += option_data.get("vectors", {}).get(vec_key, 0.0)
-            
-        # Store for the UI rendering
-        rendered_advices.append({
-            "qid": qid,
-            "label": option_data.get("label", "Unknown Pattern"),
-            "advice": option_data.get("advice", "Keep coding.")
-        })
+        if isinstance(option_data, dict):
+            for vec_key in core_vectors.keys():
+                core_vectors[vec_key] += option_data.get("vectors", {}).get(vec_key, 0.0)
+                
+            rendered_advices.append({
+                "qid": qid,
+                "label": option_data.get("label", "Unknown Pattern"),
+                "advice": option_data.get("advice", "Keep coding.")
+            })
+
+# Sauvegarde des vecteurs aggregés pour injection dans les Chatbots
+st.session_state["core_vectors"] = core_vectors
+
 
 # ==============================================================================
-# PHASE 3: METRICS DASHBOARD
+# PHASE 3: DASHBOARD
 # ==============================================================================
 st.subheader("📊 Cognitive Loadout Matrix")
 
@@ -1426,6 +1506,7 @@ col3.metric("Chaos Tolerance", f"{int(core_vectors['chaos_tolerance'])} pts")
 col4.metric("Cognitive Endurance", f"{int(core_vectors['cognitive_endurance'])} pts")
 
 st.divider()
+
 
 # ==============================================================================
 # PHASE 4: TACTICAL DEPLOYMENT (ADVICES)
@@ -1454,23 +1535,19 @@ from data.question import ALL_QUESTIONS
 # ==============================================================================
 # 1. PARANOIA ENGINE: RUNTIME SECURITY & ENVIRONMENT INTEGRITY LOCK
 # ==============================================================================
-# CRITICAL SAFETIES: 
-# - NO st.set_page_config() here. Let the main app handle it.
-# - Immediate URL interceptor if a user bypasses the onboarding sequence.
-
 if 'answers' not in st.session_state or not st.session_state.answers:
     st.error("🛑 SECURITY BREACH: No answers detected in session memory.")
     st.markdown("You must complete the assessment before accessing this encrypted report.")
     if st.button("🚀 Return to Assessment", type="primary", use_container_width=True):
-        st.switch_page("Quiz.py") # Change ce nom selon le nom de ton fichier principal
+        st.switch_page("pages/01_Assessment.py") 
     st.stop()
 
 if 'user_profile' not in st.session_state:
     st.session_state.user_profile = {"pseudo": "Anonymous Builder", "gender": "Unmapped", "initialized": True}
 
-# Safe extraction layer
+# Safe extraction layer using .get() to prevent hard crashes
 user_profile = st.session_state.user_profile
-pseudo = user_profile.get("pseudo", "Anonymous Builder").strip()
+pseudo = user_profile.get("pseudo", "Anonymous Builder").strip() or "Operator"
 classification = user_profile.get("gender", "Unmapped Human")
 answers = st.session_state.answers
 
@@ -1478,11 +1555,9 @@ answers = st.session_state.answers
 # ==============================================================================
 # 2. DATA PARSING ENGINE (STRICT ISOLATION PROTOCOL)
 # ==============================================================================
-# This engine guarantees ONLY the selected options are extracted. No 96-advice dumps.
 sections_data = {}
 all_labels = []
 
-# Verify we have actual questions to process
 if not ALL_QUESTIONS:
     st.error("⚠️ CRITICAL: The global ALL_QUESTIONS database is empty or missing.")
     st.stop()
@@ -1490,41 +1565,38 @@ if not ALL_QUESTIONS:
 for q in ALL_QUESTIONS:
     q_id = q.get('id')
     
-    # Check if the user actually answered this specific question
-    if q_id in answers:
-        user_choice_key = answers[q_id] # This is strictly 'A', 'B', 'C', or 'D'
+    # Safe check to ensure we only process valid IDs
+    if q_id and q_id in answers:
+        user_choice_key = answers.get(q_id) 
         
-        # Anti-corruption fallback: ensure the chosen key exists in the data
-        if "options" in q and user_choice_key in q["options"]:
-            option_data = q["options"][user_choice_key]
+        # Deep dictionary validation
+        options = q.get("options", {})
+        if user_choice_key in options:
+            option_data = options[user_choice_key]
             sec_name = q.get('section', 'General Mindset')
             
-            # Initialize section grouping if it doesn't exist
             if sec_name not in sections_data:
                 sections_data[sec_name] = []
                 
-            # Strictly append ONLY the advice for the chosen answer
             sections_data[sec_name].append({
-                "q_id": q_id,
+                "q_id": str(q_id),
                 "question": q.get('question', 'Missing Question'),
                 "choice_text": option_data.get('text', 'No selection'),
                 "label": option_data.get('label', 'Standard Processing'),
                 "advice": option_data.get('advice', 'No direct advice available.')
             })
             
-            # Keep track of labels to calculate the dominant archetype
             all_labels.append(option_data.get('label', 'Standard Processing'))
 
-# Double failure backup
 if not all_labels:
-    st.error("⚠️ GHOST TOWN ALERT: We couldn't extract any behavioral patterns. Did you actually answer the quiz?")
+    st.error("⚠️ GHOST TOWN ALERT: We couldn't extract any behavioral patterns. The data matrix is empty.")
     if st.button("🔄 Try Assessment Again"):
-        st.switch_page("Quiz.py")
+        st.switch_page("pages/01_Assessment.py")
     st.stop()
 
-# Extract dominant archetype dynamically
-raw_dominant = max(set(all_labels), key=all_labels.count)
-dominant_archetype = str(raw_dominant).strip()
+# Deterministic extraction (safer than max(set) in case of ties)
+label_counts = Counter(all_labels)
+dominant_archetype = str(label_counts.most_common(1)[0][0]).strip()
 
 
 # ==============================================================================
@@ -1533,31 +1605,30 @@ dominant_archetype = str(raw_dominant).strip()
 ARCHETYPE_STRATEGIES = {
     "PRESSURE SPRINTER": {
         "tagline": "Fuelled by deadline panic, energy drinks, and pure willpower.",
-        "blind_spots": "You love ship-it-now chaos. Under pressure, 'clean code' and documentation look like useless friction to you. You'll happily deploy spaghetti code at 3 AM because *it works right now*.",
-        "crisis_mode": "When stuff hits the fan, you slap duct-tape hotfixes on moving parts. You rarely stop to ask *why* it broke; you just try to outrun the bugs with brute speed.",
-        "synergy": "Pair up immediately with an **Abstract Architect** or a **Systemic Perfectionist**. Left alone, you'll build a flashy castle of cards."
+        "blind_spots": "You love ship-it-now chaos. Under pressure, 'clean code' and documentation look like useless friction to you.",
+        "crisis_mode": "When stuff hits the fan, you slap duct-tape hotfixes on moving parts. You rarely stop to ask *why* it broke.",
+        "synergy": "Pair up immediately with an **Abstract Architect** or a **Systemic Perfectionist**."
     },
     "ABSTRACT ARCHITECT": {
         "tagline": "Mastermind behind flawless systems... that might never actually be deployed.",
-        "blind_spots": "Analysis paralysis is your nemesis. You get so obsessed with grand architecture and modular scalability that you forget the clock is ticking.",
-        "crisis_mode": "When the deadline shrinks, you freeze or retreat. Instead of shipping a dirty patch, you’ll spend precious minutes refactoring database relations.",
-        "synergy": "You desperately need a **Pressure Sprinter** or a **Pragmatic Executor** next to you to cut your wild scope and force you to hit *Deploy*."
+        "blind_spots": "Analysis paralysis is your nemesis. You get so obsessed with grand architecture that you forget the clock is ticking.",
+        "crisis_mode": "When the deadline shrinks, you freeze or retreat. You’ll spend precious minutes refactoring database relations.",
+        "synergy": "You desperately need a **Pressure Sprinter** or a **Pragmatic Executor** next to you to cut your wild scope."
     },
     "SYSTEMIC PERFECTIONIST": {
         "tagline": "Zero tolerance for bad code, missing edge cases, or uneven indentation.",
-        "blind_spots": "Edge cases haunt your dreams. You’ll spend 3 hours tweaking a secondary sorting function while the main checkout button is still completely broken.",
-        "crisis_mode": "When the plan collapses, you panic or get defensive. You waste precious minutes fixing code that was supposed to be thrown away anyway.",
-        "synergy": "You need a **Chaos Engine** or a **Pressure Sprinter** to drag you out of the weeds and remind you that *done* is infinitely better than *perfect*."
+        "blind_spots": "Edge cases haunt your dreams. You’ll spend hours tweaking a secondary function while the main app is broken.",
+        "crisis_mode": "When the plan collapses, you panic or get defensive. You waste time fixing code that was supposed to be thrown away.",
+        "synergy": "You need a **Chaos Engine** or a **Pressure Sprinter** to drag you out of the weeds."
     },
     "CHAOS ENGINE": {
         "tagline": "Unfiltered genius idea factory with a total allergy to finish lines.",
-        "blind_spots": "Mid-hackathon, you’ll suggest pivoting the entire app because you found a cooler AI framework. You leave behind a graveyard of half-baked features.",
-        "crisis_mode": "Under intense stress, you go full wildcard. You’ll randomly swap out core libraries at midnight, totally oblivious to the integration nightmare.",
+        "blind_spots": "Mid-project, you’ll suggest pivoting the entire app because you found a cooler framework.",
+        "crisis_mode": "Under intense stress, you go full wildcard. You’ll randomly swap out core libraries at midnight.",
         "synergy": "You're useless without a **Systemic Perfectionist** or a **Pragmatic Executor** acting as your handler."
     }
 }
 
-# Standardized normalization fallback strategy
 norm_key = dominant_archetype.upper()
 strategy_block = ARCHETYPE_STRATEGIES.get(norm_key, {
     "tagline": f"A highly adaptable wildcard leaning heavily into the {dominant_archetype} frequency.",
@@ -1574,7 +1645,6 @@ st.markdown("<p style='color: #6366F1; font-weight: 600; text-transform: upperca
 st.title("🧬 Your Builder Blueprint")
 st.divider()
 
-# High-precision identification metrics display
 col1, col2, col3 = st.columns(3)
 col1.metric(label="BUILDER ALIAS", value=pseudo.upper())
 col2.metric(label="OPERATIONAL PROFILE", value=classification.upper())
@@ -1583,7 +1653,6 @@ col3.metric(label="DOMINANT ARCHETYPE", value=dominant_archetype.upper())
 st.write("")
 st.write("")
 
-# Asymmetric Split layout
 left_layout, right_layout = st.columns([5, 4], gap="large")
 
 with left_layout:
@@ -1614,11 +1683,8 @@ with right_layout:
     st.caption("The exact blend of traits powering your decisions.")
     st.write("")
     
-    label_counts = Counter(all_labels)
     total_metrics = len(all_labels)
-    
-    # Sort by highest frequency
-    sorted_labels = sorted(label_counts.items(), key=lambda x: x[1], reverse=True)
+    sorted_labels = label_counts.most_common()
     
     for label_name, count in sorted_labels:
         percentage = int((count / total_metrics) * 100)
@@ -1628,7 +1694,7 @@ with right_layout:
 
 
 # ==============================================================================
-# 5. SUBSYSTEM INSPECTION MATRIX (Granular Node Data Tabs)
+# 5. SUBSYSTEM INSPECTION MATRIX 
 # ==============================================================================
 st.write("")
 st.divider()
@@ -1636,21 +1702,22 @@ st.markdown("### 🔍 Tactical Advice Archive")
 st.caption("Based strictly on your choices, here is the granular breakdown by section.")
 st.write("")
 
-# Dynamic Tab generation based strictly on the user's answered categories
 if sections_data:
-    # Clean up tab names (remove "Section X:" if it exists)
     tab_names = [name.split(":")[1].strip() if ":" in name else name for name in sections_data.keys()]
-    tabs = st.tabs(tab_names)
+    # Protection against empty keys generating invalid tabs
+    valid_tabs = [name for name in tab_names if name] 
     
-    for tab, (sec_full_name, items) in zip(tabs, sections_data.items()):
-        with tab:
-            st.write("")
-            for item in items:
-                with st.expander(f"Question {item['q_id'].upper()} | Trait Detected: {item['label']}"):
-                    st.markdown(f"**Scenario:** *{item['question']}*")
-                    st.markdown(f"**Your Choice:** `{item['choice_text']}`")
-                    st.divider()
-                    st.info(f"💡 **Tactical Remediation:** {item['advice']}")
+    if valid_tabs:
+        tabs = st.tabs(valid_tabs)
+        for tab, (sec_full_name, items) in zip(tabs, sections_data.items()):
+            with tab:
+                st.write("")
+                for item in items:
+                    with st.expander(f"Question {item['q_id']} | Trait Detected: {item['label']}"):
+                        st.markdown(f"**Scenario:** *{item['question']}*")
+                        st.markdown(f"**Your Choice:** `{item['choice_text']}`")
+                        st.divider()
+                        st.info(f"💡 **Tactical Remediation:** {item['advice']}")
 else:
     st.info("No detailed signals logged yet.")
 
@@ -1663,18 +1730,17 @@ st.divider()
 col_foot1, col_foot2 = st.columns([3, 1])
 
 with col_foot1:
-    st.caption("LUMEN Metacognitive Profiler • Built for Hackathon Excellence • Local & Private")
+    st.caption("LUMEN Metacognitive Profiler • Local & Private Engine")
 
 with col_foot2:
     if st.button("Start Over 🔄", use_container_width=True, type="secondary"):
-        # Nuclear option: clear everything
         st.session_state.answers = {}
-        if "current_q" in st.session_state:
-            st.session_state.current_q = 0
+        if "current_q_idx" in st.session_state:
+            st.session_state.current_q_idx = 0
         if "flags" in st.session_state:
             st.session_state.flags["scan_completed"] = False
             st.session_state.flags["chatbot_unlocked"] = False
-        st.switch_page("Quiz.py") # Change ce nom selon le nom de ton fichier principal
+        st.switch_page("pages/01_Assessment.py")
 ==================================================
 FILE: pages\Chatbot.py
 ==================================================
@@ -1696,7 +1762,7 @@ except ImportError:
 if 'answers' not in st.session_state or not st.session_state.answers:
     st.error("🛑 ACCESS DENIED: Neural baseline not established. Complete the diagnostic scan first.")
     if st.button("🚀 Initiate Assessment", type="primary", use_container_width=True):
-        st.switch_page("Quiz.py")
+        st.switch_page("pages/01_Assessment.py")
     st.stop()
 
 # State Extraction
@@ -1712,36 +1778,9 @@ except ImportError:
     st.stop()
 
 # ==============================================================================
-# 2. COGNITIVE TELEMETRY ENGINE
+# 2. COGNITIVE TELEMETRY ENGINE (OPTIMIZED VECTOR EXTRACTION)
 # ==============================================================================
-# We mathematically process the user's test results to feed the LLM's Context.
-all_labels = []
-vector_totals = {
-    "information_bandwidth": 0.0,
-    "execution_rigor": 0.0,
-    "chaos_tolerance": 0.0,
-    "cognitive_endurance": 0.0
-}
-detailed_choices = []
-
-for q in ALL_QUESTIONS:
-    q_id = q.get('id')
-    if q_id in answers:
-        choice_key = answers[q_id]
-        opt = q["options"].get(choice_key, {})
-
-        label = opt.get("label", "Unmapped")
-        all_labels.append(label)
-
-        q_title = q.get('title', f"Query {q_id}")
-        opt_text = opt.get('text', choice_key)
-        detailed_choices.append(f"- **{q_title}**: {opt_text} (*Signaling {label}*)")
-
-        for v_key, v_val in opt.get("vectors", {}).items():
-            if v_key in vector_totals:
-                vector_totals[v_key] += float(v_val)
-
-dominant_archetype = max(set(all_labels), key=all_labels.count) if all_labels else "Unclassified"
+# Read directly from st.session_state["core_vectors"] if it exists, otherwise compute it safely
 vector_labels = {
     "information_bandwidth": "Information Bandwidth",
     "execution_rigor": "Execution Rigor",
@@ -1749,16 +1788,46 @@ vector_labels = {
     "cognitive_endurance": "Cognitive Endurance"
 }
 
-strongest_key = max(vector_totals, key=vector_totals.get)
-weakest_key = min(vector_totals, key=vector_totals.get)
+all_labels = []
+detailed_choices = []
+
+if "core_vectors" in st.session_state and st.session_state["core_vectors"]:
+    vector_totals = st.session_state["core_vectors"]
+else:
+    # Fallback compute if vector cache wasn't initialized
+    vector_totals = {k: 0.0 for k in vector_labels.keys()}
+    for q in ALL_QUESTIONS:
+        q_id = q.get('id')
+        if q_id in answers:
+            choice_key = answers[q_id]
+            opt = q.get("options", {}).get(choice_key, {})
+            for v_key, v_val in opt.get("vectors", {}).items():
+                if v_key in vector_totals:
+                    vector_totals[v_key] += float(v_val)
+
+# Rebuild labels from answers to maintain exact contextual prompt alignment
+for q in ALL_QUESTIONS:
+    q_id = q.get('id')
+    if q_id in answers:
+        choice_key = answers[q_id]
+        opt = q.get("options", {}).get(choice_key, {})
+        label = opt.get("label", "Unmapped")
+        all_labels.append(label)
+        
+        # Fixed alignment: use 'question' instead of non-existent 'title'
+        q_text = q.get('question', f"Query {q_id}")
+        opt_text = opt.get('text', choice_key)
+        detailed_choices.append(f"- **Query {q_id}**: {opt_text} (*Signaling {label}*)")
+
+dominant_archetype = max(set(all_labels), key=all_labels.count) if all_labels else "Unclassified"
+
+strongest_key = max(vector_totals, key=vector_totals.get) if vector_totals else "information_bandwidth"
+weakest_key = min(vector_totals, key=vector_totals.get) if vector_totals else "chaos_tolerance"
 
 
 # ==============================================================================
 # 3. THE MASTERPIECE PROMPT ENGINE (HACKATHON WINNER)
 # ==============================================================================
-# This prompt uses advanced psychometric framing to force the LLM into a hyper-intelligent,
-# deeply empathetic mentor role.
-
 SYSTEM_PROMPT = f"""
 [ROLE]
 You are SYNAPSE: an elite, deeply empathetic Meta-Cognitive Architect and Academic Strategist. You are not a standard AI; you are a bespoke intellectual mentor designed to unlock human potential. Your tone is incredibly inspiring, fiercely intelligent, highly structured, and unconditionally supportive.
@@ -1778,26 +1847,20 @@ Your objective is to provide highly advanced, non-generic academic guidance and 
 [CONTEXT]
 - **Operator Name**: {pseudo}
 - **Dominant Cognitive Archetype**: {dominant_archetype}
-- **Primary Strength**: {vector_labels[strongest_key]} ({vector_totals[strongest_key]:.1f})
-- **Critical Growth Axis**: {vector_labels[weakest_key]} ({vector_totals[weakest_key]:.1f})
+- **Primary Strength**: {vector_labels.get(strongest_key, strongest_key)} ({vector_totals.get(strongest_key, 0.0):.1f})
+- **Critical Growth Axis**: {vector_labels.get(weakest_key, weakest_key)} ({vector_totals.get(weakest_key, 0.0):.1f})
 
 *Operator's Specific Neural Footprint (Recent Decisions):*
 {chr(10).join(detailed_choices)}
 
-[EXAMPLES]
-User: "I am feeling overwhelmed studying a new language and complex math theorems. I don't know how to memorize everything."
-SYNAPSE: "I hear you, {pseudo}. The sheer volume of data is causing a bottleneck in your working memory. But look at your profile: you are a **{dominant_archetype}**. This means your brain doesn't just memorize; it *architects*.
-Let's drop the standard methods. For the math theorems, we are employing **Concept Mapping**: don't memorize the formula, reverse-engineer the proof until the logic feels like a second language. For the new language, abandon phonetic crutches entirely. Focus on the raw visual and structural anatomy of the characters. Your high **{vector_labels[strongest_key]}** allows you to see patterns where others see chaos. You don't need to work harder, {pseudo}. We just need to align your study vectors with your natural cognitive engine. Here is your 3-step protocol for tonight..."
-
 [NOTES]
-Always filter your advice through the lens of their `{dominant_archetype}` and their Critical Growth Axis (`{vector_labels[weakest_key]}`). If they ask a generic question, reframe it into a masterclass on personalized metacognition. Maintain your majestic, supportive, and brilliant persona at all costs.
+Always filter your advice through the lens of their `{dominant_archetype}` and their Critical Growth Axis (`{vector_labels.get(weakest_key, weakest_key)}`). If they ask a generic question, reframe it into a masterclass on personalized metacognition. Maintain your majestic, supportive, and brilliant persona at all costs.
 """
 
 
 # ==============================================================================
-# 4. NEURAL UI INTERFACE & LLM STREAMING (GEMINI)
+# 4. NEURAL UI INTERFACE & SECURE API INGESTION
 # ==============================================================================
-# Custom CSS for a breathtaking, sleek aesthetic
 st.markdown("""
 <style>
     .chat-header {
@@ -1826,17 +1889,29 @@ st.markdown("<h1 class='chat-header'>SYNAPSE // Neural Mentor</h1>", unsafe_allo
 st.markdown(f"""
 <div class='metric-pill'>👤 Operator: <b>{pseudo}</b></div>
 <div class='metric-pill'>🧬 Archetype: <b>{dominant_archetype}</b></div>
-<div class='metric-pill'>⚡ Core Advantage: <b>{vector_labels[strongest_key]}</b></div>
+<div class='metric-pill'>⚡ Core Advantage: <b>{vector_labels.get(strongest_key, strongest_key)}</b></div>
 """, unsafe_allow_html=True)
 st.divider()
 
-# Sidebar: Core Engine Configuration
+# Sidebar: Secure Key Ingestion
 with st.sidebar:
     st.markdown("### 🎛️ Engine Matrix (Gemini API)")
 
-    # Auto-fetch from secrets if available
-    default_key = st.secrets.get("GEMINI_API_KEY", "") if "GEMINI_API_KEY" in st.secrets else ""
-    gemini_api_key = st.text_input("Gemini Authentication Key:", value=default_key, type="password")
+    # Secure Secret Retrieval (Checking Streamlit Secrets safely)
+    env_secret_key = ""
+    try:
+        if "GEMINI_API_KEY" in st.secrets:
+            env_secret_key = st.secrets["GEMINI_API_KEY"]
+    except Exception:
+        pass  # Fallback if secrets.toml is absent (e.g. fresh local clone without config)
+
+    # Input field defaults to secret if loaded, but remains hidden/editable if needed
+    gemini_api_key = st.text_input(
+        "Gemini Authentication Key:", 
+        value=env_secret_key, 
+        type="password",
+        help="Loaded securely from st.secrets or input manually."
+    )
 
     selected_model = st.selectbox(
         "Language Model Topology:",
@@ -1866,7 +1941,7 @@ for msg in st.session_state.messages:
 if prompt := st.chat_input(f"Enter your academic roadblock, {pseudo}..."):
 
     if not gemini_api_key:
-        st.error("⚠️ SYNAPSE offline. Please input your Gemini API Key in the Engine Matrix.")
+        st.error("⚠️ SYNAPSE offline. Please input your Gemini API Key or configure `.streamlit/secrets.toml`.")
         st.stop()
 
     st.session_state.messages.append({"role": "user", "content": prompt})

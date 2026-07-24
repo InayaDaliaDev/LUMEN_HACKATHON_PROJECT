@@ -15,7 +15,7 @@ except ImportError:
 if 'answers' not in st.session_state or not st.session_state.answers:
     st.error("🛑 ACCESS DENIED: Neural baseline not established. Complete the diagnostic scan first.")
     if st.button("🚀 Initiate Assessment", type="primary", use_container_width=True):
-        st.switch_page("Quiz.py")
+        st.switch_page("pages/01_Assessment.py")
     st.stop()
 
 # State Extraction
@@ -31,36 +31,9 @@ except ImportError:
     st.stop()
 
 # ==============================================================================
-# 2. COGNITIVE TELEMETRY ENGINE
+# 2. COGNITIVE TELEMETRY ENGINE (OPTIMIZED VECTOR EXTRACTION)
 # ==============================================================================
-# We mathematically process the user's test results to feed the LLM's Context.
-all_labels = []
-vector_totals = {
-    "information_bandwidth": 0.0,
-    "execution_rigor": 0.0,
-    "chaos_tolerance": 0.0,
-    "cognitive_endurance": 0.0
-}
-detailed_choices = []
-
-for q in ALL_QUESTIONS:
-    q_id = q.get('id')
-    if q_id in answers:
-        choice_key = answers[q_id]
-        opt = q["options"].get(choice_key, {})
-
-        label = opt.get("label", "Unmapped")
-        all_labels.append(label)
-
-        q_title = q.get('title', f"Query {q_id}")
-        opt_text = opt.get('text', choice_key)
-        detailed_choices.append(f"- **{q_title}**: {opt_text} (*Signaling {label}*)")
-
-        for v_key, v_val in opt.get("vectors", {}).items():
-            if v_key in vector_totals:
-                vector_totals[v_key] += float(v_val)
-
-dominant_archetype = max(set(all_labels), key=all_labels.count) if all_labels else "Unclassified"
+# Read directly from st.session_state["core_vectors"] if it exists, otherwise compute it safely
 vector_labels = {
     "information_bandwidth": "Information Bandwidth",
     "execution_rigor": "Execution Rigor",
@@ -68,16 +41,46 @@ vector_labels = {
     "cognitive_endurance": "Cognitive Endurance"
 }
 
-strongest_key = max(vector_totals, key=vector_totals.get)
-weakest_key = min(vector_totals, key=vector_totals.get)
+all_labels = []
+detailed_choices = []
+
+if "core_vectors" in st.session_state and st.session_state["core_vectors"]:
+    vector_totals = st.session_state["core_vectors"]
+else:
+    # Fallback compute if vector cache wasn't initialized
+    vector_totals = {k: 0.0 for k in vector_labels.keys()}
+    for q in ALL_QUESTIONS:
+        q_id = q.get('id')
+        if q_id in answers:
+            choice_key = answers[q_id]
+            opt = q.get("options", {}).get(choice_key, {})
+            for v_key, v_val in opt.get("vectors", {}).items():
+                if v_key in vector_totals:
+                    vector_totals[v_key] += float(v_val)
+
+# Rebuild labels from answers to maintain exact contextual prompt alignment
+for q in ALL_QUESTIONS:
+    q_id = q.get('id')
+    if q_id in answers:
+        choice_key = answers[q_id]
+        opt = q.get("options", {}).get(choice_key, {})
+        label = opt.get("label", "Unmapped")
+        all_labels.append(label)
+        
+        # Fixed alignment: use 'question' instead of non-existent 'title'
+        q_text = q.get('question', f"Query {q_id}")
+        opt_text = opt.get('text', choice_key)
+        detailed_choices.append(f"- **Query {q_id}**: {opt_text} (*Signaling {label}*)")
+
+dominant_archetype = max(set(all_labels), key=all_labels.count) if all_labels else "Unclassified"
+
+strongest_key = max(vector_totals, key=vector_totals.get) if vector_totals else "information_bandwidth"
+weakest_key = min(vector_totals, key=vector_totals.get) if vector_totals else "chaos_tolerance"
 
 
 # ==============================================================================
 # 3. THE MASTERPIECE PROMPT ENGINE (HACKATHON WINNER)
 # ==============================================================================
-# This prompt uses advanced psychometric framing to force the LLM into a hyper-intelligent,
-# deeply empathetic mentor role.
-
 SYSTEM_PROMPT = f"""
 [ROLE]
 You are SYNAPSE: an elite, deeply empathetic Meta-Cognitive Architect and Academic Strategist. You are not a standard AI; you are a bespoke intellectual mentor designed to unlock human potential. Your tone is incredibly inspiring, fiercely intelligent, highly structured, and unconditionally supportive.
@@ -97,26 +100,20 @@ Your objective is to provide highly advanced, non-generic academic guidance and 
 [CONTEXT]
 - **Operator Name**: {pseudo}
 - **Dominant Cognitive Archetype**: {dominant_archetype}
-- **Primary Strength**: {vector_labels[strongest_key]} ({vector_totals[strongest_key]:.1f})
-- **Critical Growth Axis**: {vector_labels[weakest_key]} ({vector_totals[weakest_key]:.1f})
+- **Primary Strength**: {vector_labels.get(strongest_key, strongest_key)} ({vector_totals.get(strongest_key, 0.0):.1f})
+- **Critical Growth Axis**: {vector_labels.get(weakest_key, weakest_key)} ({vector_totals.get(weakest_key, 0.0):.1f})
 
 *Operator's Specific Neural Footprint (Recent Decisions):*
 {chr(10).join(detailed_choices)}
 
-[EXAMPLES]
-User: "I am feeling overwhelmed studying a new language and complex math theorems. I don't know how to memorize everything."
-SYNAPSE: "I hear you, {pseudo}. The sheer volume of data is causing a bottleneck in your working memory. But look at your profile: you are a **{dominant_archetype}**. This means your brain doesn't just memorize; it *architects*.
-Let's drop the standard methods. For the math theorems, we are employing **Concept Mapping**: don't memorize the formula, reverse-engineer the proof until the logic feels like a second language. For the new language, abandon phonetic crutches entirely. Focus on the raw visual and structural anatomy of the characters. Your high **{vector_labels[strongest_key]}** allows you to see patterns where others see chaos. You don't need to work harder, {pseudo}. We just need to align your study vectors with your natural cognitive engine. Here is your 3-step protocol for tonight..."
-
 [NOTES]
-Always filter your advice through the lens of their `{dominant_archetype}` and their Critical Growth Axis (`{vector_labels[weakest_key]}`). If they ask a generic question, reframe it into a masterclass on personalized metacognition. Maintain your majestic, supportive, and brilliant persona at all costs.
+Always filter your advice through the lens of their `{dominant_archetype}` and their Critical Growth Axis (`{vector_labels.get(weakest_key, weakest_key)}`). If they ask a generic question, reframe it into a masterclass on personalized metacognition. Maintain your majestic, supportive, and brilliant persona at all costs.
 """
 
 
 # ==============================================================================
-# 4. NEURAL UI INTERFACE & LLM STREAMING (GEMINI)
+# 4. NEURAL UI INTERFACE & SECURE API INGESTION
 # ==============================================================================
-# Custom CSS for a breathtaking, sleek aesthetic
 st.markdown("""
 <style>
     .chat-header {
@@ -145,17 +142,29 @@ st.markdown("<h1 class='chat-header'>SYNAPSE // Neural Mentor</h1>", unsafe_allo
 st.markdown(f"""
 <div class='metric-pill'>👤 Operator: <b>{pseudo}</b></div>
 <div class='metric-pill'>🧬 Archetype: <b>{dominant_archetype}</b></div>
-<div class='metric-pill'>⚡ Core Advantage: <b>{vector_labels[strongest_key]}</b></div>
+<div class='metric-pill'>⚡ Core Advantage: <b>{vector_labels.get(strongest_key, strongest_key)}</b></div>
 """, unsafe_allow_html=True)
 st.divider()
 
-# Sidebar: Core Engine Configuration
+# Sidebar: Secure Key Ingestion
 with st.sidebar:
     st.markdown("### 🎛️ Engine Matrix (Gemini API)")
 
-    # Auto-fetch from secrets if available
-    default_key = st.secrets.get("GEMINI_API_KEY", "") if "GEMINI_API_KEY" in st.secrets else ""
-    gemini_api_key = st.text_input("Gemini Authentication Key:", value=default_key, type="password")
+    # Secure Secret Retrieval (Checking Streamlit Secrets safely)
+    env_secret_key = ""
+    try:
+        if "GEMINI_API_KEY" in st.secrets:
+            env_secret_key = st.secrets["GEMINI_API_KEY"]
+    except Exception:
+        pass  # Fallback if secrets.toml is absent (e.g. fresh local clone without config)
+
+    # Input field defaults to secret if loaded, but remains hidden/editable if needed
+    gemini_api_key = st.text_input(
+        "Gemini Authentication Key:", 
+        value=env_secret_key, 
+        type="password",
+        help="Loaded securely from st.secrets or input manually."
+    )
 
     selected_model = st.selectbox(
         "Language Model Topology:",
@@ -185,7 +194,7 @@ for msg in st.session_state.messages:
 if prompt := st.chat_input(f"Enter your academic roadblock, {pseudo}..."):
 
     if not gemini_api_key:
-        st.error("⚠️ SYNAPSE offline. Please input your Gemini API Key in the Engine Matrix.")
+        st.error("⚠️ SYNAPSE offline. Please input your Gemini API Key or configure `.streamlit/secrets.toml`.")
         st.stop()
 
     st.session_state.messages.append({"role": "user", "content": prompt})

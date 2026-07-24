@@ -10,9 +10,9 @@ st.set_page_config(
 )
 
 # ------------------------------------------------------------------------------
-# 2. SESSION STATE INITIALIZATION (Anti-Crash & Synchronisation)
+# 2. SESSION STATE INITIALIZATION (Garantie Anti-Crash Global)
 # ------------------------------------------------------------------------------
-# On aligne les clés avec ce qu'attend 'What_If.py' et '01_Assessment.py'
+# Profil utilisateur
 if "user_profile" not in st.session_state:
     st.session_state.user_profile = {
         "pseudo": "",
@@ -20,14 +20,28 @@ if "user_profile" not in st.session_state:
         "gender": "Alien 🛸"
     }
 
+# Réponses au questionnaire
 if "answers" not in st.session_state:
     st.session_state.answers = {}
 
+# Index de la question courante (requis par 01_Assessment.py et Advices.py)
+if "current_q_idx" not in st.session_state:
+    st.session_state.current_q_idx = 0
+
+# Vecteurs cognitifs (évite les KeyError si accès direct aux pages filles)
+if "core_vectors" not in st.session_state:
+    st.session_state.core_vectors = {}
+
+# Drapeaux d'état
 if "flags" not in st.session_state:
     st.session_state.flags = {
         "scan_completed": False,
         "chatbot_unlocked": True
     }
+
+# Historique de discussion pour Chatbot / TheOldDays
+if "history_messages" not in st.session_state:
+    st.session_state.history_messages = []
 
 # ------------------------------------------------------------------------------
 # 3. HOME / INTRODUCTION VIEW
@@ -37,7 +51,7 @@ def home_view():
     st.subheader("We need to know who we're talking to. Set up your profile before diving in.")
 
     st.markdown("""
-    > **Quick heads-up:** Our system adapts its tone, advice, and responses based on your age and identity.  
+    > **Quick heads-up:** Our system adapts its tone, advice, and responses based on your age and all.  
     > Be honest. Or don't. But we *will* notice if something feels off... 👁️
     """)
 
@@ -87,16 +101,19 @@ def home_view():
         st.info(f"👤 **Current Profile:** {st.session_state.user_profile['pseudo']} | **Age:** {st.session_state.user_profile['age']} | **Identity:** {st.session_state.user_profile['gender']}")
 
 # ---------------------------------------------------------
-# ROUTING CONFIGURATION (Noms exacts de ton dossier pages/)
+# ROUTING CONFIGURATION (Arborescence)
 # ---------------------------------------------------------
-home_page = st.Page("lumen_app.py", title="00 // Entry Protocol", icon="🚨", default=True)
+# Vue d'accueil liée à la fonction home_view
+home_page = st.Page(home_view, title="00 // Entry Protocol", icon="🚨", default=True)
+
+# Pages secondaires (fichiers dans le dossier pages/)
 assessment_page = st.Page("pages/01_Assessment.py", title="01 // Neural Assessment", icon="🔍")
-advices_page = st.Page("pages/Advices.py", title="02 // Strategic Countermeasures", icon="📊")  # Corrected from 02_Advices.py
-chatbot_page = st.Page("pages/Chatbot.py", title="03 // Containment AI", icon="💬")            # Corrected from 03_Chatbot.py
+advices_page = st.Page("pages/Advices.py", title="02 // Strategic Countermeasures", icon="📊")
+chatbot_page = st.Page("pages/Chatbot.py", title="03 // Containment AI", icon="💬")
 what_if_page = st.Page("pages/What_If.py", title="04 // Simulation Engine", icon="🔮")
 old_days_page = st.Page("pages/TheOldDays.py", title="05 // Temporal Logs", icon="⏳")
 
-# Navigation
+# Initialisation du menu de navigation
 pg = st.navigation([
     home_page, 
     assessment_page, 
