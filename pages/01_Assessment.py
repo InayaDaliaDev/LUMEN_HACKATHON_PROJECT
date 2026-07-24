@@ -8,14 +8,15 @@ from data.question import ALL_QUESTIONS
 if "flags" not in st.session_state or not st.session_state.flags.get("scan_completed"):
     st.error("🛑 SECURITY BREACH: Assessment incomplete or session expired.")
     st.markdown("You must complete the telemetry scan before accessing the Builder Profile.")
-    if st.button("⬅️ Return to Assessment"):
-        st.switch_page("Quiz.py") # Ajuste le nom si ton fichier principal s'appelle autrement
-    st.stop()
+    
+    if st.button("⬅️ Return to Entry Protocol"):
+        st.switch_page("lumen_app.py")
+        
+    st.stop() 
 
 if "answers" not in st.session_state or not st.session_state.answers:
     st.error("⚠️ DATA CORRUPTION: No answers found in memory. Rebooting required.")
     st.stop()
-
 # ==============================================================================
 # PHASE 2: NEURAL DATA AGGREGATION
 # ==============================================================================
@@ -54,7 +55,7 @@ for q in ALL_QUESTIONS:
         })
 
 # ==============================================================================
-# PHASE 3: METRICS DASHBOARD
+# PHASE 3:  DASHBOARD
 # ==============================================================================
 st.subheader("📊 Cognitive Loadout Matrix")
 
