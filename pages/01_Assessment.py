@@ -1,11 +1,10 @@
 import streamlit as st
+import re
 from data.question import ALL_QUESTIONS
 
 # ==============================================================================
-# PHASE 1: QUESTIONNAIRE ENGINE & SESSION INITIALIZATION
+# PHASE 1: SESSION STATE INITIALIZATION
 # ==============================================================================
-
-# Initialisation des états de session
 if "current_q_idx" not in st.session_state:
     st.session_state.current_q_idx = 0
 
@@ -18,74 +17,111 @@ if "flags" not in st.session_state:
 if "user_profile" not in st.session_state:
     st.session_state.user_profile = {"pseudo": "Builder"}
 
-# Boucle du questionnaire (s'exécute tant que toutes les questions ne sont pas traitées)
-if st.session_state.current_q_idx < len(ALL_QUESTIONS):
+if not isinstance(ALL_QUESTIONS, list) or len(ALL_QUESTIONS) == 0:
+    st.error("⚠️ CRITICAL: Question database is empty or missing. Cannot run the assessment.")
+    st.stop()
+
+TOTAL_QUESTIONS = len(ALL_QUESTIONS)
+# Defensive clamp: if session state ever ends up out of range (e.g. the
+# question bank shrank between two runs), don't crash — just show the report.
+if st.session_state.current_q_idx > TOTAL_QUESTIONS:
+    st.session_state.current_q_idx = TOTAL_QUESTIONS
+
+
+# ==============================================================================
+# PHASE 2: QUESTIONNAIRE LOOP
+# ==============================================================================
+if st.session_state.current_q_idx < TOTAL_QUESTIONS:
     idx = st.session_state.current_q_idx
     q = ALL_QUESTIONS[idx]
 
-    # En-tête de progression
-    progress = idx / len(ALL_QUESTIONS)
-    st.progress(progress)
-    st.caption(f"Question {idx + 1} sur {len(ALL_QUESTIONS)}")
+    st.progress(idx / TOTAL_QUESTIONS)
+    st.caption(f"Question {idx + 1} of {TOTAL_QUESTIONS}")
 
-    # Affichage de la question
-    st.subheader(q.get("text", "Question sans titre"))
+    # FIX: the question bank stores the prompt under "question", not "text" —
+    # the old code called q.get("text", ...) which never matched anything,
+    # so every single question silently displayed "Untitled question".
+    st.subheader(q.get("question", "Untitled question"))
 
-    # Gestion flexible des options (liste ou dictionnaire)
-    options_list = list(q["options"].keys()) if isinstance(q["options"], dict) else q["options"]
-    
+    options = q.get("options", {})
+    option_keys = list(options.keys()) if isinstance(options, dict) else list(options)
+
+    # FIX: the radio previously showed raw option keys ("A", "B", "C", "D")
+    # with no indication of what each one meant — the user was choosing
+    # blind. format_func now renders the actual option text.
+    def format_option(key):
+        opt = options.get(key, {}) if isinstance(options, dict) else {}
+        label_text = opt.get("text", str(key)) if isinstance(opt, dict) else str(key)
+        return f"{key}) {label_text}"
+
+    # FIX: index=None means nothing is pre-selected — the previous version
+    # defaulted silently to the first option, so a user who clicked "Continue"
+    # without reading anything still got an answer recorded as if they'd
+    # chosen it on purpose. Now a real choice is required.
     selected_option = st.radio(
-        "Choisissez l'option qui vous correspond le mieux :",
-        options=options_list,
+        "Pick the option that matches you best:",
+        options=option_keys,
+        format_func=format_option,
+        index=None,
         key=f"radio_q_{idx}"
     )
 
-    # Bouton de validation
-    if st.button("Valider et continuer →", type="primary"):
-        # Sauvegarde de la réponse
-        st.session_state.answers[q["id"]] = selected_option
-        
-        # Passage à la question suivante
-        st.session_state.current_q_idx += 1
-        
-        # DÉBLOCAGE SÉCURITÉ : Si la dernière question vient d'être complétée
-        if st.session_state.current_q_idx >= len(ALL_QUESTIONS):
-            st.session_state.flags["scan_completed"] = True
-            st.session_state.flags["chatbot_unlocked"] = True
-            
-        st.rerun()
+    nav_col1, nav_col2 = st.columns([1, 1])
 
-    # Bloque le chargement du tableau de bord tant que le test n'est pas terminé
+    with nav_col1:
+        if idx > 0:
+            if st.button("← Previous", use_container_width=True):
+                st.session_state.current_q_idx -= 1
+                st.rerun()
+
+    with nav_col2:
+        if st.button("Confirm & continue →", type="primary", use_container_width=True):
+            if selected_option is None:
+                st.warning("Pick an option before moving on.")
+            else:
+                st.session_state.answers[q.get("id", idx)] = selected_option
+                st.session_state.current_q_idx += 1
+
+                if st.session_state.current_q_idx >= TOTAL_QUESTIONS:
+                    st.session_state.flags["scan_completed"] = True
+                    st.session_state.flags["chatbot_unlocked"] = True
+
+                st.rerun()
+
+    # Block the dashboard below until the assessment is actually finished.
     st.stop()
 
 
 # ==============================================================================
-# PARANOIA ENGINE: ACCESS CONTROL & STATE VALIDATION
+# PHASE 3: ACCESS CONTROL
 # ==============================================================================
-# Vérification de sécurité si accès direct par URL sans avoir fini le test
 if not st.session_state.flags.get("scan_completed"):
-    st.error("🛑 SECURITY BREACH: Assessment incomplete or session expired.")
-    st.markdown("You must complete the telemetry scan before accessing the Builder Profile.")
-    
-    if st.button("⬅️ Return to Entry Protocol"):
+    st.error("🛑 Assessment incomplete or session expired.")
+    st.markdown("You need to complete the full scan before viewing your Builder Profile.")
+    if st.button("⬅️ Return to start"):
         st.switch_page("lumen_app.py")
-        
-    st.stop() 
+    st.stop()
 
 if not st.session_state.answers:
-    st.error("⚠️ DATA CORRUPTION: No answers found in memory. Rebooting required.")
+    st.error("⚠️ No answers found in memory. Please retake the assessment.")
+    if st.button("🔄 Retake the assessment"):
+        st.session_state.current_q_idx = 0
+        st.session_state.answers = {}
+        st.rerun()
     st.stop()
 
 
 # ==============================================================================
-# PHASE 2: NEURAL DATA AGGREGATION
+# PHASE 4: SCORE AGGREGATION
 # ==============================================================================
 st.markdown("<p style='color: #8B5CF6; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -10px;'>Step 02 / Decryption</p>", unsafe_allow_html=True)
-pseudo = st.session_state.user_profile.get("pseudo", "Unknown Builder")
-st.title(f"🧬 Profile Decrypted: {pseudo}")
-st.write("Cross-referencing your choices with the global hackathon database...")
 
-# Initialisation des vecteurs
+pseudo_raw = st.session_state.user_profile.get("pseudo", "Unknown Builder")
+pseudo = re.sub(r"[^\w\s\-']", "", str(pseudo_raw)).strip()[:60] or "Unknown Builder"
+
+st.title(f"🧬 Profile Decrypted: {pseudo}")
+st.write("Turning your 24 answers into an actual cognitive profile...")
+
 core_vectors = {
     "information_bandwidth": 0.0,
     "execution_rigor": 0.0,
@@ -93,31 +129,36 @@ core_vectors = {
     "cognitive_endurance": 0.0
 }
 
-# Calcul des scores
 rendered_advices = []
 for q in ALL_QUESTIONS:
-    qid = q["id"]
+    qid = q.get("id")
     user_choice_key = st.session_state.answers.get(qid)
-    
-    if user_choice_key and user_choice_key in q["options"]:
-        option_data = q["options"][user_choice_key]
-        
+    options = q.get("options", {}) or {}
+
+    if user_choice_key and user_choice_key in options:
+        option_data = options[user_choice_key]
+
         if isinstance(option_data, dict):
-            for vec_key in core_vectors.keys():
-                core_vectors[vec_key] += option_data.get("vectors", {}).get(vec_key, 0.0)
-                
+            for vec_key in core_vectors:
+                try:
+                    core_vectors[vec_key] += float(option_data.get("vectors", {}).get(vec_key, 0.0))
+                except (TypeError, ValueError):
+                    continue
+
             rendered_advices.append({
                 "qid": qid,
                 "label": option_data.get("label", "Unknown Pattern"),
-                "advice": option_data.get("advice", "Keep coding.")
+                "advice": option_data.get("advice", "Keep building.")
             })
 
-# Sauvegarde des vecteurs aggregés pour injection dans les Chatbots
+# Cached here so other pages (Advices, Chatbot, TheOldDays, What_If) could
+# read this instead of recomputing the same sums from scratch each time —
+# available for reuse, doesn't replace their own defensive recomputation.
 st.session_state["core_vectors"] = core_vectors
 
 
 # ==============================================================================
-# PHASE 3: DASHBOARD
+# PHASE 5: DASHBOARD
 # ==============================================================================
 st.subheader("📊 Cognitive Loadout Matrix")
 
@@ -131,18 +172,24 @@ st.divider()
 
 
 # ==============================================================================
-# PHASE 4: TACTICAL DEPLOYMENT (ADVICES)
+# PHASE 6: TACTICAL BRIEFING
 # ==============================================================================
 st.subheader("💡 Tactical Briefing")
-st.markdown("Based on your neural patterns, here is your custom survival guide for your next build/hackathon:")
+st.markdown("Based on your answers, here's your custom survival guide for this build:")
 
 for item in rendered_advices:
-    with st.expander(f"Pattern Detected: {item['label']} (Q-{item['qid'].upper()})"):
+    with st.expander(f"Pattern detected: {item['label']} (Q-{str(item['qid']).upper()})"):
         st.info(f"**Directive:** {item['advice']}")
 
 st.write("")
 st.write("")
-if st.session_state.flags.get("chatbot_unlocked"):
-    st.success("🔓 NEW FEATURE UNLOCKED: AI Mentor Access Granted.")
-    if st.button("Initiate Chatbot Protocol 🤖", type="primary", use_container_width=True):
-        st.switch_page("pages/Chatbot.py")
+
+nav_col1, nav_col2 = st.columns(2)
+with nav_col1:
+    if st.session_state.flags.get("chatbot_unlocked"):
+        st.success("🔓 AI Mentor unlocked.")
+        if st.button("Talk to SYNAPSE 🤖", type="primary", use_container_width=True):
+            st.switch_page("pages/Chatbot.py")
+with nav_col2:
+    if st.button("See the full Builder Blueprint 🧬", use_container_width=True):
+        st.switch_page("pages/Advices.py")
