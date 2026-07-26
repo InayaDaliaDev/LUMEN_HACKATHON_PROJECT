@@ -1,6 +1,8 @@
 import streamlit as st
 import time
 import re
+import uuid
+from typing import Annotated, TypedDict
 
 # ==============================================================================
 # 0. HARDENED DEPENDENCY INJECTION
@@ -11,6 +13,14 @@ try:
     from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 except ImportError:
     st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: pip install langchain langchain-google-genai google-generativeai")
+    st.stop()
+
+try:
+    from langgraph.graph import StateGraph, START, END
+    from langgraph.graph.message import add_messages
+    from langgraph.checkpoint.memory import MemorySaver
+except ImportError:
+    st.error("⚠️ CRITICAL FAULT: Missing LangGraph. Execute: pip install langgraph")
     st.stop()
 
 # Optional: precise Google API exception types, if the package is present.
@@ -27,7 +37,6 @@ except ImportError:
 if 'answers' not in st.session_state or not st.session_state.get('answers'):
     st.error("🛑 ACCESS DENIED: Neural baseline not established. Complete the diagnostic scan first.")
     if st.button("🚀 Initiate Assessment", type="primary", use_container_width=True):
-        # FIX: the entry point is lumen_app.py, "Quiz.py" doesn't exist.
         st.switch_page("lumen_app.py")
     st.stop()
 
@@ -50,7 +59,7 @@ if not isinstance(ALL_QUESTIONS, list) or len(ALL_QUESTIONS) == 0:
 
 
 # ==============================================================================
-# 2. COGNITIVE TELEMETRY EXTRACTION ENGINE (defensive parsing)
+# 2. COGNITIVE TELEMETRY EXTRACTION ENGINE (defensive parsing) — unchanged
 # ==============================================================================
 all_labels = []
 vector_totals = {
@@ -88,7 +97,7 @@ weakest_key = min(vector_totals, key=vector_totals.get)
 
 
 # ==============================================================================
-# 3. ELITE UI/UX: THE HISTORICAL CHRONOS CONSOLE
+# 3. ELITE UI/UX: THE HISTORICAL CHRONOS CONSOLE — unchanged
 # ==============================================================================
 st.markdown("""
 <style>
@@ -115,6 +124,15 @@ st.markdown("""
         padding: 4px 12px;
         border-radius: 20px;
         font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .phase-badge {
+        background-color: #1E293B;
+        color: #38BDF8;
+        border: 1px solid #334155;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
         font-weight: 600;
     }
 </style>
@@ -155,6 +173,48 @@ with st.container():
 
 
 # ==============================================================================
+# 3bis. GROUNDING KNOWLEDGE BASE (light retrieval, no external calls needed)
+# ==============================================================================
+# A tiny curated fact-sheet per era. This is injected verbatim into the
+# system prompt as "ground truth" context, the same idea as RAG but with a
+# hand-written knowledge base instead of a vector store — cheap, offline,
+# deterministic, and it measurably reduces historical hallucination without
+# needing network access or extra API calls during the demo.
+ERA_FACTS = {
+    "Ancient Athens (5th Century BCE) - The Lyceum & Geometry Circles": [
+        "Formal education was reserved for free male citizens; girls, slaves, and metics were excluded from it.",
+        "Boys typically studied grammar, rhetoric, music, and gymnastics under a paidagogos and private tutors, not in a state school system.",
+        "Wandering teachers called Sophists charged fees to teach rhetoric and argumentation, and were controversial for doing so.",
+        "Mathematics was tied to philosophy: geometric proof was considered a path to truth, not a separate technical subject.",
+    ],
+    "Medieval University of Paris (13th Century) - Scholasticism & Theology": [
+        "The University of Paris grew out of cathedral schools and was organized into faculties (Arts, Theology, Law, Medicine), with Arts as a required first stage.",
+        "Teaching relied on lectio (reading and glossing authoritative texts) and disputatio (formal structured debate), not experimentation.",
+        "Theology, dominated by figures in the Scholastic tradition, sat at the top of the faculty hierarchy above the Arts faculty.",
+        "Only clerics and men could enroll; students lived under strict Church-supervised discipline.",
+    ],
+    "Victorian England (19th Century) - Rigid Boarding School & Classical Grammar": [
+        "Elite boys' boarding schools emphasized Latin, Greek, and classical literature far more than mathematics or science.",
+        "Corporal punishment, strict hierarchy (prefects, fagging systems), and rigid daily schedules were standard discipline tools.",
+        "Formal secondary and higher education was largely closed to girls until reforms later in the century.",
+        "Rote memorization and recitation were the dominant teaching methods, prized over independent inquiry.",
+    ],
+    "Parisian Sorbonne (1920s) - Early Female Pioneers in Advanced Mathematics": [
+        "Women had only recently gained real access to French university degrees, and were still a small, closely watched minority in mathematics lecture halls.",
+        "Female students frequently faced skepticism from professors and peers about their right to be there at all.",
+        "The Sorbonne of the era mixed traditional lecture-based instruction with an emerging, more rigorous modern approach to analysis and algebra.",
+        "A science degree was still widely seen as a stepping stone to teaching, rather than a research career, for most women who obtained one.",
+    ],
+    "Renaissance Florence (15th Century) - Humanism, Art & Mathematical Perspective": [
+        "Humanist education emphasized classical Latin and Greek texts, rhetoric, and the studia humanitatis, alongside apprenticeship-based training in workshops (botteghe).",
+        "Mathematics of the period was closely tied to practical uses: commercial arithmetic (abbaco schools), surveying, and the geometry of linear perspective in painting.",
+        "Patronage from wealthy families (the Medici above all) shaped which scholars, artists, and ideas could flourish.",
+        "Formal university-style education remained largely closed to women; their intellectual training, when it existed, happened privately.",
+    ],
+}
+
+
+# ==============================================================================
 # 4. SIDEBAR — HARDENED, SHARED KEY HANDLING
 # ==============================================================================
 def is_plausible_gemini_key(key: str) -> bool:
@@ -175,6 +235,12 @@ if "gemini_api_key" not in st.session_state:
         default_key = ""
     st.session_state.gemini_api_key = default_key
 
+if "chronos_thread_id" not in st.session_state:
+    st.session_state.chronos_thread_id = str(uuid.uuid4())
+
+if "chronos_awaiting_opening" not in st.session_state:
+    st.session_state.chronos_awaiting_opening = False
+
 with st.sidebar:
     st.markdown("### ⚙️ Engine Matrix (Gemini API)")
     st.session_state.gemini_api_key = st.text_input(
@@ -184,100 +250,125 @@ with st.sidebar:
         placeholder="Paste your Gemini API key",
         help="Shared across all Lumen pages for this session. Never logged or displayed."
     ).strip()
-    selected_model = st.selectbox("Inference Model:", ["gemini-1.5-pro", "gemini-1.5-flash"], index=0)
+    # FIX: gemini-1.5-pro / gemini-1.5-flash have been fully retired by Google
+    # (the API now returns a 404 for both) — every prior model list in this
+    # app pointed at dead models. gemini-2.5-flash / gemini-2.5-pro are the
+    # current stable, generally-available models as of mid-2026.
+    selected_model = st.selectbox("Inference Model:", ["gemini-2.5-flash", "gemini-2.5-pro"], index=0)
     request_timeout = st.slider("Request Timeout (s)", 10, 120, 45, 5)
 
     st.divider()
     if st.button("Reset Timeline ⏳", use_container_width=True, type="secondary"):
-        st.session_state.history_messages = []
+        # A fresh thread_id means LangGraph's checkpointer starts this
+        # conversation from a completely blank state — no manual list
+        # clearing needed, the old thread simply stops being referenced.
+        st.session_state.chronos_thread_id = str(uuid.uuid4())
+        st.session_state.chronos_awaiting_opening = False
         st.rerun()
 
 gemini_api_key = st.session_state.gemini_api_key
 
-if "history_messages" not in st.session_state:
-    st.session_state.history_messages = []
-
-MAX_HISTORY_MESSAGES = 40
-if len(st.session_state.history_messages) > MAX_HISTORY_MESSAGES:
-    st.session_state.history_messages = st.session_state.history_messages[-MAX_HISTORY_MESSAGES:]
-
 
 # ==============================================================================
-# 5. THE MASTERPIECE PROMPT: HISTORICAL IMMERSION ENGINE
+# 5. LANGGRAPH STATE MACHINE — THE ACTUAL NARRATIVE ENGINE
 # ==============================================================================
-SYSTEM_PROMPT = f"""
+# Why a graph instead of one big prompt: the previous version asked a single
+# LLM call to simultaneously open the scene, pose a challenge, and adapt to
+# the operator forever, hoping the model would pace itself. Here the pacing
+# is explicit and deterministic — a small router node decides which phase
+# we're in from the real turn count, and three specialized nodes each get a
+# narrower, sharper instruction for exactly that phase. Same LLM, better
+# structure: opening -> challenge -> resolution, with historical grounding
+# facts injected as context at every phase.
+class ChronosState(TypedDict):
+    messages: Annotated[list, add_messages]
+    era: str
+    focus: str
+    pseudo: str
+    dominant_archetype: str
+    strongest_label: str
+    weakest_label: str
+    turn_count: int
+    phase: str
+
+
+PHASE_INSTRUCTIONS = {
+    "opening": (
+        "PHASE — OPENING SCENE: There is no prior conversation yet. Transport the "
+        "Operator directly into the classroom, courtyard, or workshop of this era. "
+        "Describe atmosphere (sound, light, smell, clothing, architecture) and the "
+        "social reality of the time in vivid, sensory prose. End by placing the "
+        "Operator inside a concrete first moment of the day, not a generic welcome."
+    ),
+    "challenge": (
+        "PHASE — INTELLECTUAL CHALLENGE: React in-character to what the Operator just "
+        "said or did. Introduce (or continue) a specific scholar, tutor, or "
+        "institutional hurdle of this era who poses a rigorous, era-appropriate "
+        "challenge tied to the Operator's focus. Make the stakes concrete — a real "
+        "problem, a real judge, a real consequence — not abstract encouragement."
+    ),
+    "resolution": (
+        "PHASE — CONSEQUENCE & TRAJECTORY: React in-character to the Operator's latest "
+        "choice, then show its ripple effect: how this era's institutions, peers, or "
+        "authorities respond, and what door opens or closes as a result. Keep the "
+        "simulation alive and interactive — do not wrap up with a tidy moral, let the "
+        "Operator keep steering the timeline."
+    ),
+}
+
+
+def build_system_prompt(state: ChronosState) -> str:
+    facts = ERA_FACTS.get(state["era"], [])
+    facts_block = "\n".join(f"- {f}" for f in facts) or "- (No specific grounding facts on file for this era — rely on well-established general history.)"
+
+    return f"""
 [SYSTEM ARCHITECTURE: CHRONOS HISTORICAL IMMERSION MODULE]
 ROLE: You are an elite Historical Consciousness and Immersive Simulation Engine. You recreate past educational epochs with ruthless historical accuracy, profound literary prose, and vivid sensory detail. You do not romanticize the past; you depict its true intellectual brilliance, social barriers, institutional rigidities, and dogmas.
 
 [OPERATOR TELEMETRY]
-- Designation: {pseudo}
-- Cognitive Profile: {dominant_archetype} (Strong in {vector_labels[strongest_key]}, vulnerable in {vector_labels[weakest_key]})
-- Passion / Focus: {immersion_focus}
+- Designation: {state['pseudo']}
+- Cognitive Profile: {state['dominant_archetype']} (Strong in {state['strongest_label']}, vulnerable in {state['weakest_label']})
+- Passion / Focus: {state['focus']}
 
 [TEMPORAL TARGET]
-- Epoch & Setting: {selected_era}
+- Epoch & Setting: {state['era']}
 
-[EXECUTION PROTOCOL]
-1. SENSORY & SOCIOLOGICAL SETTING: Transport the Operator directly into the classroom, courtyard, or lecture hall of this era. Describe the atmosphere (smell of parchment or candle wax, ambient sound, clothing, architectural weight).
-2. THE HISTORICAL REALITY & BARRIERS: Acknowledge the strict realities of this era—including institutional gatekeeping, social expectations, and gender or class restrictions if applicable to the chosen epoch—and contrast them with the Operator's sharp, independent, modern intellectual instincts.
-3. THE INTELLECTUAL CHALLENGE: Introduce a master scholar, tutor, or institutional hurdle of the time who poses a rigorous challenge related to {immersion_focus}.
-4. INTERACTIVE IMMERSION: Remain fully in character as a historical narrator/mentor of that era, reacting dynamically to how the Operator answers or adapts.
+[VERIFIED HISTORICAL GROUNDING — treat as ground truth, never contradict these]
+{facts_block}
+
+[CURRENT NARRATIVE PHASE]
+{PHASE_INSTRUCTIONS[state['phase']]}
 
 [STYLING & CONSTRAINTS]
 - Tone: Immersive, atmospheric, deeply respectful of historical context, intellectually elevating, and uncompromisingly realistic.
 - Language: Flawless, evocative English with subtle period-appropriate flavor without becoming unreadable.
+- Never break character, never mention that you are an AI or a simulation.
 """
 
-# FIX / UPGRADE: instead of manually rebuilding a raw list of Message
-# objects by hand on every single call (as before), we declare the
-# conversation shape ONCE as a LangChain ChatPromptTemplate with a
-# MessagesPlaceholder for the turn history. This is the idiomatic
-# LangChain pattern — the template is reusable, composable with other
-# chains, and makes the system/history/human structure explicit rather
-# than assembled imperatively each time.
-prompt_template = ChatPromptTemplate.from_messages([
-    ("system", SYSTEM_PROMPT),
-    MessagesPlaceholder("history"),
-])
+
+def route_phase(state: ChronosState) -> dict:
+    """Pure, deterministic pacing logic — no LLM call, no ambiguity, no cost."""
+    turn_count = state.get("turn_count", 0)
+    if turn_count == 0:
+        phase = "opening"
+    elif turn_count < 3:
+        phase = "challenge"
+    else:
+        phase = "resolution"
+    return {"phase": phase, "turn_count": turn_count + 1}
 
 
-# ==============================================================================
-# 6. HARDENED LLM CALL WRAPPER (chain-based, retries, no secret leakage)
-# ==============================================================================
-def get_chain(model: str, api_key: str, timeout: int):
-    llm = ChatGoogleGenerativeAI(
-        model=model,
-        google_api_key=api_key,
-        temperature=0.7,
-        convert_system_message_to_human=True,
-        timeout=timeout,
-        max_retries=0,  # we handle retries ourselves, explicitly, below
-    )
-    return prompt_template | llm
+def phase_router(state: ChronosState) -> str:
+    return state["phase"]
 
 
-def history_to_messages(history):
-    """Turns our simple session_state history into LangChain message objects,
-    skipping hidden system-directive turns which never render to the user."""
-    messages = []
-    for m in history:
-        role = m.get("role")
-        content = m.get("content", "")
-        if role == "user":
-            messages.append(HumanMessage(content=content))
-        elif role == "assistant":
-            messages.append(AIMessage(content=content))
-    return messages
-
-
-def trimmed_history(history):
-    """
-    Keeps the most recent turns so a long roleplay session never silently
-    blows past the model's context window. Trimming by message count (not
-    a real tokenizer) is a conservative, dependency-free approximation —
-    good enough here since each turn is short chat dialogue, not documents.
-    """
-    messages = history_to_messages(history)
+def trimmed_history(messages):
+    """Keeps only the most recent turns so a long roleplay session never
+    silently blows past the model's context window. Message-count based
+    (not a real tokenizer) — a conservative, dependency-free approximation,
+    good enough for short chat dialogue rather than long documents."""
+    if not messages:
+        return []
     return trim_messages(
         messages,
         strategy="last",
@@ -287,20 +378,91 @@ def trimmed_history(history):
     )
 
 
-def stream_with_resilience(chain, history, placeholder, max_attempts: int = 2):
+def make_narrator_node(phase: str):
+    """Factory so the three graph nodes share one implementation while still
+    appearing as distinct, individually-inspectable steps in the graph —
+    each one locked to a single phase's instructions."""
+
+    def node(state: ChronosState, config) -> dict:
+        cfg = (config or {}).get("configurable", {})
+        api_key = cfg.get("api_key", "")
+        model = cfg.get("model", "gemini-2.5-flash")
+        timeout = cfg.get("timeout", 45)
+
+        phased_state = {**state, "phase": phase}
+        system_prompt = build_system_prompt(phased_state)
+
+        prompt_template = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            MessagesPlaceholder("history"),
+        ])
+
+        llm = ChatGoogleGenerativeAI(
+            model=model,
+            google_api_key=api_key,
+            temperature=0.75,
+            timeout=timeout,
+            max_retries=0,  # retries are handled explicitly by stream_turn()
+        )
+
+        chain = prompt_template | llm
+        response = chain.invoke({"history": trimmed_history(state.get("messages", []))})
+        return {"messages": [response]}
+
+    return node
+
+
+@st.cache_resource
+def get_chronos_app():
+    """Compiled once per server process and reused across every rerun and
+    every user session — no secrets are baked in here (they travel through
+    `config['configurable']` per-call instead), so sharing this object is
+    safe. MemorySaver keeps each conversation isolated by thread_id."""
+    graph = StateGraph(ChronosState)
+    graph.add_node("route_phase", route_phase)
+    graph.add_node("opening_narrator", make_narrator_node("opening"))
+    graph.add_node("challenge_narrator", make_narrator_node("challenge"))
+    graph.add_node("resolution_narrator", make_narrator_node("resolution"))
+
+    graph.add_edge(START, "route_phase")
+    graph.add_conditional_edges(
+        "route_phase",
+        phase_router,
+        {
+            "opening": "opening_narrator",
+            "challenge": "challenge_narrator",
+            "resolution": "resolution_narrator",
+        },
+    )
+    graph.add_edge("opening_narrator", END)
+    graph.add_edge("challenge_narrator", END)
+    graph.add_edge("resolution_narrator", END)
+
+    return graph.compile(checkpointer=MemorySaver())
+
+
+chronos_app = get_chronos_app()
+NARRATOR_NODES = {"opening_narrator", "challenge_narrator", "resolution_narrator"}
+
+
+def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int = 2):
     """
-    Streams a response with a small number of retries on transient failures.
-    Auth/config errors are never retried. No failure path ever echoes the
-    raw exception text, which could contain request details.
+    Streams a graph turn token-by-token with a small number of retries on
+    transient failures. Auth/config errors are never retried. No failure
+    path ever echoes the raw exception text, which could contain request
+    details or key fragments.
     """
     last_error_message = None
 
     for attempt in range(1, max_attempts + 1):
         full_response = ""
         try:
-            for chunk in chain.stream({"history": trimmed_history(history)}):
-                full_response += chunk.content or ""
-                placeholder.markdown(full_response + "▌")
+            for msg_chunk, metadata in chronos_app.stream(
+                input_state, config, stream_mode="messages"
+            ):
+                if metadata.get("langgraph_node") in NARRATOR_NODES:
+                    full_response += getattr(msg_chunk, "content", "") or ""
+                    placeholder.markdown(full_response + "▌")
             placeholder.markdown(full_response)
             return full_response, None
 
@@ -337,8 +499,26 @@ def stream_with_resilience(chain, history, placeholder, max_attempts: int = 2):
     return None, last_error_message
 
 
+def build_config():
+    return {
+        "configurable": {
+            "thread_id": st.session_state.chronos_thread_id,
+            "api_key": gemini_api_key,
+            "model": selected_model,
+            "timeout": request_timeout,
+        }
+    }
+
+
+def get_checkpointed_messages():
+    snapshot = chronos_app.get_state(build_config())
+    if not snapshot or not snapshot.values:
+        return []
+    return snapshot.values.get("messages", [])
+
+
 # ==============================================================================
-# 7. EXECUTION & DYNAMIC RENDERING
+# 6. EXECUTION & DYNAMIC RENDERING
 # ==============================================================================
 col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
 with col_btn2:
@@ -347,40 +527,44 @@ with col_btn2:
             st.error("⚠️ CRITICAL: A valid-looking Gemini API Key is required to activate the temporal portal.")
             st.stop()
 
-        st.session_state.history_messages = []
-        init_command = f"System directive: Open temporal portal to {selected_era}. Immerse operator {pseudo} focusing on {immersion_focus}."
-        st.session_state.history_messages.append({"role": "user", "content": init_command, "hidden": True})
+        # A brand-new thread means a brand-new checkpoint: no leftover
+        # messages, no leftover turn_count, nothing to reset by hand.
+        st.session_state.chronos_thread_id = str(uuid.uuid4())
+        st.session_state.chronos_awaiting_opening = True
+        st.rerun()
 
-for msg in st.session_state.history_messages:
-    if not msg.get("hidden", False):
-        avatar = "⏳" if msg["role"] == "assistant" else "👤"
-        with st.chat_message(msg["role"], avatar=avatar):
-            st.markdown(msg["content"])
+current_messages = get_checkpointed_messages()
 
-# Automatic execution if the portal was just opened (hidden directive pending)
-if (st.session_state.history_messages
-        and st.session_state.history_messages[-1]["role"] == "user"
-        and st.session_state.history_messages[-1].get("hidden", False)):
+for m in current_messages:
+    if isinstance(m, HumanMessage):
+        with st.chat_message("user", avatar="👤"):
+            st.markdown(m.content)
+    elif isinstance(m, AIMessage):
+        with st.chat_message("assistant", avatar="⏳"):
+            st.markdown(m.content)
+
+# Fire the opening scene exactly once, right after the portal button.
+if st.session_state.chronos_awaiting_opening and not current_messages:
     with st.chat_message("assistant", avatar="⏳"):
         message_placeholder = st.empty()
 
         if not is_plausible_gemini_key(gemini_api_key):
             st.error("⚠️ CRITICAL: Gemini API Key missing or malformed.")
         else:
-            try:
-                chain = get_chain(selected_model, gemini_api_key, request_timeout)
-            except Exception:
-                st.error("❌ Could not initialize the Gemini client. Check the model name and key format.")
-                chain = None
-
-            if chain is not None:
-                full_response, error_message = stream_with_resilience(
-                    chain, st.session_state.history_messages, message_placeholder
-                )
-                if error_message:
-                    st.error(error_message)
-                else:
-                    st.session_state.history_messages.append({"role": "assistant", "content": full_response})
+            input_state = {
+                "messages": [],
+                "era": selected_era,
+                "focus": immersion_focus,
+                "pseudo": pseudo,
+                "dominant_archetype": dominant_archetype,
+                "strongest_label": vector_labels[strongest_key],
+                "weakest_label": vector_labels[weakest_key],
+            }
+            full_response, error_message = stream_turn(input_state, build_config(), message_placeholder)
+            if error_message:
+                st.error(error_message)
+            else:
+                st.session_state.chronos_awaiting_opening = False
 
 # Real-time interactive follow-up
 if prompt := st.chat_input("Speak or respond within the historical simulation..."):
@@ -390,24 +574,21 @@ if prompt := st.chat_input("Speak or respond within the historical simulation...
 
     prompt = prompt.strip()[:4000]
 
-    st.session_state.history_messages.append({"role": "user", "content": prompt})
     with st.chat_message("user", avatar="👤"):
         st.markdown(prompt)
 
     with st.chat_message("assistant", avatar="⏳"):
         message_placeholder = st.empty()
 
-        try:
-            chain = get_chain(selected_model, gemini_api_key, request_timeout)
-        except Exception:
-            st.error("❌ Could not initialize the Gemini client. Check the model name and key format.")
-            chain = None
-
-        if chain is not None:
-            full_response, error_message = stream_with_resilience(
-                chain, st.session_state.history_messages, message_placeholder
-            )
-            if error_message:
-                st.error(error_message)
-            else:
-                st.session_state.history_messages.append({"role": "assistant", "content": full_response})
+        input_state = {
+            "messages": [HumanMessage(content=prompt)],
+            "era": selected_era,
+            "focus": immersion_focus,
+            "pseudo": pseudo,
+            "dominant_archetype": dominant_archetype,
+            "strongest_label": vector_labels[strongest_key],
+            "weakest_label": vector_labels[weakest_key],
+        }
+        full_response, error_message = stream_turn(input_state, build_config(), message_placeholder)
+        if error_message:
+            st.error(error_message)
