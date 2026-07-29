@@ -9,7 +9,7 @@ from typing import Annotated, TypedDict
 # ==============================================================================
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
-    from langchain_core.messages import HumanMessage, AIMessage, trim_messages
+    from langchain_core.messages import HumanMessage, AIMessage, trim_messages, BaseMessage
     from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 except ImportError:
     st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: pip install langchain langchain-google-genai google-generativeai")
@@ -59,7 +59,7 @@ if not isinstance(ALL_QUESTIONS, list) or len(ALL_QUESTIONS) == 0:
 
 
 # ==============================================================================
-# 2. COGNITIVE TELEMETRY EXTRACTION ENGINE (defensive parsing) — unchanged
+# 2. COGNITIVE TELEMETRY EXTRACTION ENGINE (defensive parsing)
 # ==============================================================================
 all_labels = []
 vector_totals = {
@@ -97,7 +97,7 @@ weakest_key = min(vector_totals, key=vector_totals.get)
 
 
 # ==============================================================================
-# 3. ELITE UI/UX: THE HISTORICAL CHRONOS CONSOLE — unchanged
+# 3. ELITE UI/UX: THE HISTORICAL CHRONOS CONSOLE
 # ==============================================================================
 st.markdown("""
 <style>
@@ -173,13 +173,8 @@ with st.container():
 
 
 # ==============================================================================
-# 3bis. GROUNDING KNOWLEDGE BASE (light retrieval, no external calls needed)
+# 3bis. GROUNDING KNOWLEDGE BASE
 # ==============================================================================
-# A tiny curated fact-sheet per era. This is injected verbatim into the
-# system prompt as "ground truth" context, the same idea as RAG but with a
-# hand-written knowledge base instead of a vector store — cheap, offline,
-# deterministic, and it measurably reduces historical hallucination without
-# needing network access or extra API calls during the demo.
 ERA_FACTS = {
     "Ancient Athens (5th Century BCE) - The Lyceum & Geometry Circles": [
         "Formal education was reserved for free male citizens; girls, slaves, and metics were excluded from it.",
@@ -218,14 +213,11 @@ ERA_FACTS = {
 # 4. SIDEBAR — HARDENED, SHARED KEY HANDLING
 # ==============================================================================
 def is_plausible_gemini_key(key: str) -> bool:
-    """Loose sanity check only — filters obviously-empty/malformed pastes."""
     if not key:
         return False
     key = key.strip()
     return len(key) >= 20 and " " not in key
 
-
-# FIX: shared across all Lumen pages via session_state — paste it once.
 if "gemini_api_key" not in st.session_state:
     default_key = ""
     try:
@@ -250,18 +242,21 @@ with st.sidebar:
         placeholder="Paste your Gemini API key",
         help="Shared across all Lumen pages for this session. Never logged or displayed."
     ).strip()
-    # FIX: gemini-1.5-pro / gemini-1.5-flash have been fully retired by Google
-    # (the API now returns a 404 for both) — every prior model list in this
-    # app pointed at dead models. gemini-2.5-flash / gemini-2.5-pro are the
-    # current stable, generally-available models as of mid-2026.
-    selected_model = st.selectbox("Inference Model:", ["gemini-2.5-flash", "gemini-2.5-pro"], index=0)
+
+    selected_model = st.selectbox(
+        "Inference Model:",
+        options=[
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-3.5-flash",
+            "gemini-flash-latest"
+        ],
+        index=0
+    )
     request_timeout = st.slider("Request Timeout (s)", 10, 120, 45, 5)
 
     st.divider()
     if st.button("Reset Timeline ⏳", use_container_width=True, type="secondary"):
-        # A fresh thread_id means LangGraph's checkpointer starts this
-        # conversation from a completely blank state — no manual list
-        # clearing needed, the old thread simply stops being referenced.
         st.session_state.chronos_thread_id = str(uuid.uuid4())
         st.session_state.chronos_awaiting_opening = False
         st.rerun()
@@ -272,14 +267,6 @@ gemini_api_key = st.session_state.gemini_api_key
 # ==============================================================================
 # 5. LANGGRAPH STATE MACHINE — THE ACTUAL NARRATIVE ENGINE
 # ==============================================================================
-# Why a graph instead of one big prompt: the previous version asked a single
-# LLM call to simultaneously open the scene, pose a challenge, and adapt to
-# the operator forever, hoping the model would pace itself. Here the pacing
-# is explicit and deterministic — a small router node decides which phase
-# we're in from the real turn count, and three specialized nodes each get a
-# narrower, sharper instruction for exactly that phase. Same LLM, better
-# structure: opening -> challenge -> resolution, with historical grounding
-# facts injected as context at every phase.
 class ChronosState(TypedDict):
     messages: Annotated[list, add_messages]
     era: str
@@ -337,7 +324,7 @@ ROLE: You are an elite Historical Consciousness and Immersive Simulation Engine.
 {facts_block}
 
 [CURRENT NARRATIVE PHASE]
-{PHASE_INSTRUCTIONS[state['phase']]}
+{PHASE_INSTRUCTIONS.get(state.get('phase', 'opening'), PHASE_INSTRUCTIONS['opening'])}
 
 [STYLING & CONSTRAINTS]
 - Tone: Immersive, atmospheric, deeply respectful of historical context, intellectually elevating, and uncompromisingly realistic.
@@ -347,7 +334,6 @@ ROLE: You are an elite Historical Consciousness and Immersive Simulation Engine.
 
 
 def route_phase(state: ChronosState) -> dict:
-    """Pure, deterministic pacing logic — no LLM call, no ambiguity, no cost."""
     turn_count = state.get("turn_count", 0)
     if turn_count == 0:
         phase = "opening"
@@ -359,30 +345,29 @@ def route_phase(state: ChronosState) -> dict:
 
 
 def phase_router(state: ChronosState) -> str:
-    return state["phase"]
+    return state.get("phase", "opening")
+
+
+def safe_token_counter(msgs) -> int:
+    """Polymorphic constraint evaluator to prevent TypeError if a singleton is passed instead of an iterable."""
+    if isinstance(msgs, list):
+        return len(msgs)
+    return 1
 
 
 def trimmed_history(messages):
-    """Keeps only the most recent turns so a long roleplay session never
-    silently blows past the model's context window. Message-count based
-    (not a real tokenizer) — a conservative, dependency-free approximation,
-    good enough for short chat dialogue rather than long documents."""
     if not messages:
         return []
     return trim_messages(
         messages,
         strategy="last",
-        token_counter=len,
-        max_tokens=24,
+        token_counter=safe_token_counter,
+        max_tokens=24,  # Interpreted as 24 nodes/messages based on the safe_token_counter mapping
         start_on="human",
     )
 
 
 def make_narrator_node(phase: str):
-    """Factory so the three graph nodes share one implementation while still
-    appearing as distinct, individually-inspectable steps in the graph —
-    each one locked to a single phase's instructions."""
-
     def node(state: ChronosState, config) -> dict:
         cfg = (config or {}).get("configurable", {})
         api_key = cfg.get("api_key", "")
@@ -402,7 +387,7 @@ def make_narrator_node(phase: str):
             google_api_key=api_key,
             temperature=0.75,
             timeout=timeout,
-            max_retries=0,  # retries are handled explicitly by stream_turn()
+            max_retries=0,
         )
 
         chain = prompt_template | llm
@@ -414,10 +399,6 @@ def make_narrator_node(phase: str):
 
 @st.cache_resource
 def get_chronos_app():
-    """Compiled once per server process and reused across every rerun and
-    every user session — no secrets are baked in here (they travel through
-    `config['configurable']` per-call instead), so sharing this object is
-    safe. MemorySaver keeps each conversation isolated by thread_id."""
     graph = StateGraph(ChronosState)
     graph.add_node("route_phase", route_phase)
     graph.add_node("opening_narrator", make_narrator_node("opening"))
@@ -446,12 +427,6 @@ NARRATOR_NODES = {"opening_narrator", "challenge_narrator", "resolution_narrator
 
 
 def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int = 2):
-    """
-    Streams a graph turn token-by-token with a small number of retries on
-    transient failures. Auth/config errors are never retried. No failure
-    path ever echoes the raw exception text, which could contain request
-    details or key fragments.
-    """
     last_error_message = None
 
     for attempt in range(1, max_attempts + 1):
@@ -527,8 +502,6 @@ with col_btn2:
             st.error("⚠️ CRITICAL: A valid-looking Gemini API Key is required to activate the temporal portal.")
             st.stop()
 
-        # A brand-new thread means a brand-new checkpoint: no leftover
-        # messages, no leftover turn_count, nothing to reset by hand.
         st.session_state.chronos_thread_id = str(uuid.uuid4())
         st.session_state.chronos_awaiting_opening = True
         st.rerun()
@@ -543,7 +516,6 @@ for m in current_messages:
         with st.chat_message("assistant", avatar="⏳"):
             st.markdown(m.content)
 
-# Fire the opening scene exactly once, right after the portal button.
 if st.session_state.chronos_awaiting_opening and not current_messages:
     with st.chat_message("assistant", avatar="⏳"):
         message_placeholder = st.empty()
@@ -566,7 +538,6 @@ if st.session_state.chronos_awaiting_opening and not current_messages:
             else:
                 st.session_state.chronos_awaiting_opening = False
 
-# Real-time interactive follow-up
 if prompt := st.chat_input("Speak or respond within the historical simulation..."):
     if not is_plausible_gemini_key(gemini_api_key):
         st.error("⚠️ CRITICAL: A valid-looking Gemini API Key is required.")

@@ -9,7 +9,7 @@ from typing import Annotated, TypedDict
 # ==============================================================================
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
-    from langchain_core.messages import HumanMessage, AIMessage, trim_messages
+    from langchain_core.messages import HumanMessage, AIMessage, trim_messages, BaseMessage
     from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 except ImportError:
     st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: pip install langchain langchain-google-genai google-generativeai")
@@ -42,9 +42,6 @@ if 'answers' not in st.session_state or not st.session_state.get('answers'):
 
 user_profile = st.session_state.get("user_profile", {}) or {}
 pseudo_raw = user_profile.get("pseudo", "Operator")
-# Defensive sanitation: never trust session_state content blindly, even if it
-# originates from your own app — a corrupted or tampered session should not
-# crash rendering or leak into the LLM prompt unsanitized.
 pseudo = re.sub(r"[^\w\s\-']", "", str(pseudo_raw)).strip()[:60] or "Operator"
 
 answers = st.session_state.get("answers", {}) or {}
@@ -61,7 +58,7 @@ if not isinstance(ALL_QUESTIONS, list) or len(ALL_QUESTIONS) == 0:
 
 
 # ==============================================================================
-# 2. COGNITIVE TELEMETRY EXTRACTION ENGINE (defensive parsing) — unchanged
+# 2. COGNITIVE TELEMETRY EXTRACTION ENGINE (defensive parsing)
 # ==============================================================================
 all_labels = []
 vector_totals = {
@@ -99,7 +96,7 @@ weakest_key = min(vector_totals, key=vector_totals.get)
 
 
 # ==============================================================================
-# 3. ELITE UI/UX: THE CHRONOS CONTROL MATRIX — unchanged
+# 3. ELITE UI/UX: THE CHRONOS CONTROL MATRIX
 # ==============================================================================
 st.markdown("""
 <style>
@@ -155,21 +152,11 @@ with st.container():
 # 4. SIDEBAR — HARDENED, SHARED KEY HANDLING
 # ==============================================================================
 def is_plausible_gemini_key(key: str) -> bool:
-    """
-    Loose sanity check only — NOT a validity check. Google key formats can
-    change, so this never blocks a real key; it only filters out empty
-    strings, whitespace, and obviously-too-short pastes before we waste a
-    network call and show the user a confusing traceback instead.
-    """
     if not key:
         return False
     key = key.strip()
     return len(key) >= 20 and " " not in key
 
-
-# FIX: shared across all Lumen pages via session_state — paste it once,
-# same key used by TheOldDays.py and Chatbot.py — no need to re-paste
-# the Gemini key when switching between pages.
 if "gemini_api_key" not in st.session_state:
     default_key = ""
     try:
@@ -194,17 +181,21 @@ with st.sidebar:
         placeholder="Paste your Gemini API key",
         help="Shared across all Lumen pages for this session. Never logged or displayed."
     ).strip()
-    # FIX: gemini-1.5-pro / gemini-1.5-flash are fully retired by Google (the
-    # API now returns a 404 for both). gemini-2.5-flash / gemini-2.5-pro are
-    # the current stable, generally-available models as of mid-2026.
-    selected_model = st.selectbox("Inference Model:", ["gemini-2.5-flash", "gemini-2.5-pro"], index=0)
+
+    selected_model = st.selectbox(
+        "Inference Model:",
+        options=[
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-3.5-flash",
+            "gemini-flash-latest"
+        ],
+        index=0
+    )
     request_timeout = st.slider("Request Timeout (s)", 10, 120, 45, 5)
 
     st.divider()
     if st.button("Purge Timeline Memory 🧹", use_container_width=True, type="secondary"):
-        # A fresh thread_id means LangGraph's checkpointer starts this
-        # conversation from a completely blank state — no manual list
-        # clearing needed, the old thread simply stops being referenced.
         st.session_state.multiverse_thread_id = str(uuid.uuid4())
         st.session_state.multiverse_awaiting_opening = False
         st.rerun()
@@ -215,10 +206,6 @@ gemini_api_key = st.session_state.gemini_api_key
 # ==============================================================================
 # 5. LANGGRAPH STATE MACHINE — THE ACTUAL SIMULATION ENGINE
 # ==============================================================================
-# Same architecture as TheOldDays.py: a deterministic router node reads the
-# real turn count and picks a phase, three specialized nodes each get a
-# narrower instruction for exactly that phase instead of one prompt trying
-# to do everything at once — briefing, then trajectory, then remediation.
 class MultiverseState(TypedDict):
     messages: Annotated[list, add_messages]
     sim_level: str
@@ -263,14 +250,6 @@ PHASE_INSTRUCTIONS = {
     ),
 }
 
-# [REPRESENTATIONAL INTEGRITY] — deliberately NOT a per-region "facts" lookup
-# like the historical eras get in TheOldDays.py. A continent-sized region
-# ("Africa", "Asia"...) contains far too much genuine diversity in education
-# systems to responsibly reduce to a fixed list of "facts" — that risks
-# flattening it into a stereotype instead of grounding it. Instead, the
-# model is explicitly instructed to commit to ONE concrete, clearly-scoped
-# scenario while naming it as one instance among many, not "the" regional
-# norm.
 REPRESENTATIONAL_GUARDRAIL = (
     "[REPRESENTATIONAL INTEGRITY]\n"
     "{sim_region} contains enormously diverse educational systems across "
@@ -313,14 +292,13 @@ ROLE: You are CHRONOS, an enterprise-grade Epistemic Simulation Engine and Socio
 {phase_text}
 
 [STYLING & CONSTRAINTS]
-- Tone: Absolute authority, clinical precision, deeply analytical, intellectually elevating, and profoundly serious. No corporate pleasantries or generic AI fluff ("As an AI...").
+- Tone: Absolute authority, clinical precision, deeply analytical, intellectually elevating, and profoundly serious. No corporate pleasantries or generic AI fluff.
 - Formatting: Advanced Markdown architecture. Use bold headers, explicit metric notation, and structured lists.
 - Never break character, never mention that you are an AI or a simulation.
 """
 
 
 def route_phase(state: MultiverseState) -> dict:
-    """Pure, deterministic pacing logic — no LLM call, no ambiguity, no cost."""
     turn_count = state.get("turn_count", 0)
     if turn_count == 0:
         phase = "opening"
@@ -335,25 +313,26 @@ def phase_router(state: MultiverseState) -> str:
     return state["phase"]
 
 
+def safe_token_counter(msgs) -> int:
+    """Polymorphic constraint evaluator to prevent TypeError if a singleton is passed instead of an iterable."""
+    if isinstance(msgs, list):
+        return len(msgs)
+    return 1
+
+
 def trimmed_history(messages):
-    """Keeps only the most recent turns so a long roleplay session never
-    silently blows past the model's context window."""
     if not messages:
         return []
     return trim_messages(
         messages,
         strategy="last",
-        token_counter=len,
+        token_counter=safe_token_counter,
         max_tokens=24,
         start_on="human",
     )
 
 
 def make_narrator_node(phase: str):
-    """Factory so the three graph nodes share one implementation while still
-    appearing as distinct, individually-inspectable steps in the graph —
-    each one locked to a single phase's instructions."""
-
     def node(state: MultiverseState, config) -> dict:
         cfg = (config or {}).get("configurable", {})
         api_key = cfg.get("api_key", "")
@@ -373,7 +352,7 @@ def make_narrator_node(phase: str):
             google_api_key=api_key,
             temperature=0.6,
             timeout=timeout,
-            max_retries=0,  # retries are handled explicitly by stream_turn()
+            max_retries=0,
         )
 
         chain = prompt_template | llm
@@ -385,10 +364,6 @@ def make_narrator_node(phase: str):
 
 @st.cache_resource
 def get_chronos_multiverse_app():
-    """Compiled once per server process and reused across every rerun and
-    every user session — no secrets are baked in here (they travel through
-    `config['configurable']` per-call instead), so sharing this object is
-    safe. MemorySaver keeps each conversation isolated by thread_id."""
     graph = StateGraph(MultiverseState)
     graph.add_node("route_phase", route_phase)
     graph.add_node("opening_narrator", make_narrator_node("opening"))
@@ -417,13 +392,6 @@ NARRATOR_NODES = {"opening_narrator", "challenge_narrator", "resolution_narrator
 
 
 def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int = 2):
-    """
-    Streams a graph turn token-by-token with a small number of retries on
-    transient failures (timeouts, rate limits, temporary server errors).
-    Auth/config errors are never retried — retrying a bad key just burns
-    quota and time. Every failure path is user-legible and NEVER includes
-    the raw API key.
-    """
     last_error_message = None
 
     for attempt in range(1, max_attempts + 1):
@@ -463,7 +431,7 @@ def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int 
             last_error_message = fatal_user_message
 
             if transient and attempt < max_attempts:
-                time.sleep(1.5 * attempt)  # simple linear backoff
+                time.sleep(1.5 * attempt)
                 continue
             else:
                 return None, last_error_message
@@ -499,8 +467,6 @@ with col_btn2:
             st.error("⚠️ CRITICAL: A valid-looking Gemini API Key is required to initialize the Chronos engine.")
             st.stop()
 
-        # A brand-new thread means a brand-new checkpoint: no leftover
-        # messages, no leftover turn_count, nothing to reset by hand.
         st.session_state.multiverse_thread_id = str(uuid.uuid4())
         st.session_state.multiverse_awaiting_opening = True
         st.rerun()
@@ -515,7 +481,6 @@ for m in current_messages:
         with st.chat_message("assistant", avatar="🌐"):
             st.markdown(m.content)
 
-# Fire the opening briefing exactly once, right after the launch button.
 if st.session_state.multiverse_awaiting_opening and not current_messages:
     with st.chat_message("assistant", avatar="🌐"):
         message_placeholder = st.empty()
@@ -539,14 +504,11 @@ if st.session_state.multiverse_awaiting_opening and not current_messages:
             else:
                 st.session_state.multiverse_awaiting_opening = False
 
-# Real-time interactive follow-up
-if prompt := st.chat_input("Interact with the simulation timeline (e.g., 'What happens if I skip lectures to build an independent project?')..."):
+if prompt := st.chat_input("Interact with the simulation timeline..."):
     if not is_plausible_gemini_key(gemini_api_key):
         st.error("⚠️ CRITICAL: A valid-looking Gemini API Key is required.")
         st.stop()
 
-    # Defensive input hygiene: cap length so a pasted wall of text can't
-    # silently blow the context window or the UI.
     prompt = prompt.strip()[:4000]
 
     with st.chat_message("user", avatar="👤"):

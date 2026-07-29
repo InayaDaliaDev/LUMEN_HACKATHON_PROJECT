@@ -42,9 +42,6 @@ if 'answers' not in st.session_state or not st.session_state.get('answers'):
 
 user_profile = st.session_state.get("user_profile", {}) or {}
 pseudo_raw = user_profile.get("pseudo", "Operator")
-# Defensive sanitation: never trust session_state content blindly, even if it
-# originates from your own app — a corrupted or tampered session should not
-# crash rendering or leak into the LLM prompt unsanitized.
 pseudo = re.sub(r"[^\w\s\-']", "", str(pseudo_raw)).strip()[:60] or "Operator"
 
 answers = st.session_state.get("answers", {}) or {}
@@ -61,7 +58,7 @@ if not isinstance(ALL_QUESTIONS, list) or len(ALL_QUESTIONS) == 0:
 
 
 # ==============================================================================
-# 2. COGNITIVE TELEMETRY ENGINE (defensive parsing) — unchanged
+# 2. COGNITIVE TELEMETRY ENGINE (defensive parsing)
 # ==============================================================================
 all_labels = []
 vector_totals = {
@@ -109,16 +106,8 @@ detailed_choices_block = "\n".join(detailed_choices) if detailed_choices else "-
 
 
 # ==============================================================================
-# 3. VERIFIED TECHNIQUE LIBRARY (grounding — the actual point of this page)
+# 3. VERIFIED TECHNIQUE LIBRARY
 # ==============================================================================
-# The old prompt just TOLD the model "never give generic advice, use real
-# frameworks" and hoped it would comply and not invent anything. That's not
-# grounding, that's a wish. Here the real, named, well-established techniques
-# live in code, tagged by which cognitive axis they help compensate for
-# ("addresses") and which they play to the strength of ("leverages"). A
-# deterministic node below picks the most relevant ones for THIS Operator's
-# actual profile before the LLM ever gets involved — the model still writes
-# the explanation, but it can't quietly swap in a made-up "technique".
 TECHNIQUE_LIBRARY = [
     {
         "name": "Spaced Repetition",
@@ -184,10 +173,6 @@ TECHNIQUE_LIBRARY = [
 
 
 def select_priority_techniques(weakest_key: str, strongest_key: str) -> list:
-    """Deterministic, no LLM call: ranks the library by relevance to THIS
-    Operator's actual profile. Growth-axis techniques come first (the more
-    urgent need), then a strength-leveraging pick — never invented, always
-    drawn from the verified library above."""
     addresses_weak = [t["name"] for t in TECHNIQUE_LIBRARY if weakest_key in t["addresses"]]
     leverages_strong = [t["name"] for t in TECHNIQUE_LIBRARY if strongest_key in t["leverages"]]
 
@@ -201,7 +186,7 @@ def select_priority_techniques(weakest_key: str, strongest_key: str) -> list:
 
 
 # ==============================================================================
-# 4. NEURAL UI INTERFACE — unchanged
+# 4. NEURAL UI INTERFACE
 # ==============================================================================
 st.markdown("""
 <style>
@@ -240,19 +225,11 @@ st.divider()
 # 5. SIDEBAR — HARDENED, SHARED KEY HANDLING
 # ==============================================================================
 def is_plausible_gemini_key(key: str) -> bool:
-    """
-    Loose sanity check only — NOT a validity check. Filters out empty
-    strings, whitespace, and obviously-too-short pastes before we waste a
-    network call and show the user a confusing traceback.
-    """
     if not key:
         return False
     key = key.strip()
     return len(key) >= 20 and " " not in key
 
-
-# Shared across all Lumen pages via session_state — paste it once for the
-# whole app (Chatbot / TheOldDays / What_If all read the same value).
 if "gemini_api_key" not in st.session_state:
     default_key = ""
     try:
@@ -275,13 +252,18 @@ with st.sidebar:
         help="Shared across all Lumen pages for this session. Never logged or displayed."
     ).strip()
 
-    # FIX: gemini-1.5-pro / gemini-1.5-flash are fully retired by Google (the
-    # API now returns a 404 for both). gemini-2.5-flash / gemini-2.5-pro are
-    # the current stable, generally-available models as of mid-2026.
+    # Modèles optimisés avec repli sécurisé (modèles actifs au 07/2026 —
+    # vérifiés via genai.list_models() sur une clé réelle)
     selected_model = st.selectbox(
         "Language Model Topology:",
-        options=["gemini-2.5-flash", "gemini-2.5-pro"],
-        index=0
+        options=[
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-3.5-flash",
+            "gemini-flash-latest"
+        ],
+        index=0,
+        help="gemini-2.5-flash offre le meilleur compromis qualité/fiabilité pour une démo devant jury."
     )
 
     temperature = st.slider("Cognitive Drift (Temperature):", 0.0, 1.0, 0.6, 0.05,
@@ -291,8 +273,6 @@ with st.sidebar:
 
     st.divider()
     if st.button("Purge Session Memory 🧹", use_container_width=True, type="secondary"):
-        # A fresh thread_id means LangGraph's checkpointer starts this
-        # conversation from a completely blank state.
         st.session_state.synapse_thread_id = str(uuid.uuid4())
         st.rerun()
 
@@ -357,8 +337,6 @@ Always filter your advice through the lens of their `{state['dominant_archetype'
 
 
 def trimmed_history(messages):
-    """Keeps only the most recent turns so a long mentoring session never
-    silently blows past the model's context window."""
     if not messages:
         return []
     return trim_messages(
@@ -371,9 +349,6 @@ def trimmed_history(messages):
 
 
 def select_techniques_node(state: MentorState, config) -> dict:
-    """Pure, deterministic pre-processing — no LLM call, no ambiguity, no
-    cost. Decides WHICH real techniques are most relevant before the mentor
-    node ever writes a word."""
     picks = select_priority_techniques(state.get("weakest_key", ""), state.get("strongest_key", ""))
     return {"selected_techniques": picks}
 
@@ -381,7 +356,7 @@ def select_techniques_node(state: MentorState, config) -> dict:
 def mentor_node(state: MentorState, config) -> dict:
     cfg = (config or {}).get("configurable", {})
     api_key = cfg.get("api_key", "")
-    model = cfg.get("model", "gemini-2.5-flash")
+    primary_model = cfg.get("model", "gemini-2.5-flash")
     temp = cfg.get("temperature", 0.6)
     timeout = cfg.get("timeout", 45)
 
@@ -391,26 +366,35 @@ def mentor_node(state: MentorState, config) -> dict:
         MessagesPlaceholder("history"),
     ])
 
-    llm = ChatGoogleGenerativeAI(
-        model=model,
-        google_api_key=api_key,
-        temperature=temp,
-        timeout=timeout,
-        max_retries=0,  # retries are handled explicitly by stream_turn()
-    )
+    # Cascade de secours automatique pour parer aux erreurs 429 / 404
+    fallback_chain = [primary_model, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
+    models_to_try = []
+    for m in fallback_chain:
+        if m not in models_to_try:
+            models_to_try.append(m)
 
-    chain = prompt_template | llm
-    response = chain.invoke({"history": trimmed_history(state.get("messages", []))})
-    return {"messages": [response]}
+    last_exception = None
+    for model_name in models_to_try:
+        try:
+            llm = ChatGoogleGenerativeAI(
+                model=model_name,
+                google_api_key=api_key,
+                temperature=temp,
+                timeout=timeout,
+                max_retries=1,
+            )
+            chain = prompt_template | llm
+            response = chain.invoke({"history": trimmed_history(state.get("messages", []))})
+            return {"messages": [response]}
+        except Exception as e:
+            last_exception = e
+            continue
+
+    raise last_exception if last_exception else RuntimeError("All model execution attempts failed.")
 
 
 @st.cache_resource
 def get_synapse_app():
-    """Compiled once per server process and reused across every rerun and
-    every user session — no secrets or per-user profile data are baked in
-    here (they travel through the state/config per-call instead), so
-    sharing this compiled graph is safe. MemorySaver keeps each
-    conversation isolated by thread_id."""
     graph = StateGraph(MentorState)
     graph.add_node("select_techniques", select_techniques_node)
     graph.add_node("mentor", mentor_node)
@@ -445,9 +429,6 @@ def get_checkpointed_messages():
 
 
 def seed_greeting_if_new():
-    """Matches the original UX: a static, non-LLM welcome message is
-    present from the very first render of a fresh thread, and counts as
-    part of the conversation history the model sees afterwards."""
     if get_checkpointed_messages():
         return
     greeting = (
@@ -462,12 +443,6 @@ seed_greeting_if_new()
 
 
 def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int = 2):
-    """
-    Streams a response with a small number of retries on transient failures.
-    Auth/config errors are never retried. No failure path ever echoes the
-    raw exception text, which could contain request details — only a
-    classified, user-legible message.
-    """
     last_error_message = None
 
     for attempt in range(1, max_attempts + 1):
@@ -502,12 +477,12 @@ def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int 
 
             if fatal_user_message is None:
                 transient = True
-                fatal_user_message = f"❌ Unexpected engine fault ({type(e).__name__})."
+                fatal_user_message = f"❌ Engine issue ({type(e).__name__}: {str(e)})."
 
             last_error_message = fatal_user_message
 
             if transient and attempt < max_attempts:
-                time.sleep(1.5 * attempt)
+                time.sleep(1.0 * attempt)
                 continue
             else:
                 return None, last_error_message
@@ -536,8 +511,6 @@ if prompt := st.chat_input(f"Enter your academic roadblock, {pseudo}..."):
         st.error("⚠️ SYNAPSE offline. Please input a valid-looking Gemini API Key in the Engine Matrix.")
         st.stop()
 
-    # Defensive input hygiene: cap length so a pasted wall of text can't
-    # silently blow the context window.
     prompt = prompt.strip()[:4000]
 
     with st.chat_message("user", avatar="👤"):
