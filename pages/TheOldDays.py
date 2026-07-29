@@ -4,12 +4,33 @@ import re
 import uuid
 from typing import Annotated, TypedDict
 
+
+def extract_text(content) -> str:
+    """Extrait uniquement le texte affichable d'un message LLM.
+
+    Gemini (surtout les modèles récents type 3.x) peut renvoyer `.content`
+    soit comme une simple chaîne, soit comme une liste de blocs
+    (texte + blocs internes de raisonnement/"signature"). On ne veut
+    JAMAIS afficher ces blocs internes à l'utilisateur — seulement le texte.
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict) and block.get("type", "text") == "text":
+                parts.append(block.get("text", ""))
+        return "".join(parts)
+    return str(content) if content else ""
+
 # ==============================================================================
 # 0. HARDENED DEPENDENCY INJECTION
 # ==============================================================================
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
-    from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
+    from langchain_core.messages import HumanMessage, AIMessage, trim_messages, BaseMessage
     from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 except ImportError:
     st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: pip install langchain langchain-google-genai google-generativeai")
@@ -42,6 +63,7 @@ if 'answers' not in st.session_state or not st.session_state.get('answers'):
 
 user_profile = st.session_state.get("user_profile", {}) or {}
 pseudo_raw = user_profile.get("pseudo", "Operator")
+# Never trust session_state content blindly when it feeds an LLM prompt.
 pseudo = re.sub(r"[^\w\s\-']", "", str(pseudo_raw)).strip()[:60] or "Operator"
 
 answers = st.session_state.get("answers", {}) or {}
@@ -333,7 +355,7 @@ ROLE: You are an elite Historical Consciousness and Immersive Simulation Engine.
 
 
 def route_phase(state: ChronosState) -> dict:
-    turn_count = state.get("turn_count") or 0
+    turn_count = state.get("turn_count", 0)
     if turn_count == 0:
         phase = "opening"
     elif turn_count < 3:
@@ -347,24 +369,30 @@ def phase_router(state: ChronosState) -> str:
     return state.get("phase", "opening")
 
 
+def safe_token_counter(msgs) -> int:
+    """Polymorphic constraint evaluator to prevent TypeError if a singleton is passed instead of an iterable."""
+    if isinstance(msgs, list):
+        return len(msgs)
+    return 1
+
+
 def trimmed_history(messages):
-    """
-    Purge adaptative garantissant que l'API Gemini reçoit toujours 
-    un historique valide commençant par un message utilisateur (HumanMessage).
-    """
     if not messages:
         return []
-    msgs = messages[-20:]
-    while msgs and not isinstance(msgs[0], HumanMessage):
-        msgs.pop(0)
-    return msgs
+    return trim_messages(
+        messages,
+        strategy="last",
+        token_counter=safe_token_counter,
+        max_tokens=24,  # Interpreted as 24 nodes/messages based on the safe_token_counter mapping
+        start_on="human",
+    )
 
 
 def make_narrator_node(phase: str):
     def node(state: ChronosState, config) -> dict:
         cfg = (config or {}).get("configurable", {})
         api_key = cfg.get("api_key", "")
-        primary_model = cfg.get("model", "gemini-2.5-flash")
+        model = cfg.get("model", "gemini-2.5-flash")
         timeout = cfg.get("timeout", 45)
 
         phased_state = {**state, "phase": phase}
@@ -375,33 +403,17 @@ def make_narrator_node(phase: str):
             MessagesPlaceholder("history"),
         ])
 
-        # Cascade de secours automatique anti-crash
-        fallback_chain = [primary_model, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
-        models_to_try = []
-        for m in fallback_chain:
-            if m not in models_to_try:
-                models_to_try.append(m)
+        llm = ChatGoogleGenerativeAI(
+            model=model,
+            google_api_key=api_key,
+            temperature=0.75,
+            timeout=timeout,
+            max_retries=0,
+        )
 
-        last_exception = None
-        for idx, model_name in enumerate(models_to_try):
-            try:
-                if idx > 0:
-                    st.toast(f"⏳ Temporal reroute ({model_name})...")
-                llm = ChatGoogleGenerativeAI(
-                    model=model_name,
-                    google_api_key=api_key,
-                    temperature=0.75,
-                    timeout=timeout,
-                    max_retries=1,
-                )
-                chain = prompt_template | llm
-                response = chain.invoke({"history": trimmed_history(state.get("messages", []))})
-                return {"messages": [response]}
-            except Exception as e:
-                last_exception = e
-                continue
-
-        raise last_exception if last_exception else RuntimeError("All model execution attempts failed.")
+        chain = prompt_template | llm
+        response = chain.invoke({"history": trimmed_history(state.get("messages", []))})
+        return {"messages": [response]}
 
     return node
 
@@ -445,16 +457,10 @@ def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int 
                 input_state, config, stream_mode="messages"
             ):
                 if metadata.get("langgraph_node") in NARRATOR_NODES:
-                    content_chunk = getattr(msg_chunk, "content", "")
-                    if content_chunk:
-                        full_response += str(content_chunk)
-                        placeholder.markdown(full_response + " ▌")
-            
-            if full_response:
-                placeholder.markdown(full_response)
-                return full_response, None
-            else:
-                raise RuntimeError("Le modèle a retourné une réponse vide.")
+                    full_response += extract_text(getattr(msg_chunk, "content", ""))
+                    placeholder.markdown(full_response + "▌")
+            placeholder.markdown(full_response)
+            return full_response, None
 
         except Exception as e:
             transient = False
@@ -476,7 +482,7 @@ def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int 
 
             if fatal_user_message is None:
                 transient = True
-                fatal_user_message = f"❌ Temporal disruption ({type(e).__name__}: {str(e)})."
+                fatal_user_message = f"❌ Temporal disruption ({type(e).__name__})."
 
             last_error_message = fatal_user_message
 
@@ -523,15 +529,13 @@ with col_btn2:
 
 current_messages = get_checkpointed_messages()
 
-# Affichage de l'historique en ignorant l'instruction système initiale cachée
 for m in current_messages:
     if isinstance(m, HumanMessage):
-        if not str(m.content).startswith("[SYSTEM ACTION:"):
-            with st.chat_message("user", avatar="👤"):
-                st.markdown(m.content)
+        with st.chat_message("user", avatar="👤"):
+            st.markdown(extract_text(m.content))
     elif isinstance(m, AIMessage):
         with st.chat_message("assistant", avatar="⏳"):
-            st.markdown(m.content)
+            st.markdown(extract_text(m.content))
 
 if st.session_state.chronos_awaiting_opening and not current_messages:
     with st.chat_message("assistant", avatar="⏳"):
@@ -540,10 +544,8 @@ if st.session_state.chronos_awaiting_opening and not current_messages:
         if not is_plausible_gemini_key(gemini_api_key):
             st.error("⚠️ CRITICAL: Gemini API Key missing or malformed.")
         else:
-            # FIX MAJEUR : On injecte un HumanMessage initial pour respecter l'API Gemini
-            opening_prompt = f"[SYSTEM ACTION: Establish the opening scene in {selected_era} focusing on {immersion_focus}. Immerse the operator immediately.]"
             input_state = {
-                "messages": [HumanMessage(content=opening_prompt)],
+                "messages": [],
                 "era": selected_era,
                 "focus": immersion_focus,
                 "pseudo": pseudo,
@@ -553,7 +555,6 @@ if st.session_state.chronos_awaiting_opening and not current_messages:
             }
             full_response, error_message = stream_turn(input_state, build_config(), message_placeholder)
             if error_message:
-                message_placeholder.empty()
                 st.error(error_message)
             else:
                 st.session_state.chronos_awaiting_opening = False
@@ -582,5 +583,4 @@ if prompt := st.chat_input("Speak or respond within the historical simulation...
         }
         full_response, error_message = stream_turn(input_state, build_config(), message_placeholder)
         if error_message:
-            message_placeholder.empty()
             st.error(error_message)

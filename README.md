@@ -1,5 +1,8 @@
 # 🧠 LUMEN — The Metacognitive Mirror
 
+URL FOR THE APP HERE ===> https://lumenhackathonproject-zl2krm44mqm5we6d2arztr.streamlit.app/
+URL FOR THE DEMO HERE ===>
+
 > **Prometheus July AI Challenge 2026** · *Built by a student, for students*
 
 ![Status](https://img.shields.io/badge/status-active-brightgreen)
