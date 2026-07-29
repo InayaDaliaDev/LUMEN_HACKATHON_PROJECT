@@ -9,7 +9,7 @@ from typing import Annotated, TypedDict
 # ==============================================================================
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
-    from langchain_core.messages import HumanMessage, AIMessage, trim_messages, BaseMessage
+    from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
     from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 except ImportError:
     st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: pip install langchain langchain-google-genai google-generativeai")
@@ -313,30 +313,24 @@ def phase_router(state: MultiverseState) -> str:
     return state["phase"]
 
 
-def safe_token_counter(msgs) -> int:
-    """Polymorphic constraint evaluator to prevent TypeError if a singleton is passed instead of an iterable."""
-    if isinstance(msgs, list):
-        return len(msgs)
-    return 1
-
-
 def trimmed_history(messages):
+    """
+    Purge déterministe garantissant que l'API Gemini reçoit toujours un historique
+    valide et impérativement initialisé par un rôle utilisateur (HumanMessage).
+    """
     if not messages:
         return []
-    return trim_messages(
-        messages,
-        strategy="last",
-        token_counter=safe_token_counter,
-        max_tokens=24,
-        start_on="human",
-    )
+    msgs = messages[-20:]
+    while msgs and not isinstance(msgs[0], HumanMessage):
+        msgs.pop(0)
+    return msgs
 
 
 def make_narrator_node(phase: str):
     def node(state: MultiverseState, config) -> dict:
         cfg = (config or {}).get("configurable", {})
         api_key = cfg.get("api_key", "")
-        model = cfg.get("model", "gemini-2.5-flash")
+        primary_model = cfg.get("model", "gemini-2.5-flash")
         timeout = cfg.get("timeout", 45)
 
         phased_state = {**state, "phase": phase}
@@ -347,17 +341,33 @@ def make_narrator_node(phase: str):
             MessagesPlaceholder("history"),
         ])
 
-        llm = ChatGoogleGenerativeAI(
-            model=model,
-            google_api_key=api_key,
-            temperature=0.6,
-            timeout=timeout,
-            max_retries=0,
-        )
+        # Cascade automatique de résilience anti-crash
+        fallback_chain = [primary_model, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
+        models_to_try = []
+        for m in fallback_chain:
+            if m not in models_to_try:
+                models_to_try.append(m)
 
-        chain = prompt_template | llm
-        response = chain.invoke({"history": trimmed_history(state.get("messages", []))})
-        return {"messages": [response]}
+        last_exception = None
+        for idx, model_name in enumerate(models_to_try):
+            try:
+                if idx > 0:
+                    st.toast(f"⏳ Dynamic reroute ({model_name})...")
+                llm = ChatGoogleGenerativeAI(
+                    model=model_name,
+                    google_api_key=api_key,
+                    temperature=0.6,
+                    timeout=timeout,
+                    max_retries=1,
+                )
+                chain = prompt_template | llm
+                response = chain.invoke({"history": trimmed_history(state.get("messages", []))})
+                return {"messages": [response]}
+            except Exception as e:
+                last_exception = e
+                continue
+
+        raise last_exception if last_exception else RuntimeError("All model execution attempts failed.")
 
     return node
 
@@ -401,10 +411,16 @@ def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int 
                 input_state, config, stream_mode="messages"
             ):
                 if metadata.get("langgraph_node") in NARRATOR_NODES:
-                    full_response += getattr(msg_chunk, "content", "") or ""
-                    placeholder.markdown(full_response + "▌")
-            placeholder.markdown(full_response)
-            return full_response, None
+                    content_chunk = getattr(msg_chunk, "content", "")
+                    if content_chunk:
+                        full_response += str(content_chunk)
+                        placeholder.markdown(full_response + " ▌")
+            
+            if full_response:
+                placeholder.markdown(full_response)
+                return full_response, None
+            else:
+                raise RuntimeError("Le modèle a retourné une réponse vide.")
 
         except Exception as e:
             transient = False
@@ -426,7 +442,7 @@ def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int 
 
             if fatal_user_message is None:
                 transient = True
-                fatal_user_message = f"❌ Unexpected engine fault ({type(e).__name__})."
+                fatal_user_message = f"❌ Unexpected engine fault ({type(e).__name__}: {str(e)})."
 
             last_error_message = fatal_user_message
 
@@ -473,10 +489,12 @@ with col_btn2:
 
 current_messages = get_checkpointed_messages()
 
+# Affichage de l'historique en filtrant l'impulsion système invisible
 for m in current_messages:
     if isinstance(m, HumanMessage):
-        with st.chat_message("user", avatar="👤"):
-            st.markdown(m.content)
+        if not str(m.content).startswith("[SYSTEM ACTION:"):
+            with st.chat_message("user", avatar="👤"):
+                st.markdown(m.content)
     elif isinstance(m, AIMessage):
         with st.chat_message("assistant", avatar="🌐"):
             st.markdown(m.content)
@@ -488,8 +506,10 @@ if st.session_state.multiverse_awaiting_opening and not current_messages:
         if not is_plausible_gemini_key(gemini_api_key):
             st.error("⚠️ CRITICAL: Gemini API Key missing or malformed.")
         else:
+            # FIX MAJEUR : Injection d'un HumanMessage initial pour respecter l'API Gemini
+            opening_prompt = f"[SYSTEM ACTION: Initialize institutional reality matrix for {sim_level} in {sim_region} ({sim_type}). Analyze operator cognitive profile.]"
             input_state = {
-                "messages": [],
+                "messages": [HumanMessage(content=opening_prompt)],
                 "sim_level": sim_level,
                 "sim_type": sim_type,
                 "sim_region": sim_region,
@@ -500,6 +520,7 @@ if st.session_state.multiverse_awaiting_opening and not current_messages:
             }
             full_response, error_message = stream_turn(input_state, build_config(), message_placeholder)
             if error_message:
+                message_placeholder.empty()
                 st.error(error_message)
             else:
                 st.session_state.multiverse_awaiting_opening = False
@@ -529,4 +550,5 @@ if prompt := st.chat_input("Interact with the simulation timeline..."):
         }
         full_response, error_message = stream_turn(input_state, build_config(), message_placeholder)
         if error_message:
+            message_placeholder.empty()
             st.error(error_message)

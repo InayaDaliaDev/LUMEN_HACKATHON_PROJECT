@@ -252,8 +252,6 @@ with st.sidebar:
         help="Shared across all Lumen pages for this session. Never logged or displayed."
     ).strip()
 
-    # Modèles optimisés avec repli sécurisé (modèles actifs au 07/2026 —
-    # vérifiés via genai.list_models() sur une clé réelle)
     selected_model = st.selectbox(
         "Language Model Topology:",
         options=[
@@ -366,7 +364,6 @@ def mentor_node(state: MentorState, config) -> dict:
         MessagesPlaceholder("history"),
     ])
 
-    # Cascade de secours automatique pour parer aux erreurs 429 / 404
     fallback_chain = [primary_model, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
     models_to_try = []
     for m in fallback_chain:
@@ -374,8 +371,10 @@ def mentor_node(state: MentorState, config) -> dict:
             models_to_try.append(m)
 
     last_exception = None
-    for model_name in models_to_try:
+    for idx, model_name in enumerate(models_to_try):
         try:
+            if idx > 0:
+                st.toast(f"⚡ Rerouting neural pathways ({model_name})...")
             llm = ChatGoogleGenerativeAI(
                 model=model_name,
                 google_api_key=api_key,
@@ -452,10 +451,16 @@ def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int 
                 input_state, config, stream_mode="messages"
             ):
                 if metadata.get("langgraph_node") == "mentor":
-                    full_response += getattr(msg_chunk, "content", "") or ""
-                    placeholder.markdown(full_response + "▌")
-            placeholder.markdown(full_response)
-            return full_response, None
+                    content_chunk = getattr(msg_chunk, "content", "")
+                    if content_chunk:
+                        full_response += str(content_chunk)
+                        placeholder.markdown(full_response + " ▌")
+            
+            if full_response:
+                placeholder.markdown(full_response)
+                return full_response, None
+            else:
+                raise RuntimeError("Le modèle a retourné une réponse vide.")
 
         except Exception as e:
             transient = False
@@ -529,6 +534,13 @@ if prompt := st.chat_input(f"Enter your academic roadblock, {pseudo}..."):
             "weakest_label": vector_labels[weakest_key],
             "detailed_choices": detailed_choices_block,
         }
-        full_response, error_message = stream_turn(input_state, build_config(), message_placeholder)
+        
+        full_response, error_message = stream_turn(
+            input_state, 
+            build_config(), 
+            message_placeholder
+        )
+        
         if error_message:
+            message_placeholder.empty()
             st.error(error_message)

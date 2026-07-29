@@ -130,6 +130,30 @@ pg = st.navigation([
 
 pg.run()
 ==================================================
+FILE: archive\teste_model.py
+==================================================
+
+import os
+import streamlit as st
+import google.generativeai as genai
+
+# Récupération automatique depuis secrets.toml
+try:
+    API_KEY = st.secrets["GEMINI_API_KEY"] # Adapte le nom de la clé selon ton secrets.toml
+except:
+    API_KEY = os.getenv("GEMINI_API_KEY")
+
+if not API_KEY:
+    print("⚠️ Clé API introuvable dans secrets.toml ou l'environnement !")
+else:
+    genai.configure(api_key=API_KEY)
+    print("✅ Clé configurée avec succès ! Lancement du test...\n")
+    
+    # Le reste de ton code pour lister les modèles...
+    for m in genai.list_models():
+        if 'generateContent' in m.supported_generation_methods:
+            print(f"👉 Nom exact : {m.name}")
+==================================================
 FILE: data\question.py
 ==================================================
 
@@ -1941,9 +1965,6 @@ if 'answers' not in st.session_state or not st.session_state.get('answers'):
 
 user_profile = st.session_state.get("user_profile", {}) or {}
 pseudo_raw = user_profile.get("pseudo", "Operator")
-# Defensive sanitation: never trust session_state content blindly, even if it
-# originates from your own app — a corrupted or tampered session should not
-# crash rendering or leak into the LLM prompt unsanitized.
 pseudo = re.sub(r"[^\w\s\-']", "", str(pseudo_raw)).strip()[:60] or "Operator"
 
 answers = st.session_state.get("answers", {}) or {}
@@ -1960,7 +1981,7 @@ if not isinstance(ALL_QUESTIONS, list) or len(ALL_QUESTIONS) == 0:
 
 
 # ==============================================================================
-# 2. COGNITIVE TELEMETRY ENGINE (defensive parsing) — unchanged
+# 2. COGNITIVE TELEMETRY ENGINE (defensive parsing)
 # ==============================================================================
 all_labels = []
 vector_totals = {
@@ -2008,16 +2029,8 @@ detailed_choices_block = "\n".join(detailed_choices) if detailed_choices else "-
 
 
 # ==============================================================================
-# 3. VERIFIED TECHNIQUE LIBRARY (grounding — the actual point of this page)
+# 3. VERIFIED TECHNIQUE LIBRARY
 # ==============================================================================
-# The old prompt just TOLD the model "never give generic advice, use real
-# frameworks" and hoped it would comply and not invent anything. That's not
-# grounding, that's a wish. Here the real, named, well-established techniques
-# live in code, tagged by which cognitive axis they help compensate for
-# ("addresses") and which they play to the strength of ("leverages"). A
-# deterministic node below picks the most relevant ones for THIS Operator's
-# actual profile before the LLM ever gets involved — the model still writes
-# the explanation, but it can't quietly swap in a made-up "technique".
 TECHNIQUE_LIBRARY = [
     {
         "name": "Spaced Repetition",
@@ -2083,10 +2096,6 @@ TECHNIQUE_LIBRARY = [
 
 
 def select_priority_techniques(weakest_key: str, strongest_key: str) -> list:
-    """Deterministic, no LLM call: ranks the library by relevance to THIS
-    Operator's actual profile. Growth-axis techniques come first (the more
-    urgent need), then a strength-leveraging pick — never invented, always
-    drawn from the verified library above."""
     addresses_weak = [t["name"] for t in TECHNIQUE_LIBRARY if weakest_key in t["addresses"]]
     leverages_strong = [t["name"] for t in TECHNIQUE_LIBRARY if strongest_key in t["leverages"]]
 
@@ -2100,7 +2109,7 @@ def select_priority_techniques(weakest_key: str, strongest_key: str) -> list:
 
 
 # ==============================================================================
-# 4. NEURAL UI INTERFACE — unchanged
+# 4. NEURAL UI INTERFACE
 # ==============================================================================
 st.markdown("""
 <style>
@@ -2139,19 +2148,11 @@ st.divider()
 # 5. SIDEBAR — HARDENED, SHARED KEY HANDLING
 # ==============================================================================
 def is_plausible_gemini_key(key: str) -> bool:
-    """
-    Loose sanity check only — NOT a validity check. Filters out empty
-    strings, whitespace, and obviously-too-short pastes before we waste a
-    network call and show the user a confusing traceback.
-    """
     if not key:
         return False
     key = key.strip()
     return len(key) >= 20 and " " not in key
 
-
-# Shared across all Lumen pages via session_state — paste it once for the
-# whole app (Chatbot / TheOldDays / What_If all read the same value).
 if "gemini_api_key" not in st.session_state:
     default_key = ""
     try:
@@ -2174,13 +2175,18 @@ with st.sidebar:
         help="Shared across all Lumen pages for this session. Never logged or displayed."
     ).strip()
 
-    # FIX: gemini-1.5-pro / gemini-1.5-flash are fully retired by Google (the
-    # API now returns a 404 for both). gemini-2.5-flash / gemini-2.5-pro are
-    # the current stable, generally-available models as of mid-2026.
+    # Modèles optimisés avec repli sécurisé (modèles actifs au 07/2026 —
+    # vérifiés via genai.list_models() sur une clé réelle)
     selected_model = st.selectbox(
         "Language Model Topology:",
-        options=["gemini-2.0-flash", "gemini-2.5-pro-exp-03-25"],
-        index=0
+        options=[
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-3.5-flash",
+            "gemini-flash-latest"
+        ],
+        index=0,
+        help="gemini-2.5-flash offre le meilleur compromis qualité/fiabilité pour une démo devant jury."
     )
 
     temperature = st.slider("Cognitive Drift (Temperature):", 0.0, 1.0, 0.6, 0.05,
@@ -2190,8 +2196,6 @@ with st.sidebar:
 
     st.divider()
     if st.button("Purge Session Memory 🧹", use_container_width=True, type="secondary"):
-        # A fresh thread_id means LangGraph's checkpointer starts this
-        # conversation from a completely blank state.
         st.session_state.synapse_thread_id = str(uuid.uuid4())
         st.rerun()
 
@@ -2256,8 +2260,6 @@ Always filter your advice through the lens of their `{state['dominant_archetype'
 
 
 def trimmed_history(messages):
-    """Keeps only the most recent turns so a long mentoring session never
-    silently blows past the model's context window."""
     if not messages:
         return []
     return trim_messages(
@@ -2270,9 +2272,6 @@ def trimmed_history(messages):
 
 
 def select_techniques_node(state: MentorState, config) -> dict:
-    """Pure, deterministic pre-processing — no LLM call, no ambiguity, no
-    cost. Decides WHICH real techniques are most relevant before the mentor
-    node ever writes a word."""
     picks = select_priority_techniques(state.get("weakest_key", ""), state.get("strongest_key", ""))
     return {"selected_techniques": picks}
 
@@ -2280,7 +2279,7 @@ def select_techniques_node(state: MentorState, config) -> dict:
 def mentor_node(state: MentorState, config) -> dict:
     cfg = (config or {}).get("configurable", {})
     api_key = cfg.get("api_key", "")
-    model = cfg.get("model", "gemini-2.5-flash")
+    primary_model = cfg.get("model", "gemini-2.5-flash")
     temp = cfg.get("temperature", 0.6)
     timeout = cfg.get("timeout", 45)
 
@@ -2290,26 +2289,35 @@ def mentor_node(state: MentorState, config) -> dict:
         MessagesPlaceholder("history"),
     ])
 
-    llm = ChatGoogleGenerativeAI(
-        model=model,
-        google_api_key=api_key,
-        temperature=temp,
-        timeout=timeout,
-        max_retries=0,  # retries are handled explicitly by stream_turn()
-    )
+    # Cascade de secours automatique pour parer aux erreurs 429 / 404
+    fallback_chain = [primary_model, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
+    models_to_try = []
+    for m in fallback_chain:
+        if m not in models_to_try:
+            models_to_try.append(m)
 
-    chain = prompt_template | llm
-    response = chain.invoke({"history": trimmed_history(state.get("messages", []))})
-    return {"messages": [response]}
+    last_exception = None
+    for model_name in models_to_try:
+        try:
+            llm = ChatGoogleGenerativeAI(
+                model=model_name,
+                google_api_key=api_key,
+                temperature=temp,
+                timeout=timeout,
+                max_retries=1,
+            )
+            chain = prompt_template | llm
+            response = chain.invoke({"history": trimmed_history(state.get("messages", []))})
+            return {"messages": [response]}
+        except Exception as e:
+            last_exception = e
+            continue
+
+    raise last_exception if last_exception else RuntimeError("All model execution attempts failed.")
 
 
 @st.cache_resource
 def get_synapse_app():
-    """Compiled once per server process and reused across every rerun and
-    every user session — no secrets or per-user profile data are baked in
-    here (they travel through the state/config per-call instead), so
-    sharing this compiled graph is safe. MemorySaver keeps each
-    conversation isolated by thread_id."""
     graph = StateGraph(MentorState)
     graph.add_node("select_techniques", select_techniques_node)
     graph.add_node("mentor", mentor_node)
@@ -2344,9 +2352,6 @@ def get_checkpointed_messages():
 
 
 def seed_greeting_if_new():
-    """Matches the original UX: a static, non-LLM welcome message is
-    present from the very first render of a fresh thread, and counts as
-    part of the conversation history the model sees afterwards."""
     if get_checkpointed_messages():
         return
     greeting = (
@@ -2361,12 +2366,6 @@ seed_greeting_if_new()
 
 
 def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int = 2):
-    """
-    Streams a response with a small number of retries on transient failures.
-    Auth/config errors are never retried. No failure path ever echoes the
-    raw exception text, which could contain request details — only a
-    classified, user-legible message.
-    """
     last_error_message = None
 
     for attempt in range(1, max_attempts + 1):
@@ -2401,12 +2400,12 @@ def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int 
 
             if fatal_user_message is None:
                 transient = True
-                fatal_user_message = f"❌ Unexpected engine fault ({type(e).__name__})."
+                fatal_user_message = f"❌ Engine issue ({type(e).__name__}: {str(e)})."
 
             last_error_message = fatal_user_message
 
             if transient and attempt < max_attempts:
-                time.sleep(1.5 * attempt)
+                time.sleep(1.0 * attempt)
                 continue
             else:
                 return None, last_error_message
@@ -2435,8 +2434,6 @@ if prompt := st.chat_input(f"Enter your academic roadblock, {pseudo}..."):
         st.error("⚠️ SYNAPSE offline. Please input a valid-looking Gemini API Key in the Engine Matrix.")
         st.stop()
 
-    # Defensive input hygiene: cap length so a pasted wall of text can't
-    # silently blow the context window.
     prompt = prompt.strip()[:4000]
 
     with st.chat_message("user", avatar="👤"):
@@ -2473,7 +2470,7 @@ from typing import Annotated, TypedDict
 # ==============================================================================
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
-    from langchain_core.messages import HumanMessage, AIMessage, trim_messages
+    from langchain_core.messages import HumanMessage, AIMessage, trim_messages, BaseMessage
     from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 except ImportError:
     st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: pip install langchain langchain-google-genai google-generativeai")
@@ -2523,7 +2520,7 @@ if not isinstance(ALL_QUESTIONS, list) or len(ALL_QUESTIONS) == 0:
 
 
 # ==============================================================================
-# 2. COGNITIVE TELEMETRY EXTRACTION ENGINE (defensive parsing) — unchanged
+# 2. COGNITIVE TELEMETRY EXTRACTION ENGINE (defensive parsing)
 # ==============================================================================
 all_labels = []
 vector_totals = {
@@ -2561,7 +2558,7 @@ weakest_key = min(vector_totals, key=vector_totals.get)
 
 
 # ==============================================================================
-# 3. ELITE UI/UX: THE HISTORICAL CHRONOS CONSOLE — unchanged
+# 3. ELITE UI/UX: THE HISTORICAL CHRONOS CONSOLE
 # ==============================================================================
 st.markdown("""
 <style>
@@ -2637,13 +2634,8 @@ with st.container():
 
 
 # ==============================================================================
-# 3bis. GROUNDING KNOWLEDGE BASE (light retrieval, no external calls needed)
+# 3bis. GROUNDING KNOWLEDGE BASE
 # ==============================================================================
-# A tiny curated fact-sheet per era. This is injected verbatim into the
-# system prompt as "ground truth" context, the same idea as RAG but with a
-# hand-written knowledge base instead of a vector store — cheap, offline,
-# deterministic, and it measurably reduces historical hallucination without
-# needing network access or extra API calls during the demo.
 ERA_FACTS = {
     "Ancient Athens (5th Century BCE) - The Lyceum & Geometry Circles": [
         "Formal education was reserved for free male citizens; girls, slaves, and metics were excluded from it.",
@@ -2682,14 +2674,11 @@ ERA_FACTS = {
 # 4. SIDEBAR — HARDENED, SHARED KEY HANDLING
 # ==============================================================================
 def is_plausible_gemini_key(key: str) -> bool:
-    """Loose sanity check only — filters obviously-empty/malformed pastes."""
     if not key:
         return False
     key = key.strip()
     return len(key) >= 20 and " " not in key
 
-
-# FIX: shared across all Lumen pages via session_state — paste it once.
 if "gemini_api_key" not in st.session_state:
     default_key = ""
     try:
@@ -2714,18 +2703,21 @@ with st.sidebar:
         placeholder="Paste your Gemini API key",
         help="Shared across all Lumen pages for this session. Never logged or displayed."
     ).strip()
-    # FIX: gemini-1.5-pro / gemini-1.5-flash have been fully retired by Google
-    # (the API now returns a 404 for both) — every prior model list in this
-    # app pointed at dead models. gemini-2.5-flash / gemini-2.5-pro are the
-    # current stable, generally-available models as of mid-2026.
-    selected_model = st.selectbox("Inference Model:", ["gemini-2.0-flash", "gemini-2.5-pro-exp-03-25"], index=0)
+
+    selected_model = st.selectbox(
+        "Inference Model:",
+        options=[
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-3.5-flash",
+            "gemini-flash-latest"
+        ],
+        index=0
+    )
     request_timeout = st.slider("Request Timeout (s)", 10, 120, 45, 5)
 
     st.divider()
     if st.button("Reset Timeline ⏳", use_container_width=True, type="secondary"):
-        # A fresh thread_id means LangGraph's checkpointer starts this
-        # conversation from a completely blank state — no manual list
-        # clearing needed, the old thread simply stops being referenced.
         st.session_state.chronos_thread_id = str(uuid.uuid4())
         st.session_state.chronos_awaiting_opening = False
         st.rerun()
@@ -2736,14 +2728,6 @@ gemini_api_key = st.session_state.gemini_api_key
 # ==============================================================================
 # 5. LANGGRAPH STATE MACHINE — THE ACTUAL NARRATIVE ENGINE
 # ==============================================================================
-# Why a graph instead of one big prompt: the previous version asked a single
-# LLM call to simultaneously open the scene, pose a challenge, and adapt to
-# the operator forever, hoping the model would pace itself. Here the pacing
-# is explicit and deterministic — a small router node decides which phase
-# we're in from the real turn count, and three specialized nodes each get a
-# narrower, sharper instruction for exactly that phase. Same LLM, better
-# structure: opening -> challenge -> resolution, with historical grounding
-# facts injected as context at every phase.
 class ChronosState(TypedDict):
     messages: Annotated[list, add_messages]
     era: str
@@ -2801,7 +2785,7 @@ ROLE: You are an elite Historical Consciousness and Immersive Simulation Engine.
 {facts_block}
 
 [CURRENT NARRATIVE PHASE]
-{PHASE_INSTRUCTIONS[state['phase']]}
+{PHASE_INSTRUCTIONS.get(state.get('phase', 'opening'), PHASE_INSTRUCTIONS['opening'])}
 
 [STYLING & CONSTRAINTS]
 - Tone: Immersive, atmospheric, deeply respectful of historical context, intellectually elevating, and uncompromisingly realistic.
@@ -2811,7 +2795,6 @@ ROLE: You are an elite Historical Consciousness and Immersive Simulation Engine.
 
 
 def route_phase(state: ChronosState) -> dict:
-    """Pure, deterministic pacing logic — no LLM call, no ambiguity, no cost."""
     turn_count = state.get("turn_count", 0)
     if turn_count == 0:
         phase = "opening"
@@ -2823,30 +2806,29 @@ def route_phase(state: ChronosState) -> dict:
 
 
 def phase_router(state: ChronosState) -> str:
-    return state["phase"]
+    return state.get("phase", "opening")
+
+
+def safe_token_counter(msgs) -> int:
+    """Polymorphic constraint evaluator to prevent TypeError if a singleton is passed instead of an iterable."""
+    if isinstance(msgs, list):
+        return len(msgs)
+    return 1
 
 
 def trimmed_history(messages):
-    """Keeps only the most recent turns so a long roleplay session never
-    silently blows past the model's context window. Message-count based
-    (not a real tokenizer) — a conservative, dependency-free approximation,
-    good enough for short chat dialogue rather than long documents."""
     if not messages:
         return []
     return trim_messages(
         messages,
         strategy="last",
-        token_counter=len,
-        max_tokens=24,
+        token_counter=safe_token_counter,
+        max_tokens=24,  # Interpreted as 24 nodes/messages based on the safe_token_counter mapping
         start_on="human",
     )
 
 
 def make_narrator_node(phase: str):
-    """Factory so the three graph nodes share one implementation while still
-    appearing as distinct, individually-inspectable steps in the graph —
-    each one locked to a single phase's instructions."""
-
     def node(state: ChronosState, config) -> dict:
         cfg = (config or {}).get("configurable", {})
         api_key = cfg.get("api_key", "")
@@ -2866,7 +2848,7 @@ def make_narrator_node(phase: str):
             google_api_key=api_key,
             temperature=0.75,
             timeout=timeout,
-            max_retries=0,  # retries are handled explicitly by stream_turn()
+            max_retries=0,
         )
 
         chain = prompt_template | llm
@@ -2878,10 +2860,6 @@ def make_narrator_node(phase: str):
 
 @st.cache_resource
 def get_chronos_app():
-    """Compiled once per server process and reused across every rerun and
-    every user session — no secrets are baked in here (they travel through
-    `config['configurable']` per-call instead), so sharing this object is
-    safe. MemorySaver keeps each conversation isolated by thread_id."""
     graph = StateGraph(ChronosState)
     graph.add_node("route_phase", route_phase)
     graph.add_node("opening_narrator", make_narrator_node("opening"))
@@ -2910,12 +2888,6 @@ NARRATOR_NODES = {"opening_narrator", "challenge_narrator", "resolution_narrator
 
 
 def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int = 2):
-    """
-    Streams a graph turn token-by-token with a small number of retries on
-    transient failures. Auth/config errors are never retried. No failure
-    path ever echoes the raw exception text, which could contain request
-    details or key fragments.
-    """
     last_error_message = None
 
     for attempt in range(1, max_attempts + 1):
@@ -2991,8 +2963,6 @@ with col_btn2:
             st.error("⚠️ CRITICAL: A valid-looking Gemini API Key is required to activate the temporal portal.")
             st.stop()
 
-        # A brand-new thread means a brand-new checkpoint: no leftover
-        # messages, no leftover turn_count, nothing to reset by hand.
         st.session_state.chronos_thread_id = str(uuid.uuid4())
         st.session_state.chronos_awaiting_opening = True
         st.rerun()
@@ -3007,7 +2977,6 @@ for m in current_messages:
         with st.chat_message("assistant", avatar="⏳"):
             st.markdown(m.content)
 
-# Fire the opening scene exactly once, right after the portal button.
 if st.session_state.chronos_awaiting_opening and not current_messages:
     with st.chat_message("assistant", avatar="⏳"):
         message_placeholder = st.empty()
@@ -3030,7 +2999,6 @@ if st.session_state.chronos_awaiting_opening and not current_messages:
             else:
                 st.session_state.chronos_awaiting_opening = False
 
-# Real-time interactive follow-up
 if prompt := st.chat_input("Speak or respond within the historical simulation..."):
     if not is_plausible_gemini_key(gemini_api_key):
         st.error("⚠️ CRITICAL: A valid-looking Gemini API Key is required.")
@@ -3071,7 +3039,7 @@ from typing import Annotated, TypedDict
 # ==============================================================================
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
-    from langchain_core.messages import HumanMessage, AIMessage, trim_messages
+    from langchain_core.messages import HumanMessage, AIMessage, trim_messages, BaseMessage
     from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 except ImportError:
     st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: pip install langchain langchain-google-genai google-generativeai")
@@ -3104,9 +3072,6 @@ if 'answers' not in st.session_state or not st.session_state.get('answers'):
 
 user_profile = st.session_state.get("user_profile", {}) or {}
 pseudo_raw = user_profile.get("pseudo", "Operator")
-# Defensive sanitation: never trust session_state content blindly, even if it
-# originates from your own app — a corrupted or tampered session should not
-# crash rendering or leak into the LLM prompt unsanitized.
 pseudo = re.sub(r"[^\w\s\-']", "", str(pseudo_raw)).strip()[:60] or "Operator"
 
 answers = st.session_state.get("answers", {}) or {}
@@ -3123,7 +3088,7 @@ if not isinstance(ALL_QUESTIONS, list) or len(ALL_QUESTIONS) == 0:
 
 
 # ==============================================================================
-# 2. COGNITIVE TELEMETRY EXTRACTION ENGINE (defensive parsing) — unchanged
+# 2. COGNITIVE TELEMETRY EXTRACTION ENGINE (defensive parsing)
 # ==============================================================================
 all_labels = []
 vector_totals = {
@@ -3161,7 +3126,7 @@ weakest_key = min(vector_totals, key=vector_totals.get)
 
 
 # ==============================================================================
-# 3. ELITE UI/UX: THE CHRONOS CONTROL MATRIX — unchanged
+# 3. ELITE UI/UX: THE CHRONOS CONTROL MATRIX
 # ==============================================================================
 st.markdown("""
 <style>
@@ -3217,21 +3182,11 @@ with st.container():
 # 4. SIDEBAR — HARDENED, SHARED KEY HANDLING
 # ==============================================================================
 def is_plausible_gemini_key(key: str) -> bool:
-    """
-    Loose sanity check only — NOT a validity check. Google key formats can
-    change, so this never blocks a real key; it only filters out empty
-    strings, whitespace, and obviously-too-short pastes before we waste a
-    network call and show the user a confusing traceback instead.
-    """
     if not key:
         return False
     key = key.strip()
     return len(key) >= 20 and " " not in key
 
-
-# FIX: shared across all Lumen pages via session_state — paste it once,
-# same key used by TheOldDays.py and Chatbot.py — no need to re-paste
-# the Gemini key when switching between pages.
 if "gemini_api_key" not in st.session_state:
     default_key = ""
     try:
@@ -3256,17 +3211,21 @@ with st.sidebar:
         placeholder="Paste your Gemini API key",
         help="Shared across all Lumen pages for this session. Never logged or displayed."
     ).strip()
-    # FIX: gemini-1.5-pro / gemini-1.5-flash are fully retired by Google (the
-    # API now returns a 404 for both). gemini-2.5-flash / gemini-2.5-pro are
-    # the current stable, generally-available models as of mid-2026.
-    selected_model = st.selectbox("Inference Model:", ["gemini-2.0-flash", "gemini-2.5-pro-exp-03-25"], index=0)
+
+    selected_model = st.selectbox(
+        "Inference Model:",
+        options=[
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-3.5-flash",
+            "gemini-flash-latest"
+        ],
+        index=0
+    )
     request_timeout = st.slider("Request Timeout (s)", 10, 120, 45, 5)
 
     st.divider()
     if st.button("Purge Timeline Memory 🧹", use_container_width=True, type="secondary"):
-        # A fresh thread_id means LangGraph's checkpointer starts this
-        # conversation from a completely blank state — no manual list
-        # clearing needed, the old thread simply stops being referenced.
         st.session_state.multiverse_thread_id = str(uuid.uuid4())
         st.session_state.multiverse_awaiting_opening = False
         st.rerun()
@@ -3277,10 +3236,6 @@ gemini_api_key = st.session_state.gemini_api_key
 # ==============================================================================
 # 5. LANGGRAPH STATE MACHINE — THE ACTUAL SIMULATION ENGINE
 # ==============================================================================
-# Same architecture as TheOldDays.py: a deterministic router node reads the
-# real turn count and picks a phase, three specialized nodes each get a
-# narrower instruction for exactly that phase instead of one prompt trying
-# to do everything at once — briefing, then trajectory, then remediation.
 class MultiverseState(TypedDict):
     messages: Annotated[list, add_messages]
     sim_level: str
@@ -3325,14 +3280,6 @@ PHASE_INSTRUCTIONS = {
     ),
 }
 
-# [REPRESENTATIONAL INTEGRITY] — deliberately NOT a per-region "facts" lookup
-# like the historical eras get in TheOldDays.py. A continent-sized region
-# ("Africa", "Asia"...) contains far too much genuine diversity in education
-# systems to responsibly reduce to a fixed list of "facts" — that risks
-# flattening it into a stereotype instead of grounding it. Instead, the
-# model is explicitly instructed to commit to ONE concrete, clearly-scoped
-# scenario while naming it as one instance among many, not "the" regional
-# norm.
 REPRESENTATIONAL_GUARDRAIL = (
     "[REPRESENTATIONAL INTEGRITY]\n"
     "{sim_region} contains enormously diverse educational systems across "
@@ -3375,14 +3322,13 @@ ROLE: You are CHRONOS, an enterprise-grade Epistemic Simulation Engine and Socio
 {phase_text}
 
 [STYLING & CONSTRAINTS]
-- Tone: Absolute authority, clinical precision, deeply analytical, intellectually elevating, and profoundly serious. No corporate pleasantries or generic AI fluff ("As an AI...").
+- Tone: Absolute authority, clinical precision, deeply analytical, intellectually elevating, and profoundly serious. No corporate pleasantries or generic AI fluff.
 - Formatting: Advanced Markdown architecture. Use bold headers, explicit metric notation, and structured lists.
 - Never break character, never mention that you are an AI or a simulation.
 """
 
 
 def route_phase(state: MultiverseState) -> dict:
-    """Pure, deterministic pacing logic — no LLM call, no ambiguity, no cost."""
     turn_count = state.get("turn_count", 0)
     if turn_count == 0:
         phase = "opening"
@@ -3397,25 +3343,26 @@ def phase_router(state: MultiverseState) -> str:
     return state["phase"]
 
 
+def safe_token_counter(msgs) -> int:
+    """Polymorphic constraint evaluator to prevent TypeError if a singleton is passed instead of an iterable."""
+    if isinstance(msgs, list):
+        return len(msgs)
+    return 1
+
+
 def trimmed_history(messages):
-    """Keeps only the most recent turns so a long roleplay session never
-    silently blows past the model's context window."""
     if not messages:
         return []
     return trim_messages(
         messages,
         strategy="last",
-        token_counter=len,
+        token_counter=safe_token_counter,
         max_tokens=24,
         start_on="human",
     )
 
 
 def make_narrator_node(phase: str):
-    """Factory so the three graph nodes share one implementation while still
-    appearing as distinct, individually-inspectable steps in the graph —
-    each one locked to a single phase's instructions."""
-
     def node(state: MultiverseState, config) -> dict:
         cfg = (config or {}).get("configurable", {})
         api_key = cfg.get("api_key", "")
@@ -3435,7 +3382,7 @@ def make_narrator_node(phase: str):
             google_api_key=api_key,
             temperature=0.6,
             timeout=timeout,
-            max_retries=0,  # retries are handled explicitly by stream_turn()
+            max_retries=0,
         )
 
         chain = prompt_template | llm
@@ -3447,10 +3394,6 @@ def make_narrator_node(phase: str):
 
 @st.cache_resource
 def get_chronos_multiverse_app():
-    """Compiled once per server process and reused across every rerun and
-    every user session — no secrets are baked in here (they travel through
-    `config['configurable']` per-call instead), so sharing this object is
-    safe. MemorySaver keeps each conversation isolated by thread_id."""
     graph = StateGraph(MultiverseState)
     graph.add_node("route_phase", route_phase)
     graph.add_node("opening_narrator", make_narrator_node("opening"))
@@ -3479,13 +3422,6 @@ NARRATOR_NODES = {"opening_narrator", "challenge_narrator", "resolution_narrator
 
 
 def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int = 2):
-    """
-    Streams a graph turn token-by-token with a small number of retries on
-    transient failures (timeouts, rate limits, temporary server errors).
-    Auth/config errors are never retried — retrying a bad key just burns
-    quota and time. Every failure path is user-legible and NEVER includes
-    the raw API key.
-    """
     last_error_message = None
 
     for attempt in range(1, max_attempts + 1):
@@ -3525,7 +3461,7 @@ def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int 
             last_error_message = fatal_user_message
 
             if transient and attempt < max_attempts:
-                time.sleep(1.5 * attempt)  # simple linear backoff
+                time.sleep(1.5 * attempt)
                 continue
             else:
                 return None, last_error_message
@@ -3561,8 +3497,6 @@ with col_btn2:
             st.error("⚠️ CRITICAL: A valid-looking Gemini API Key is required to initialize the Chronos engine.")
             st.stop()
 
-        # A brand-new thread means a brand-new checkpoint: no leftover
-        # messages, no leftover turn_count, nothing to reset by hand.
         st.session_state.multiverse_thread_id = str(uuid.uuid4())
         st.session_state.multiverse_awaiting_opening = True
         st.rerun()
@@ -3577,7 +3511,6 @@ for m in current_messages:
         with st.chat_message("assistant", avatar="🌐"):
             st.markdown(m.content)
 
-# Fire the opening briefing exactly once, right after the launch button.
 if st.session_state.multiverse_awaiting_opening and not current_messages:
     with st.chat_message("assistant", avatar="🌐"):
         message_placeholder = st.empty()
@@ -3601,14 +3534,11 @@ if st.session_state.multiverse_awaiting_opening and not current_messages:
             else:
                 st.session_state.multiverse_awaiting_opening = False
 
-# Real-time interactive follow-up
-if prompt := st.chat_input("Interact with the simulation timeline (e.g., 'What happens if I skip lectures to build an independent project?')..."):
+if prompt := st.chat_input("Interact with the simulation timeline..."):
     if not is_plausible_gemini_key(gemini_api_key):
         st.error("⚠️ CRITICAL: A valid-looking Gemini API Key is required.")
         st.stop()
 
-    # Defensive input hygiene: cap length so a pasted wall of text can't
-    # silently blow the context window or the UI.
     prompt = prompt.strip()[:4000]
 
     with st.chat_message("user", avatar="👤"):
