@@ -1,7 +1,7 @@
 # 🧠 LUMEN — The Metacognitive Mirror
 
 URL FOR THE APP HERE ===> https://lumenhackathonproject-zl2krm44mqm5we6d2arztr.streamlit.app/
-URL FOR THE DEMO HERE ===>
+URL FOR THE DEMO HERE ===> https://drive.google.com/drive/u/0/folders/1wtw82RnEoku6S7zHZX-VCLgzI9gseFWO 
 
 > **Prometheus July AI Challenge 2026** · *Built by a student, for students*
 

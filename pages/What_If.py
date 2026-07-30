@@ -368,17 +368,31 @@ def make_narrator_node(phase: str):
             MessagesPlaceholder("history"),
         ])
 
-        llm = ChatGoogleGenerativeAI(
-            model=model,
-            google_api_key=api_key,
-            temperature=0.6,
-            timeout=timeout,
-            max_retries=0,
-        )
+        # Cascade de secours automatique pour parer aux erreurs 429 / 404
+        fallback_chain = [model, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
+        models_to_try = []
+        for m in fallback_chain:
+            if m not in models_to_try:
+                models_to_try.append(m)
 
-        chain = prompt_template | llm
-        response = chain.invoke({"history": trimmed_history(state.get("messages", []))})
-        return {"messages": [response]}
+        last_exception = None
+        for model_name in models_to_try:
+            try:
+                llm = ChatGoogleGenerativeAI(
+                    model=model_name,
+                    google_api_key=api_key,
+                    temperature=0.6,
+                    timeout=timeout,
+                    max_retries=1,
+                )
+                chain = prompt_template | llm
+                response = chain.invoke({"history": trimmed_history(state.get("messages", []))})
+                return {"messages": [response]}
+            except Exception as e:
+                last_exception = e
+                continue
+
+        raise last_exception if last_exception else RuntimeError("All model execution attempts failed.")
 
     return node
 
