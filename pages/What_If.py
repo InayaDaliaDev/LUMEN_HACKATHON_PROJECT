@@ -4,6 +4,12 @@ import re
 import uuid
 from typing import Annotated, TypedDict
 
+# Message technique invisible : sert uniquement à donner à Gemini un premier
+# tour "human" non vide pour la phase d'ouverture (l'API refuse un historique
+# totalement vide). Il est filtré à l'affichage et jamais montré à l'utilisateur.
+KICKOFF_MARKER = "[LUMEN_INTERNAL_KICKOFF] Begin the immersive opening scene now."
+
+
 def extract_text(content) -> str:
     """
     Extrait uniquement le texte affichable d'un message LLM.
@@ -544,6 +550,8 @@ current_messages = get_checkpointed_messages()
 
 for m in current_messages:
     if isinstance(m, HumanMessage):
+        if extract_text(m.content) == KICKOFF_MARKER:
+            continue  # message technique interne, jamais affiché
         with st.chat_message("user", avatar="👤"):
             st.markdown(extract_text(m.content))
     elif isinstance(m, AIMessage):
@@ -558,7 +566,7 @@ if st.session_state.chronos_awaiting_opening and not current_messages:
             st.error("⚠️ CRITICAL: Gemini API Key missing or malformed.")
         else:
             input_state = {
-                "messages": [],
+                "messages": [HumanMessage(content=KICKOFF_MARKER)],
                 "era": selected_era,
                 "focus": immersion_focus,
                 "pseudo": pseudo,
