@@ -208,7 +208,8 @@ with st.sidebar:
         options=[
             "gemini-2.5-flash",
             "gemini-2.5-flash-lite",
-            "gemini-3.5-flash",
+            "gemini-1.5-flash",
+            "gemini-2.0-flash",
             "gemini-flash-latest"
         ],
         index=0
@@ -320,7 +321,7 @@ ROLE: You are CHRONOS, an enterprise-grade Epistemic Simulation Engine and Socio
 
 
 def route_phase(state: MultiverseState) -> dict:
-    turn_count = state.get("turn_count", 0)
+    turn_count = int(state.get("turn_count") or 0)
     if turn_count == 0:
         phase = "opening"
     elif turn_count < 3:
@@ -335,7 +336,6 @@ def phase_router(state: MultiverseState) -> str:
 
 
 def safe_token_counter(msgs) -> int:
-    """Polymorphic constraint evaluator to prevent TypeError if a singleton is passed instead of an iterable."""
     if isinstance(msgs, list):
         return len(msgs)
     return 1
@@ -368,8 +368,14 @@ def make_narrator_node(phase: str):
             MessagesPlaceholder("history"),
         ])
 
-        # Cascade de secours automatique pour parer aux erreurs 429 / 404
-        fallback_chain = [model, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
+        # Cascade de secours industrielle incluant des modèles de production stables
+        fallback_chain = [
+            model, 
+            "gemini-1.5-flash", 
+            "gemini-2.0-flash", 
+            "gemini-1.5-pro", 
+            "gemini-flash-latest"
+        ]
         models_to_try = []
         for m in fallback_chain:
             if m not in models_to_try:
@@ -487,7 +493,7 @@ def build_config():
 
 def get_checkpointed_messages():
     snapshot = chronos_app.get_state(build_config())
-    if not snapshot or not snapshot.values:
+    if not snapshot or not getattr(snapshot, "values", None):
         return []
     return snapshot.values.get("messages", [])
 
@@ -538,6 +544,8 @@ if st.session_state.multiverse_awaiting_opening and not current_messages:
                 st.error(error_message)
             else:
                 st.session_state.multiverse_awaiting_opening = False
+                # FORÇAGE SYNC DOM : Réalignement de l'arbre d'état
+                st.rerun()
 
 if prompt := st.chat_input("Interact with the simulation timeline..."):
     if not is_plausible_gemini_key(gemini_api_key):
@@ -565,3 +573,6 @@ if prompt := st.chat_input("Interact with the simulation timeline..."):
         full_response, error_message = stream_turn(input_state, build_config(), message_placeholder)
         if error_message:
             st.error(error_message)
+        else:
+            # FORÇAGE SYNC DOM : Maintien de l'historique visuel au tour suivant
+            st.rerun()

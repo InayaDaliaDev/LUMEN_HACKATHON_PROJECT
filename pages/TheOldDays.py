@@ -4,14 +4,10 @@ import re
 import uuid
 from typing import Annotated, TypedDict
 
-
 def extract_text(content) -> str:
-    """Extrait uniquement le texte affichable d'un message LLM.
-
-    Gemini (surtout les modèles récents type 3.x) peut renvoyer `.content`
-    soit comme une simple chaîne, soit comme une liste de blocs
-    (texte + blocs internes de raisonnement/"signature"). On ne veut
-    JAMAIS afficher ces blocs internes à l'utilisateur — seulement le texte.
+    """
+    Extrait uniquement le texte affichable d'un message LLM.
+    Protège contre les formats de retour composites de Gemini.
     """
     if isinstance(content, str):
         return content
@@ -44,7 +40,6 @@ except ImportError:
     st.error("⚠️ CRITICAL FAULT: Missing LangGraph. Execute: pip install langgraph")
     st.stop()
 
-# Optional: precise Google API exception types, if the package is present.
 try:
     from google.api_core import exceptions as google_exceptions
     HAS_GOOGLE_EXCEPTIONS = True
@@ -63,7 +58,6 @@ if 'answers' not in st.session_state or not st.session_state.get('answers'):
 
 user_profile = st.session_state.get("user_profile", {}) or {}
 pseudo_raw = user_profile.get("pseudo", "Operator")
-# Never trust session_state content blindly when it feeds an LLM prompt.
 pseudo = re.sub(r"[^\w\s\-']", "", str(pseudo_raw)).strip()[:60] or "Operator"
 
 answers = st.session_state.get("answers", {}) or {}
@@ -189,7 +183,6 @@ with st.container():
                 "Scientific Experimentation & Natural Philosophy"
             ]
         )
-
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -269,7 +262,8 @@ with st.sidebar:
         options=[
             "gemini-2.5-flash",
             "gemini-2.5-flash-lite",
-            "gemini-3.5-flash",
+            "gemini-1.5-flash",
+            "gemini-2.0-flash",
             "gemini-flash-latest"
         ],
         index=0
@@ -355,7 +349,7 @@ ROLE: You are an elite Historical Consciousness and Immersive Simulation Engine.
 
 
 def route_phase(state: ChronosState) -> dict:
-    turn_count = state.get("turn_count", 0)
+    turn_count = int(state.get("turn_count") or 0)
     if turn_count == 0:
         phase = "opening"
     elif turn_count < 3:
@@ -370,7 +364,6 @@ def phase_router(state: ChronosState) -> str:
 
 
 def safe_token_counter(msgs) -> int:
-    """Polymorphic constraint evaluator to prevent TypeError if a singleton is passed instead of an iterable."""
     if isinstance(msgs, list):
         return len(msgs)
     return 1
@@ -383,7 +376,7 @@ def trimmed_history(messages):
         messages,
         strategy="last",
         token_counter=safe_token_counter,
-        max_tokens=24,  # Interpreted as 24 nodes/messages based on the safe_token_counter mapping
+        max_tokens=24,
         start_on="human",
     )
 
@@ -403,8 +396,14 @@ def make_narrator_node(phase: str):
             MessagesPlaceholder("history"),
         ])
 
-        # Cascade de secours automatique pour parer aux erreurs 429 / 404
-        fallback_chain = [model, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
+        # Cascade de secours industrielle : si un modèle expérimental 404, on bascule sur un stable
+        fallback_chain = [
+            model, 
+            "gemini-1.5-flash", 
+            "gemini-2.0-flash", 
+            "gemini-1.5-pro", 
+            "gemini-flash-latest"
+        ]
         models_to_try = []
         for m in fallback_chain:
             if m not in models_to_try:
@@ -522,7 +521,7 @@ def build_config():
 
 def get_checkpointed_messages():
     snapshot = chronos_app.get_state(build_config())
-    if not snapshot or not snapshot.values:
+    if not snapshot or not getattr(snapshot, "values", None):
         return []
     return snapshot.values.get("messages", [])
 
@@ -572,6 +571,8 @@ if st.session_state.chronos_awaiting_opening and not current_messages:
                 st.error(error_message)
             else:
                 st.session_state.chronos_awaiting_opening = False
+                # FORÇAGE SYNC DOM : Recharger proprement le state depuis le checkpointer
+                st.rerun()
 
 if prompt := st.chat_input("Speak or respond within the historical simulation..."):
     if not is_plausible_gemini_key(gemini_api_key):
@@ -598,3 +599,6 @@ if prompt := st.chat_input("Speak or respond within the historical simulation...
         full_response, error_message = stream_turn(input_state, build_config(), message_placeholder)
         if error_message:
             st.error(error_message)
+        else:
+            # FORÇAGE SYNC DOM : Assure la persistance dans l'interface pour le tour suivant
+            st.rerun()
