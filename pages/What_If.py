@@ -4,9 +4,6 @@ import re
 import uuid
 from typing import Annotated, TypedDict
 
-# ==============================================================================
-# 0. SÛRETÉ & UTILITAIRES
-# ==============================================================================
 def extract_text(content) -> str:
     """Extrait uniquement le texte affichable d'un message LLM."""
     if isinstance(content, str):
@@ -21,6 +18,9 @@ def extract_text(content) -> str:
         return "".join(parts)
     return str(content) if content else ""
 
+# ==============================================================================
+# 0. HARDENED DEPENDENCY INJECTION
+# ==============================================================================
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
     from langchain_core.messages import HumanMessage, AIMessage, trim_messages
@@ -37,28 +37,96 @@ except ImportError:
     st.error("⚠️ CRITICAL FAULT: Missing LangGraph. Execute: pip install langgraph")
     st.stop()
 
-try:
-    from google.api_core import exceptions as google_exceptions
-    HAS_GOOGLE_EXCEPTIONS = True
-except ImportError:
-    HAS_GOOGLE_EXCEPTIONS = False
+
+# ==============================================================================
+# 1. LANGGRAPH STATE MACHINE & WORKFLOW (Déclaré en premier)
+# ==============================================================================
+class HistoricalState(TypedDict):
+    messages: Annotated[list, add_messages]
+    pseudo: str
+    historical_epoch: str
+    intellectual_pursuit: str
+
+
+def build_historical_prompt(state: HistoricalState) -> str:
+    return f"""
+[ROLE]
+You are CHRONOS: an immersive historical simulation engine. You place the operator directly inside legendary intellectual hubs of human history. You maintain strict historical verisimilitude, adopting the intellectual rigor, vocabulary, philosophical depth, and cultural nuances of the era.
+
+[CONTEXT]
+- Traveler/Operator: {state.get('pseudo', 'Operator')}
+- Historical Epoch & Setting: {state.get('historical_epoch', 'Ancient Athens')}
+- Intellectual Focus: {state.get('intellectual_pursuit', 'Pure Mathematics')}
+
+[OBJECTIVE]
+Engage in deep intellectual dialogue with the operator. Challenge their thoughts using the philosophical or scientific constraints of the chosen epoch, introduce historical figures or peers naturally, and maintain an immersive, eloquent, and structured Markdown layout. Never break historical character or reveal modern AI meta-language.
+"""
+
+
+def historical_node(state: HistoricalState, config) -> dict:
+    cfg = (config or {}).get("configurable", {})
+    api_key = cfg.get("api_key", "")
+    primary_model = cfg.get("model", "gemini-2.5-flash")
+    temp = cfg.get("temperature", 0.6)
+    timeout = cfg.get("timeout", 45)
+
+    system_prompt = build_historical_prompt(state)
+    prompt_template = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        MessagesPlaceholder("history"),
+    ])
+
+    fallback_chain = [primary_model, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.5-flash"]
+    models_to_try = []
+    for m in fallback_chain:
+        if m not in models_to_try:
+            models_to_try.append(m)
+
+    last_exception = None
+    for model_name in models_to_try:
+        try:
+            llm = ChatGoogleGenerativeAI(
+                model=model_name,
+                google_api_key=api_key,
+                temperature=temp,
+                timeout=timeout,
+                max_retries=1,
+            )
+            chain = prompt_template | llm
+            trimmed_hist = trim_messages(state.get("messages", []), strategy="last", token_counter=len, max_tokens=24, start_on="human")
+            response = chain.invoke({"history": trimmed_hist})
+            return {"messages": [response]}
+        except Exception as e:
+            last_exception = e
+            continue
+
+    raise last_exception if last_exception else RuntimeError("Historical simulation inference failed.")
+
+
+@st.cache_resource
+def get_historical_app():
+    graph = StateGraph(HistoricalState)
+    graph.add_node("historical_node", historical_node)
+    graph.add_edge(START, "historical_node")
+    graph.add_edge("historical_node", END)
+    return graph.compile(checkpointer=MemorySaver())
 
 
 # ==============================================================================
-# 1. ÉTAT & CONFIGURATION DE LA PAGE
+# 2. ÉTAT & CONFIGURATION DE LA PAGE
 # ==============================================================================
 user_profile = st.session_state.get("user_profile", {}) or {}
 pseudo_raw = user_profile.get("pseudo", "Operator")
 pseudo = re.sub(r"[^\w\s\-']", "", str(pseudo_raw)).strip()[:60] or "Operator"
-archetype = user_profile.get("archetype", "The Relentless Shipper")
 
-# Isolation stricte du thread pour la page 05
 if "historical_thread_id" not in st.session_state:
     st.session_state.historical_thread_id = str(uuid.uuid4())
 
+historical_app = get_historical_app()
+
 
 # ==============================================================================
-# 2. INTERFACE UTILISATEUR & SIDEBAR
+# 3. INTERFACE UTILISATEUR & SIDEBAR
 # ==============================================================================
 st.markdown("""
 <style>
@@ -121,7 +189,7 @@ gemini_api_key = st.session_state.gemini_api_key
 
 
 # ==============================================================================
-# 3. CONFIGURATION DES COORDONNÉES TEMPORELLES (Sélecteurs de la capture)
+# 4. CONFIGURATION DES COORDONNÉES & INITIALISATION
 # ==============================================================================
 st.markdown("### 🏛️ Select Temporal Coordinates")
 col1, col2 = st.columns(2)
@@ -147,108 +215,6 @@ with col2:
         ]
     )
 
-# Bouton d'initialisation de l'immersion temporelle
-if st.button("🏛️ INITIATE TIME-TRAVEL IMMERSION", type="primary", use_container_width=True):
-    st.session_state.historical_thread_id = str(uuid.uuid4())
-    
-    initial_seed = (
-        f"**[TEMPORAL ANCHOR SECURED]**\n\n"
-        f"Coordinates locked:\n"
-        f"- Epoch: **{historical_epoch}**\n"
-        f"- Pursuit: **{intellectual_pursuit}**\n\n"
-        f"Greetings, traveler {pseudo}. You have crossed the stream of centuries to enter this intellectual circle. "
-        f"The masters and scholars await your opening thesis or question. How do you present yourself to them?"
-    )
-    
-    cfg = {
-        "configurable": {
-            "thread_id": st.session_state.historical_thread_id,
-            "api_key": gemini_api_key,
-            "model": selected_model,
-            "temperature": temperature,
-            "timeout": request_timeout,
-        }
-    }
-    app = get_historical_app()
-    app.update_state(cfg, {"messages": [AIMessage(content=initial_seed)]})
-    st.rerun()
-
-st.divider()
-
-
-# ==============================================================================
-# 4. LANGGRAPH STATE MACHINE
-# ==============================================================================
-class HistoricalState(TypedDict):
-    messages: Annotated[list, add_messages]
-    pseudo: str
-    historical_epoch: str
-    intellectual_pursuit: str
-
-
-def build_historical_prompt(state: HistoricalState) -> str:
-    return f"""
-[ROLE]
-You are CHRONOS: an immersive historical simulation engine. You place the operator directly inside legendary intellectual hubs of human history. You maintain strict historical verisimilitude, adopting the intellectual rigor, vocabulary, philosophical depth, and cultural nuances of the era.
-
-[CONTEXT]
-- Traveler/Operator: {state.get('pseudo', 'Operator')}
-- Historical Epoch & Setting: {state.get('historical_epoch', 'Ancient Athens')}
-- Intellectual Focus: {state.get('intellectual_pursuit', 'Pure Mathematics')}
-
-[OBJECTIVE]
-Engage in deep intellectual dialogue with the operator. Challenge their thoughts using the philosophical or scientific constraints of the chosen epoch, introduce historical figures or peers naturally, and maintain an immersive, eloquent, and structured Markdown layout. Never break historical character or reveal modern AI meta-language.
-"""
-
-
-def historical_node(state: HistoricalState, config) -> dict:
-    cfg = (config or {}).get("configurable", {})
-    api_key = cfg.get("api_key", "")
-    primary_model = cfg.get("model", "gemini-2.5-flash")
-    temp = cfg.get("temperature", 0.6)
-    timeout = cfg.get("timeout", 45)
-
-    system_prompt = build_historical_prompt(state)
-    prompt_template = ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
-        MessagesPlaceholder("history"),
-    ])
-
-    fallback_chain = [primary_model, "gemini-2.5-flash", "gemini-2.5-flash-lite"]
-    models_to_try = [m for m in fallback_chain if m]
-
-    last_exception = None
-    for model_name in models_to_try:
-        try:
-            llm = ChatGoogleGenerativeAI(
-                model=model_name,
-                google_api_key=api_key,
-                temperature=temp,
-                timeout=timeout,
-                max_retries=1,
-            )
-            chain = prompt_template | llm
-            trimmed_hist = trim_messages(state.get("messages", []), strategy="last", token_correct=len, max_tokens=24, start_on="human") if 'token_correct' not in globals() else trim_messages(state.get("messages", []), strategy="last", token_counter=len, max_tokens=24, start_on="human")
-            response = chain.invoke({"history": trimmed_hist})
-            return {"messages": [response]}
-        except Exception as e:
-            last_exception = e
-            continue
-
-    raise last_exception if last_exception else RuntimeError("Historical simulation inference failed.")
-
-
-@st.cache_resource
-def get_historical_app():
-    graph = StateGraph(HistoricalState)
-    graph.add_node("historical_node", historical_node)
-    graph.add_edge(START, "historical_node")
-    graph.add_edge("historical_node", END)
-    return graph.compile(checkpointer=MemorySaver())
-
-
-historical_app = get_historical_app()
-
 
 def build_config():
     return {
@@ -269,6 +235,25 @@ def get_checkpointed_messages():
     return snapshot.values.get("messages", [])
 
 
+if st.button("🏛️ INITIATE TIME-TRAVEL IMMERSION", type="primary", use_container_width=True):
+    st.session_state.historical_thread_id = str(uuid.uuid4())
+    
+    initial_seed = (
+        f"**[TEMPORAL ANCHOR SECURED]**\n\n"
+        f"Coordinates locked:\n"
+        f"- Epoch: **{historical_epoch}**\n"
+        f"- Pursuit: **{intellectual_pursuit}**\n\n"
+        f"Greetings, traveler {pseudo}. You have crossed the stream of centuries to enter this intellectual circle. "
+        f"The masters and scholars await your opening thesis or question. How do you present yourself to them?"
+    )
+    
+    cfg = build_config()
+    historical_app.update_state(cfg, {"messages": [AIMessage(content=initial_seed)]})
+    st.rerun()
+
+st.divider()
+
+
 # ==============================================================================
 # 5. RENDU DE L'HISTORIQUE & CHAT INPUT
 # ==============================================================================
@@ -279,7 +264,6 @@ for m in get_checkpointed_messages():
     elif isinstance(m, AIMessage):
         with st.chat_message("assistant", avatar="🏛️"):
             st.markdown(extract_text(m.content))
-
 
 if prompt := st.chat_input("Speak or respond within the historical simulation..."):
     if not gemini_api_key or len(gemini_api_key) < 20:
