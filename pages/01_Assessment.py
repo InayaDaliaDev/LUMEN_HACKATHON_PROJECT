@@ -38,26 +38,16 @@ if st.session_state.current_q_idx < TOTAL_QUESTIONS:
     st.progress(idx / TOTAL_QUESTIONS)
     st.caption(f"Question {idx + 1} of {TOTAL_QUESTIONS}")
 
-    # FIX: the question bank stores the prompt under "question", not "text" —
-    # the old code called q.get("text", ...) which never matched anything,
-    # so every single question silently displayed "Untitled question".
     st.subheader(q.get("question", "Untitled question"))
 
     options = q.get("options", {})
     option_keys = list(options.keys()) if isinstance(options, dict) else list(options)
 
-    # FIX: the radio previously showed raw option keys ("A", "B", "C", "D")
-    # with no indication of what each one meant — the user was choosing
-    # blind. format_func now renders the actual option text.
     def format_option(key):
         opt = options.get(key, {}) if isinstance(options, dict) else {}
         label_text = opt.get("text", str(key)) if isinstance(opt, dict) else str(key)
         return f"{key}) {label_text}"
 
-    # FIX: index=None means nothing is pre-selected — the previous version
-    # defaulted silently to the first option, so a user who clicked "Continue"
-    # without reading anything still got an answer recorded as if they'd
-    # chosen it on purpose. Now a real choice is required.
     selected_option = st.radio(
         "Pick the option that matches you best:",
         options=option_keys,
@@ -188,8 +178,10 @@ nav_col1, nav_col2 = st.columns(2)
 with nav_col1:
     if st.session_state.flags.get("chatbot_unlocked"):
         st.success("🔓 AI Mentor unlocked.")
+        # FIX: pointait vers "pages/Chatbot.py" (inexistant) -> le vrai fichier est 03_Mr.Brown.py
         if st.button("Talk to SYNAPSE 🤖", type="primary", use_container_width=True):
-            st.switch_page("pages/Chatbot.py")
+            st.switch_page("pages/03_Mr.Brown.py")
 with nav_col2:
+    # FIX: pointait vers "pages/Advices.py" (inexistant) -> le vrai fichier est 02_Advices.py
     if st.button("See the full Builder Blueprint 🧬", use_container_width=True):
-        st.switch_page("pages/Advices.py")
+        st.switch_page("pages/02_Advices.py")

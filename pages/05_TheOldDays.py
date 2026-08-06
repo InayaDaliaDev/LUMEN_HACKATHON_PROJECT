@@ -5,7 +5,8 @@ import uuid
 from typing import Annotated, TypedDict
 
 def extract_text(content) -> str:
-    """Extrait uniquement le texte affichable d'un message LLM."""
+    """Extrait de manière sécurisée uniquement le texte affichable d'un message LLM,
+    en filtrant les blocs internes ou structures complexes."""
     if isinstance(content, str):
         return content
     if isinstance(content, list):
@@ -19,14 +20,14 @@ def extract_text(content) -> str:
     return str(content) if content else ""
 
 # ==============================================================================
-# 0. HARDENED DEPENDENCY INJECTION
+# 0. HARDENED DEPENDENCY INJECTION & SAFETY CHECKS
 # ==============================================================================
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
     from langchain_core.messages import HumanMessage, AIMessage, trim_messages
     from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 except ImportError:
-    st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: pip install langchain langchain-google-genai google-generativeai")
+    st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: `pip install langchain langchain-google-genai google-generativeai`")
     st.stop()
 
 try:
@@ -34,7 +35,7 @@ try:
     from langgraph.graph.message import add_messages
     from langgraph.checkpoint.memory import MemorySaver
 except ImportError:
-    st.error("⚠️ CRITICAL FAULT: Missing LangGraph. Execute: pip install langgraph")
+    st.error("⚠️ CRITICAL FAULT: Missing LangGraph. Execute: `pip install langgraph`")
     st.stop()
 
 try:
@@ -43,9 +44,11 @@ try:
 except ImportError:
     HAS_GOOGLE_EXCEPTIONS = False
 
+st.set_page_config(page_title="Chronos // Multiverse Engine", page_icon="⏳", layout="wide")
+
 
 # ==============================================================================
-# 1. LANGGRAPH STATE MACHINE & WORKFLOW (Déclaré en premier pour éviter le NameError)
+# 1. LANGGRAPH STATE MACHINE & WORKFLOW ARCHITECTURE
 # ==============================================================================
 class MultiverseState(TypedDict):
     messages: Annotated[list, add_messages]
@@ -101,14 +104,20 @@ def multiverse_node(state: MultiverseState, config) -> dict:
                 max_retries=1,
             )
             chain = prompt_template | llm
-            trimmed_hist = trim_messages(state.get("messages", []), strategy="last", token_counter=len, max_tokens=24, start_on="human")
+            trimmed_hist = trim_messages(
+                state.get("messages", []), 
+                strategy="last", 
+                token_counter=len, 
+                max_tokens=24, 
+                start_on="human"
+            )
             response = chain.invoke({"history": trimmed_hist})
             return {"messages": [response]}
         except Exception as e:
             last_exception = e
             continue
 
-    raise last_exception if last_exception else RuntimeError("Multiverse inference failed.")
+    raise last_exception if last_exception else RuntimeError("Multiverse inference failed across all fallback models.")
 
 
 @st.cache_resource
@@ -121,7 +130,7 @@ def get_multiverse_app():
 
 
 # ==============================================================================
-# 2. ÉTAT & CONFIGURATION DE LA PAGE
+# 2. STATE SANITIZATION & SESSION INITIALIZATION
 # ==============================================================================
 user_profile = st.session_state.get("user_profile", {}) or {}
 pseudo_raw = user_profile.get("pseudo", "Operator")
@@ -134,7 +143,7 @@ multiverse_app = get_multiverse_app()
 
 
 # ==============================================================================
-# 3. INTERFACE UTILISATEUR & SIDEBAR
+# 3. USER INTERFACE & SIDEBAR STYLING
 # ==============================================================================
 st.markdown("""
 <style>
@@ -175,12 +184,13 @@ with st.sidebar:
 
     st.session_state.gemini_api_key = st.text_input(
         "Gemini Authentication Key:",
-        value=st.session_state.gemini_api_key,
-        type="password"
+        value=st.session_state.get("gemini_api_key", ""),
+        type="password",
+        help="Shared across Lumen modules. Never logged or exposed."
     ).strip()
 
     selected_model = st.selectbox(
-        "Inference Model:",
+        "Inference Model Topology:",
         options=["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.5-flash"],
         index=0
     )
@@ -193,11 +203,11 @@ with st.sidebar:
         st.session_state.multiverse_thread_id = str(uuid.uuid4())
         st.rerun()
 
-gemini_api_key = st.session_state.gemini_api_key
+gemini_api_key = st.session_state.get("gemini_api_key", "")
 
 
 # ==============================================================================
-# 4. CONFIGURATION DES PARAMÈTRES & INITIALISATION
+# 4. ENVIRONMENTAL PARAMETERS & CONFIG BUILDER
 # ==============================================================================
 st.markdown("### 🎛️ Configure Environmental Parameters")
 col1, col2, col3 = st.columns(3)
@@ -213,7 +223,7 @@ with col3:
 def build_config():
     return {
         "configurable": {
-            "thread_id": st.session_state.multiverse_thread_id,
+            "thread_id": st.session_state.get("multiverse_thread_id", str(uuid.uuid4())),
             "api_key": gemini_api_key,
             "model": selected_model,
             "temperature": temperature,
@@ -223,10 +233,13 @@ def build_config():
 
 
 def get_checkpointed_messages():
-    snapshot = multiverse_app.get_state(build_config())
-    if not snapshot or not snapshot.values:
+    try:
+        snapshot = multiverse_app.get_state(build_config())
+        if not snapshot or not snapshot.values:
+            return []
+        return snapshot.values.get("messages", [])
+    except Exception:
         return []
-    return snapshot.values.get("messages", [])
 
 
 if st.button("🚀 EXECUTE TIMELINE SIMULATION", type="primary", use_container_width=True):
@@ -243,14 +256,17 @@ if st.button("🚀 EXECUTE TIMELINE SIMULATION", type="primary", use_container_w
     )
     
     cfg = build_config()
-    multiverse_app.update_state(cfg, {"messages": [AIMessage(content=initial_seed)]})
+    try:
+        multiverse_app.update_state(cfg, {"messages": [AIMessage(content=initial_seed)]})
+    except Exception:
+        pass
     st.rerun()
 
 st.divider()
 
 
 # ==============================================================================
-# 5. RENDU DE L'HISTORIQUE & CHAT INPUT
+# 5. RENDER HISTORY & STREAMING EXECUTION ENGINE
 # ==============================================================================
 for m in get_checkpointed_messages():
     if isinstance(m, HumanMessage):
@@ -286,7 +302,7 @@ if prompt := st.chat_input("Interact with the simulation timeline..."):
             for msg_chunk, metadata in multiverse_app.stream(
                 input_state, build_config(), stream_mode="messages"
             ):
-                if metadata.get("langgraph_node") == "multiverse_node":
+                if metadata and metadata.get("langgraph_node") == "multiverse_node":
                     full_response += extract_text(getattr(msg_chunk, "content", ""))
                     message_placeholder.markdown(full_response + "▌")
             message_placeholder.markdown(full_response)

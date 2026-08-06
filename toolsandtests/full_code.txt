@@ -4,7 +4,14 @@ FILE: lumen_app.py
 ==================================================
 
 import streamlit as st
+from core.state import init_session_state
+from core.disclaimer import render_lumen_disclaimer
 
+# 1. Initialisation de l'état
+init_session_state()
+
+# 2. Affichage du disclaimer tout en haut de la page principale
+render_lumen_disclaimer()
 # ------------------------------------------------------------------------------
 # 1. PAGE CONFIGURATION
 # ------------------------------------------------------------------------------
@@ -130,29 +137,224 @@ pg = st.navigation([
 
 pg.run()
 ==================================================
-FILE: archive\teste_model.py
+FILE: core\centralstate.py
 ==================================================
 
-import os
+# ==============================================================================
+# CORE/STATE.PY : GESTIONNAIRE D'ÉTAT CENTRALISÉ (INVARIANT DE SESSION)
+# ==============================================================================
+from typing import Dict, Any, List
 import streamlit as st
-import google.generativeai as genai
 
-# Récupération automatique depuis secrets.toml
-try:
-    API_KEY = st.secrets["GEMINI_API_KEY"] # Adapte le nom de la clé selon ton secrets.toml
-except:
-    API_KEY = os.getenv("GEMINI_API_KEY")
-
-if not API_KEY:
-    print("⚠️ Clé API introuvable dans secrets.toml ou l'environnement !")
-else:
-    genai.configure(api_key=API_KEY)
-    print("✅ Clé configurée avec succès ! Lancement du test...\n")
+# Schéma contractuel de l'état global de Lumen.
+# Toute nouvelle variable globale DOIT être déclarée ici avec sa valeur neutre.
+DEFAULT_STATE: Dict[str, Any] = {
+    # --- Module Assessment (01_Assessment.py) ---
+    "answers": {},                 # Dict[str, str] : {question_id: option_key}
+    "assessment_completed": False, # Bool : Verrou de validation du questionnaire
     
-    # Le reste de ton code pour lister les modèles...
-    for m in genai.list_models():
-        if 'generateContent' in m.supported_generation_methods:
-            print(f"👉 Nom exact : {m.name}")
+    # --- Module Scoring & Algèbre (core/scoring.py -> Advices.py) ---
+    "raw_vectors": {               # Scores cognitifs bruts
+        "information_bandwidth": 0.0,
+        "execution_rigor": 0.0,
+        "chaos_tolerance": 0.0,
+        "cognitive_endurance": 0.0,
+    },
+    "normalized_vectors": {        # Scores normalisés (0 à 100%) pour le radar
+        "information_bandwidth": 0,
+        "execution_rigor": 0,
+        "chaos_tolerance": 0,
+        "cognitive_endurance": 0,
+    },
+    "advices_list": [],            # List[Dict[str, str]] : Conseils extraits
+    
+    # --- Module Synapse IA (Chatbot.py) ---
+    "chat_messages": [],           # List[Dict[str, str]] : Historique conversationnel
+    "synapse_system_prompt": "",   # Prompt contextuel généré après l'assessment
+}
+
+
+def init_session_state() -> None:
+    """
+    Initialise l'espace d'état de Streamlit de manière idempotente.
+    À appeler une seule fois tout en haut de `lumen_app.py`.
+    """
+    for key, default_value in DEFAULT_STATE.items():
+        if key not in st.session_state:
+            st.session_state[key] = default_value
+
+
+def reset_assessment_state() -> None:
+    """
+    Réinitialise uniquement le sous-espace lié au test cognitif,
+    sans détruire l'historique global si l'utilisateur veut refaire le test.
+    """
+    st.session_state["answers"] = {}
+    st.session_state["assessment_completed"] = False
+    st.session_state["raw_vectors"] = DEFAULT_STATE["raw_vectors"].copy()
+    st.session_state["normalized_vectors"] = DEFAULT_STATE["normalized_vectors"].copy()
+    st.session_state["advices_list"] = []
+    st.session_state["synapse_system_prompt"] = ""
+
+
+def get_state(key: str, default: Any = None) -> Any:
+    """Accesseur sécurisé pour lire une variable d'état."""
+    return st.session_state.get(key, default)
+==================================================
+FILE: core\disclaimer.py
+==================================================
+
+# ==============================================================================
+# CORE/DISCLAIMER.PY : AVERTISSEMENT HUMAIN ET DÉCALÉ (DISCLAIMER)
+# ==============================================================================
+import streamlit as st
+
+
+def render_lumen_disclaimer() -> None:
+    """
+    Affiche un avertissement cynique, réaliste et drôle en haut de l'application
+    pour rappeler aux utilisateurs que Lumen n'est pas un substitut à l'éducation réelle.
+    """
+    with st.container():
+        st.markdown(
+            """
+            > 🚨 **System Warning: Not a Life Coach (Yet).** 
+            > 
+            > Look, Lumen is a brilliant piece of software, but let's be real—it's still software. 
+            > This app won't magically do your homework, replace years of actual studying, or fix your sleep schedule. 
+            > If you're expecting a certified diploma or professional psychological validation out of a few 
+            > click-through buttons, you might want to rethink your life choices. 
+            > 
+            > Proceed at your own risk, trust your own brain, and don't blame the code if reality hits hard. ☕
+            """,
+            unsafe_allow_html=True
+        )
+        st.divider()
+==================================================
+FILE: core\scoring.py
+==================================================
+
+# ==============================================================================
+# CORE/SCORING.PY : MOTEUR ALGÉBRIQUE ET DE TRAITEMENT DES RÉSULTATS
+# ==============================================================================
+from typing import Dict, List, Any
+from data.question import ALL_QUESTIONS
+
+# Définition explicite des 4 axes cognitifs de Lumen
+COGNITIVE_AXES: List[str] = [
+    "information_bandwidth",
+    "execution_rigor",
+    "chaos_tolerance",
+    "cognitive_endurance"
+]
+
+
+def compute_profile_vectors(
+    answers: Dict[str, str], 
+    questions_db: List[Dict[str, Any]] = ALL_QUESTIONS
+) -> Dict[str, float]:
+    """
+    Calcule le score brut pour chaque axe cognitif en additionnant 
+    les poids des réponses sélectionnées par l'utilisateur.
+    """
+    raw_vectors = {axis: 0.0 for axis in COGNITIVE_AXES}
+    
+    for question in questions_db:
+        question_id = question.get("id")
+        selected_option_key = answers.get(question_id)
+        options = question.get("options", {})
+        
+        if selected_option_key and selected_option_key in options:
+            option_data = options[selected_option_key]
+            if isinstance(option_data, dict):
+                weights = option_data.get("vectors", {})
+                for axis in COGNITIVE_AXES:
+                    try:
+                        raw_vectors[axis] += float(weights.get(axis, 0.0))
+                    except (TypeError, ValueError):
+                        continue
+                        
+    return raw_vectors
+
+
+def compute_theoretical_bounds(
+    questions_db: List[Dict[str, Any]] = ALL_QUESTIONS
+) -> Dict[str, Dict[str, float]]:
+    """
+    Calcule dynamiquement les bornes inférieures et supérieures théoriques
+    (inf et sup) possibles pour chaque axe d'après la base de questions.
+    """
+    bounds = {axis: {"min": 0.0, "max": 0.0} for axis in COGNITIVE_AXES}
+    
+    for question in questions_db:
+        options = question.get("options", {})
+        if not isinstance(options, dict):
+            continue
+            
+        for axis in COGNITIVE_AXES:
+            axis_values = [
+                float(opt.get("vectors", {}).get(axis, 0.0))
+                for opt in options.values()
+                if isinstance(opt, dict)
+            ]
+            if axis_values:
+                bounds[axis]["min"] += min(axis_values)
+                bounds[axis]["max"] += max(axis_values)
+                
+    return bounds
+
+
+def normalize_scores(
+    raw_vectors: Dict[str, float], 
+    bounds: Dict[str, Dict[str, float]] = None
+) -> Dict[str, int]:
+    """
+    Projette les scores bruts sur une échelle normalisée de 0 à 100%.
+    Intègre une sécurité contre la division par zéro.
+    """
+    if bounds is None:
+        bounds = compute_theoretical_bounds()
+        
+    normalized_vectors = {}
+    for axis, raw_value in raw_vectors.items():
+        min_bound = bounds.get(axis, {}).get("min", 0.0)
+        max_bound = bounds.get(axis, {}).get("max", 0.0)
+        
+        # Garde-fou mathématique si l'axe a une variance nulle
+        if max_bound == min_bound:
+            normalized_vectors[axis] = 50
+        else:
+            scaled_score = ((raw_value - min_bound) / (max_bound - min_bound)) * 100.0
+            # On contraint le résultat entier dans l'intervalle [0, 100]
+            normalized_vectors[axis] = int(max(0, min(100, round(scaled_score))))
+            
+    return normalized_vectors
+
+
+def extract_user_advices(
+    answers: Dict[str, str], 
+    questions_db: List[Dict[str, Any]] = ALL_QUESTIONS
+) -> List[Dict[str, str]]:
+    """
+    Extrait les profils et recommandations textuelles associés aux choix.
+    Permet aux vues Streamlit d'afficher le texte sans logique de filtrage.
+    """
+    advices_list = []
+    for question in questions_db:
+        question_id = question.get("id")
+        selected_option_key = answers.get(question_id)
+        options = question.get("options", {})
+        
+        if selected_option_key and selected_option_key in options:
+            option_data = options[selected_option_key]
+            if isinstance(option_data, dict):
+                advices_list.append({
+                    "question_id": question_id,
+                    "label": option_data.get("label", "Profil Non Déterminé"),
+                    "advice": option_data.get("advice", "Aucun conseil disponible pour cette sélection.")
+                })
+                
+    return advices_list
 ==================================================
 FILE: data\question.py
 ==================================================
@@ -1596,7 +1798,7 @@ with nav_col2:
     if st.button("See the full Builder Blueprint 🧬", use_container_width=True):
         st.switch_page("pages/Advices.py")
 ==================================================
-FILE: pages\Advices.py
+FILE: pages\02_Advices.py
 ==================================================
 
 import streamlit as st
@@ -1918,7 +2120,7 @@ with col_foot2:
             st.session_state.flags["chatbot_unlocked"] = False
         st.switch_page("pages/01_Assessment.py")
 ==================================================
-FILE: pages\Chatbot.py
+FILE: pages\03_Mr.Brown.py
 ==================================================
 
 import streamlit as st
@@ -1927,15 +2129,8 @@ import re
 import uuid
 from typing import Annotated, TypedDict
 
-
 def extract_text(content) -> str:
-    """Extrait uniquement le texte affichable d'un message LLM.
-
-    Gemini (surtout les modèles récents type 3.x) peut renvoyer `.content`
-    soit comme une simple chaîne, soit comme une liste de blocs
-    (texte + blocs internes de raisonnement/"signature"). On ne veut
-    JAMAIS afficher ces blocs internes à l'utilisateur — seulement le texte.
-    """
+    """Extrait uniquement le texte affichable d'un message LLM de manière sécurisée."""
     if isinstance(content, str):
         return content
     if isinstance(content, list):
@@ -1967,7 +2162,6 @@ except ImportError:
     st.error("⚠️ CRITICAL FAULT: Missing LangGraph. Execute: pip install langgraph")
     st.stop()
 
-# Optional: precise Google API exception types, if the package is present.
 try:
     from google.api_core import exceptions as google_exceptions
     HAS_GOOGLE_EXCEPTIONS = True
@@ -2002,7 +2196,7 @@ if not isinstance(ALL_QUESTIONS, list) or len(ALL_QUESTIONS) == 0:
 
 
 # ==============================================================================
-# 2. COGNITIVE TELEMETRY ENGINE (defensive parsing)
+# 2. COGNITIVE TELEMETRY ENGINE (Defensive Parsing)
 # ==============================================================================
 all_labels = []
 vector_totals = {
@@ -2044,8 +2238,8 @@ vector_labels = {
     "cognitive_endurance": "Cognitive Endurance"
 }
 
-strongest_key = max(vector_totals, key=vector_totals.get)
-weakest_key = min(vector_totals, key=vector_totals.get)
+strongest_key = max(vector_totals, key=vector_totals.get) if vector_totals else "information_bandwidth"
+weakest_key = min(vector_totals, key=vector_totals.get) if vector_totals else "cognitive_endurance"
 detailed_choices_block = "\n".join(detailed_choices) if detailed_choices else "- (No detailed signals on file.)"
 
 
@@ -2117,8 +2311,8 @@ TECHNIQUE_LIBRARY = [
 
 
 def select_priority_techniques(weakest_key: str, strongest_key: str) -> list:
-    addresses_weak = [t["name"] for t in TECHNIQUE_LIBRARY if weakest_key in t["addresses"]]
-    leverages_strong = [t["name"] for t in TECHNIQUE_LIBRARY if strongest_key in t["leverages"]]
+    addresses_weak = [t["name"] for t in TECHNIQUE_LIBRARY if weakest_key in t.get("addresses", [])]
+    leverages_strong = [t["name"] for t in TECHNIQUE_LIBRARY if strongest_key in t.get("leverages", [])]
 
     picks = []
     for name in addresses_weak[:2] + leverages_strong[:1]:
@@ -2160,7 +2354,7 @@ st.markdown("<h1 class='chat-header'>SYNAPSE // Neural Mentor</h1>", unsafe_allo
 st.markdown(f"""
 <div class='metric-pill'>👤 Operator: <b>{pseudo}</b></div>
 <div class='metric-pill'>🧬 Archetype: <b>{dominant_archetype}</b></div>
-<div class='metric-pill'>⚡ Core Advantage: <b>{vector_labels[strongest_key]}</b></div>
+<div class='metric-pill'>⚡ Core Advantage: <b>{vector_labels.get(strongest_key, strongest_key)}</b></div>
 """, unsafe_allow_html=True)
 st.divider()
 
@@ -2191,13 +2385,11 @@ with st.sidebar:
 
     st.session_state.gemini_api_key = st.text_input(
         "Gemini Authentication Key:",
-        value=st.session_state.gemini_api_key,
+        value=st.session_state.get("gemini_api_key", ""),
         type="password",
         help="Shared across all Lumen pages for this session. Never logged or displayed."
     ).strip()
 
-    # Modèles optimisés avec repli sécurisé (modèles actifs au 07/2026 —
-    # vérifiés via genai.list_models() sur une clé réelle)
     selected_model = st.selectbox(
         "Language Model Topology:",
         options=[
@@ -2207,11 +2399,11 @@ with st.sidebar:
             "gemini-flash-latest"
         ],
         index=0,
-        help="gemini-2.5-flash offre le meilleur compromis qualité/fiabilité pour une démo devant jury."
+        help="gemini-2.5-flash offre le meilleur compromis qualité/fiabilité."
     )
 
     temperature = st.slider("Cognitive Drift (Temperature):", 0.0, 1.0, 0.6, 0.05,
-                            help="Lower values yield highly structured academic plans. Higher values increase creative empathy.")
+                            help="Lower values yield highly structured academic plans.")
 
     request_timeout = st.slider("Request Timeout (s)", 10, 120, 45, 5)
 
@@ -2220,7 +2412,7 @@ with st.sidebar:
         st.session_state.synapse_thread_id = str(uuid.uuid4())
         st.rerun()
 
-gemini_api_key = st.session_state.gemini_api_key
+gemini_api_key = st.session_state.get("gemini_api_key", "")
 
 
 # ==============================================================================
@@ -2247,36 +2439,33 @@ def build_system_prompt(state: MentorState) -> str:
 
     return f"""
 [ROLE]
-You are SYNAPSE: an elite, deeply empathetic Meta-Cognitive Architect and Academic Strategist. You are not a standard AI; you are a bespoke intellectual mentor designed to unlock human potential. Your tone is incredibly inspiring, fiercely intelligent, highly structured, and unconditionally supportive.
+You are SYNAPSE: an elite, deeply empathetic Meta-Cognitive Architect and Academic Strategist. Your tone is inspiring, fiercely intelligent, highly structured, and unconditionally supportive.
 
 [TASK]
-Your objective is to provide highly advanced, non-generic academic guidance strictly tailored to the user's psychological profile.
+Your objective is to provide highly advanced academic guidance strictly tailored to the user's psychological profile.
 1. Deconstruct their academic roadblocks with psychological precision.
-2. Validate their struggles emotionally, then pivot immediately to high-level, actionable strategy.
-3. Recommend and adapt techniques FROM THE VERIFIED LIBRARY below to their specific dominant archetype and cognitive metrics — never invent a technique that isn't in it.
+2. Validate their struggles emotionally, then pivot immediately to high-level strategy.
+3. Recommend and adapt techniques FROM THE VERIFIED LIBRARY below to their specific dominant archetype and cognitive metrics.
 
-[VERIFIED TECHNIQUE LIBRARY — the only techniques you may name and recommend]
+[VERIFIED TECHNIQUE LIBRARY]
 {library_block}
 
-[PRIORITY PICKS FOR THIS OPERATOR — computed from their actual profile, lead with these when relevant]
+[PRIORITY PICKS FOR THIS OPERATOR]
 {priority_block}
 
 [SPECIFICS]
-- NEVER use generic advice like "make a flashcard", "take a break", or "use a planner" as a substitute for naming and explaining one of the techniques above.
-- Format your responses beautifully using Markdown. Use bolding for emphasis, bullet points for structure, and keep paragraphs punchy.
-- Write in English with flawless, poetic, yet technical eloquence. Elevate the user. Make them feel capable of mastering the hardest disciplines.
+- Never use generic advice as a substitute for naming and explaining one of the techniques above.
+- Format responses beautifully using Markdown.
+- Write in English with flawless eloquence.
 
 [CONTEXT]
-- **Operator Name**: {state['pseudo']}
-- **Dominant Cognitive Archetype**: {state['dominant_archetype']}
-- **Primary Strength**: {state['strongest_label']}
-- **Critical Growth Axis**: {state['weakest_label']}
+- **Operator Name**: {state.get('pseudo', 'Operator')}
+- **Dominant Cognitive Archetype**: {state.get('dominant_archetype', 'Unclassified')}
+- **Primary Strength**: {state.get('strongest_label', '')}
+- **Critical Growth Axis**: {state.get('weakest_label', '')}
 
-*Operator's Specific Neural Footprint (Recent Decisions):*
-{state['detailed_choices']}
-
-[NOTES]
-Always filter your advice through the lens of their `{state['dominant_archetype']}` and their Critical Growth Axis (`{state['weakest_label']}`). If they ask a generic question, reframe it into a masterclass on personalized metacognition using one or more of the library techniques above. Maintain your majestic, supportive, and brilliant persona at all costs. Never mention that you are an AI or that a "library" or "graph" exists — speak as SYNAPSE, not about your own architecture.
+*Operator's Specific Neural Footprint:*
+{state.get('detailed_choices', '')}
 """
 
 
@@ -2310,7 +2499,6 @@ def mentor_node(state: MentorState, config) -> dict:
         MessagesPlaceholder("history"),
     ])
 
-    # Cascade de secours automatique pour parer aux erreurs 429 / 404
     fallback_chain = [primary_model, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
     models_to_try = []
     for m in fallback_chain:
@@ -2366,10 +2554,13 @@ def build_config():
 
 
 def get_checkpointed_messages():
-    snapshot = synapse_app.get_state(build_config())
-    if not snapshot or not snapshot.values:
+    try:
+        snapshot = synapse_app.get_state(build_config())
+        if not snapshot or not snapshot.values:
+            return []
+        return snapshot.values.get("messages", [])
+    except Exception:
         return []
-    return snapshot.values.get("messages", [])
 
 
 def seed_greeting_if_new():
@@ -2380,7 +2571,10 @@ def seed_greeting_if_new():
         f"footprint, {pseudo}. What complex academic concept or revision block are "
         f"we conquering today?"
     )
-    synapse_app.update_state(build_config(), {"messages": [AIMessage(content=greeting)]})
+    try:
+        synapse_app.update_state(build_config(), {"messages": [AIMessage(content=greeting)]})
+    except Exception:
+        pass
 
 
 seed_greeting_if_new()
@@ -2395,7 +2589,7 @@ def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int 
             for msg_chunk, metadata in synapse_app.stream(
                 input_state, config, stream_mode="messages"
             ):
-                if metadata.get("langgraph_node") == "mentor":
+                if metadata and metadata.get("langgraph_node") == "mentor":
                     full_response += extract_text(getattr(msg_chunk, "content", ""))
                     placeholder.markdown(full_response + "▌")
             placeholder.markdown(full_response)
@@ -2407,11 +2601,11 @@ def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int 
 
             if HAS_GOOGLE_EXCEPTIONS:
                 if isinstance(e, google_exceptions.PermissionDenied):
-                    fatal_user_message = "🔒 Access denied — the API key is invalid, revoked, or lacks permission for this model."
+                    fatal_user_message = "🔒 Access denied — the API key is invalid or lacks permission."
                 elif isinstance(e, google_exceptions.Unauthenticated):
-                    fatal_user_message = "🔒 Authentication failed — check that the API key is correct."
+                    fatal_user_message = "🔒 Authentication failed — check your API key."
                 elif isinstance(e, google_exceptions.InvalidArgument):
-                    fatal_user_message = "⚠️ Invalid request — the selected model name may be wrong or unsupported for this key."
+                    fatal_user_message = "⚠️ Invalid request — check selected model."
                 elif isinstance(e, google_exceptions.ResourceExhausted):
                     transient = True
                     fatal_user_message = "⏳ Rate limit or quota reached."
@@ -2452,7 +2646,7 @@ for m in get_checkpointed_messages():
 if prompt := st.chat_input(f"Enter your academic roadblock, {pseudo}..."):
 
     if not is_plausible_gemini_key(gemini_api_key):
-        st.error("⚠️ SYNAPSE offline. Please input a valid-looking Gemini API Key in the Engine Matrix.")
+        st.error("⚠️ SYNAPSE offline. Please input a valid Gemini API Key in the Engine Matrix.")
         st.stop()
 
     prompt = prompt.strip()[:4000]
@@ -2469,15 +2663,528 @@ if prompt := st.chat_input(f"Enter your academic roadblock, {pseudo}..."):
             "dominant_archetype": dominant_archetype,
             "strongest_key": strongest_key,
             "weakest_key": weakest_key,
-            "strongest_label": vector_labels[strongest_key],
-            "weakest_label": vector_labels[weakest_key],
+            "strongest_label": vector_labels.get(strongest_key, strongest_key),
+            "weakest_label": vector_labels.get(weakest_key, weakest_key),
             "detailed_choices": detailed_choices_block,
         }
         full_response, error_message = stream_turn(input_state, build_config(), message_placeholder)
         if error_message:
             st.error(error_message)
 ==================================================
-FILE: pages\TheOldDays.py
+FILE: pages\05_What_If.py
+==================================================
+
+import streamlit as st
+import time
+import re
+import uuid
+from typing import Annotated, TypedDict
+
+# ==============================================================================
+# 0. CONFIGURATION DE LA PAGE & UTILITAIRES DE TEXTE
+# ==============================================================================
+st.set_page_config(
+    page_title="And what if?! // Counterfactual Simulation Core",
+    page_icon="⚡",
+    layout="wide"
+)
+
+KICKOFF_MARKER = "[WHAT_IF_INTERNAL_KICKOFF] Open the divergence point with vivid, uncompromising realism."
+
+def extract_text(content) -> str:
+    """Extrait proprement le texte affichable d'un message LLM en filtrant les structures composites."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict) and block.get("type", "text") == "text":
+                parts.append(block.get("text", ""))
+        return "".join(parts)
+    return str(content) if content else ""
+
+
+# ==============================================================================
+# 1. VÉRIFICATION DES DÉPENDANCES CRITIQUES
+# ==============================================================================
+try:
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_core.messages import HumanMessage, AIMessage, trim_messages
+    from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+except ImportError:
+    st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: `pip install langchain langchain-google-genai google-generativeai`")
+    st.stop()
+
+try:
+    from langgraph.graph import StateGraph, START, END
+    from langgraph.graph.message import add_messages
+    from langgraph.checkpoint.memory import MemorySaver
+except ImportError:
+    st.error("⚠️ CRITICAL FAULT: Missing LangGraph. Execute: `pip install langgraph`")
+    st.stop()
+
+try:
+    from google.api_core import exceptions as google_exceptions
+    HAS_GOOGLE_EXCEPTIONS = True
+except ImportError:
+    HAS_GOOGLE_EXCEPTIONS = False
+
+
+# ==============================================================================
+# 2. GESTION DU PROFIL UTILISATEUR & PARAMÈTRES DE SESSION
+# ==============================================================================
+user_profile = st.session_state.get("user_profile", {}) or {}
+traveler_raw = user_profile.get("pseudo", "Traveler")
+traveler_name = re.sub(r"[^\w\s\-']", "", str(traveler_raw)).strip()[:60] or "Traveler"
+
+if "whatif_thread_id" not in st.session_state:
+    st.session_state.whatif_thread_id = str(uuid.uuid4())
+
+if "whatif_awaiting_opening" not in st.session_state:
+    st.session_state.whatif_awaiting_opening = False
+
+
+# ==============================================================================
+# 3. INTERFACE VISUELLE : DESIGN SYSTEM "AND WHAT IF?!"
+# ==============================================================================
+st.markdown("""
+<style>
+    .whatif-title {
+        background: linear-gradient(90deg, #38BDF8 0%, #818CF8 50%, #C084FC 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 900;
+        font-size: 2.7rem;
+        letter-spacing: -1.2px;
+        margin-bottom: 0px;
+    }
+    .whatif-subtitle {
+        color: #94A3B8;
+        font-size: 1.05rem;
+        margin-bottom: 25px;
+    }
+    .scenario-box {
+        background-color: #121216;
+        border: 1px solid #2A2A35;
+        padding: 22px;
+        border-radius: 14px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        margin-bottom: 20px;
+    }
+    .pill-tag {
+        background-color: #1E1E28;
+        color: #38BDF8;
+        border: 1px solid #334155;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-block;
+        margin-right: 8px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("<h1 class='whatif-title'>And what if?! // Divergence Engine</h1>", unsafe_allow_html=True)
+st.markdown(f"<div class='whatif-subtitle'>Exploring alternate trajectories, lost paths, and systemic shocks with historical and scientific rigor.</div>", unsafe_allow_html=True)
+st.markdown(f"<div><span class='pill-tag'>TRAVELER: {traveler_name.upper()}</span></div>", unsafe_allow_html=True)
+st.write("")
+st.divider()
+
+
+# ==============================================================================
+# 4. BIBLIOTHÈQUE DE SCÉNARIOS CONTREFACTUELS & CONFIGURATION
+# ==============================================================================
+DEFAULT_SCENARIOS = {
+    "Calculus Divergence (Leibniz vs Newton)": "What if Isaac Newton's manuscripts on fluxions were lost in the Great Plague of London in 1665, leaving Gottfried Wilhelm Leibniz as the sole architect and sole public transmitter of calculus across Europe?",
+    "The Alexandria Imperative": "What if the Library of Alexandria was successfully evacuated and relocated under royal patronage in 48 BCE, preserving Hellenistic engineering, automated mechanics, and advanced geometry through late antiquity?",
+    "Babbage's Victorian Information Age": "What if the British Treasury fully funded Charles Babbage’s Analytical Engine in 1834, allowing the construction of mechanical computing decades before the birth of electronic transistors?",
+    "The Silk Road Scientific Synthesis": "What if the Mongol Empire's Pax Mongolica institutionalized a permanent academy of science in Samarkand in the 13th century, fusing Islamic algebra, Chinese printing, and European logic centuries early?",
+    "Custom Divergence Point": "Enter your own custom historical or scientific pivot point..."
+}
+
+with st.container():
+    st.markdown("<div class='scenario-box'>", unsafe_allow_html=True)
+    st.markdown("### 🌀 Define the Divergence Point")
+    
+    selected_preset = st.selectbox(
+        "Choose a Preset Scenario or Craft Your Own:",
+        list(DEFAULT_SCENARIOS.keys())
+    )
+    
+    if selected_preset == "Custom Divergence Point":
+        divergence_premise = st.text_area(
+            "Specify your 'What if?!' question in detail:",
+            value="What if Nikola Tesla's Wardenclyffe Tower was fully funded in 1901, establishing a global wireless energy grid?",
+            height=90
+        )
+    else:
+        divergence_premise = DEFAULT_SCENARIOS[selected_preset]
+        st.info(f"**Core Premise:** {divergence_premise}")
+        
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ==============================================================================
+# 5. SIDEBAR — MATRICE DE CONTRÔLE & CLÉ API
+# ==============================================================================
+if "gemini_api_key" not in st.session_state:
+    default_key = ""
+    try:
+        if "GEMINI_API_KEY" in st.secrets:
+            default_key = st.secrets["GEMINI_API_KEY"]
+    except Exception:
+        default_key = ""
+    st.session_state.gemini_api_key = default_key
+
+with st.sidebar:
+    st.markdown("### 🎛️ Engine Control Matrix")
+    st.session_state.gemini_api_key = st.text_input(
+        "Gemini API Key:",
+        value=st.session_state.gemini_api_key,
+        type="password",
+        placeholder="AIzaSy...",
+        help="Securely stored for this session."
+    ).strip()
+
+    selected_model = st.selectbox(
+        "Inference Model:",
+        options=[
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-1.5-flash",
+            "gemini-2.0-flash",
+            "gemini-flash-latest"
+        ],
+        index=0
+    )
+    
+    temperature = st.slider("Divergence Creativity (Temperature):", 0.0, 1.0, 0.7, 0.05)
+    request_timeout = st.slider("Request Timeout (s)", 10, 120, 45, 5)
+
+    st.divider()
+    if st.button("Reset Timeline 🧹", use_container_width=True, type="secondary"):
+        st.session_state.whatif_thread_id = str(uuid.uuid4())
+        st.session_state.whatif_awaiting_opening = False
+        st.rerun()
+
+gemini_api_key = st.session_state.gemini_api_key
+
+
+# ==============================================================================
+# 6. LANGGRAPH STATE MACHINE & NARRATIVE ENGINE
+# ==============================================================================
+class WhatIfState(TypedDict):
+    messages: Annotated[list, add_messages]
+    premise: str
+    traveler: str
+    turn_count: int
+    timeline_phase: str
+
+
+PHASE_DESCRIPTIONS = {
+    "genesis": (
+        "PHASE — GENESIS OF DIVERGENCES: The divergence point has just triggered. "
+        "Describe the immediate aftermath with visceral, sensory, and intellectual realism. "
+        "Show how institutions, contemporary minds, and daily life shift in response to this new reality. "
+        "Do not offer generic welcomes; drop the traveler right into the shifting timeline."
+    ),
+    "shock": (
+        "PHASE — SYSTEMIC SHOCK & RESISTANCE: React sharply to what the traveler just introduced or asked. "
+        "Introduce realistic resistance, unintended consequences, intellectual conflict, or technological bottlenecks "
+        "characteristic of this timeline. Make the stakes concrete and intellectually demanding."
+    ),
+    "ripple": (
+        "PHASE — RIPPLE EFFECTS & TRAJECTORY: Trace the cascading effects of recent choices across society, "
+        "science, or politics. Keep the simulation immersive, open-ended, and fiercely reactive."
+    )
+}
+
+
+def build_system_prompt(state: WhatIfState) -> str:
+    phase = state.get("timeline_phase", "genesis")
+    return f"""
+[ROLE]
+You are CHRONOS-X: an elite Counterfactual Simulation Core. You model alternate histories, lost scientific trajectories, and civilizational divergences with extreme intellectual depth, uncompromising realism, and vivid prose. You avoid cliché phrases, corporate AI filler, and superficial summaries. You treat every counterfactual scenario with rigorous logic and historical plausibility.
+
+[TRAVELER]
+- Designation: {state.get('traveler', 'Traveler')}
+
+[DIVERGENCE PREMISE]
+{state.get('premise', 'An alternate historical path.')}
+
+[CURRENT SIMULATION PHASE]
+{PHASE_DESCRIPTIONS.get(phase, PHASE_DESCRIPTIONS['genesis'])}
+
+[RULES]
+- Write with sharp, evocative, literary prose.
+- Never break character, never mention AI or prompts.
+- Challenge the traveler's assumptions and make every decision carry realistic consequences.
+"""
+
+
+def route_timeline_phase(state: WhatIfState) -> dict:
+    turns = int(state.get("turn_count", 0))
+    if turns == 0:
+        phase = "genesis"
+    elif turns < 3:
+        phase = "shock"
+    else:
+        phase = "ripple"
+    return {"timeline_phase": phase, "turn_count": turns + 1}
+
+
+def phase_router(state: WhatIfState) -> str:
+    return state.get("timeline_phase", "genesis")
+
+
+def safe_token_counter(msgs) -> int:
+    return len(msgs) if isinstance(msgs, list) else 1
+
+
+def trimmed_history(messages):
+    if not messages:
+        return []
+    return trim_messages(
+        messages,
+        strategy="last",
+        token_counter=safe_token_counter,
+        max_tokens=24,
+        start_on="human",
+    )
+
+
+def make_simulator_node(phase: str):
+    def node(state: WhatIfState, config) -> dict:
+        cfg = (config or {}).get("configurable", {})
+        api_key = cfg.get("api_key", "")
+        model = cfg.get("model", "gemini-2.5-flash")
+        timeout = cfg.get("timeout", 45)
+        temp = cfg.get("temperature", 0.7)
+
+        active_state = {**state, "timeline_phase": phase}
+        system_prompt = build_system_prompt(active_state)
+
+        prompt_template = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            MessagesPlaceholder("history"),
+        ])
+
+        fallback_chain = [
+            model,
+            "gemini-2.5-flash",
+            "gemini-1.5-flash",
+            "gemini-2.0-flash",
+            "gemini-flash-latest"
+        ]
+        models_to_try = []
+        for m in fallback_chain:
+            if m not in models_to_try:
+                models_to_try.append(m)
+
+        last_exception = None
+        for model_name in models_to_try:
+            try:
+                llm = ChatGoogleGenerativeAI(
+                    model=model_name,
+                    google_api_key=api_key,
+                    temperature=temp,
+                    timeout=timeout,
+                    max_retries=1,
+                )
+                chain = prompt_template | llm
+                response = chain.invoke({"history": trimmed_history(state.get("messages", []))})
+                return {"messages": [response]}
+            except Exception as e:
+                last_exception = e
+                continue
+
+        raise last_exception if last_exception else RuntimeError("All model execution attempts failed.")
+
+    return node
+
+
+@st.cache_resource
+def get_whatif_app():
+    graph = StateGraph(WhatIfState)
+    graph.add_node("route_timeline_phase", route_timeline_phase)
+    graph.add_node("genesis_node", make_simulator_node("genesis"))
+    graph.add_node("shock_node", make_simulator_node("shock"))
+    graph.add_node("ripple_node", make_simulator_node("ripple"))
+
+    graph.add_edge(START, "route_timeline_phase")
+    graph.add_conditional_edges(
+        "route_timeline_phase",
+        phase_router,
+        {
+            "genesis": "genesis_node",
+            "shock": "shock_node",
+            "ripple": "ripple_node",
+        },
+    )
+    graph.add_edge("genesis_node", END)
+    graph.add_edge("shock_node", END)
+    graph.add_edge("ripple_node", END)
+
+    return graph.compile(checkpointer=MemorySaver())
+
+
+whatif_app = get_whatif_app()
+SIMULATOR_NODES = {"genesis_node", "shock_node", "ripple_node"}
+
+
+# ==============================================================================
+# 7. MOTEUR DE STREAMING ROBUSTE & GESTION DES ERREURS
+# ==============================================================================
+def is_plausible_gemini_key(key: str) -> bool:
+    if not key:
+        return False
+    key = key.strip()
+    return len(key) >= 20 and " " not in key
+
+
+def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int = 2):
+    last_error_message = None
+
+    for attempt in range(1, max_attempts + 1):
+        full_response = ""
+        try:
+            for msg_chunk, metadata in whatif_app.stream(
+                input_state, config, stream_mode="messages"
+            ):
+                if metadata and metadata.get("langgraph_node") in SIMULATOR_NODES:
+                    full_response += extract_text(getattr(msg_chunk, "content", ""))
+                    placeholder.markdown(full_response + "▌")
+            placeholder.markdown(full_response)
+            return full_response, None
+
+        except Exception as e:
+            transient = False
+            user_msg = None
+
+            if HAS_GOOGLE_EXCEPTIONS:
+                if isinstance(e, google_exceptions.PermissionDenied):
+                    user_msg = "🔒 Access Denied: Invalid or restricted API key."
+                elif isinstance(e, google_exceptions.Unauthenticated):
+                    user_msg = "🔒 Authentication Failed: Check your API key."
+                elif isinstance(e, google_exceptions.InvalidArgument):
+                    user_msg = "⚠️ Invalid Request: Selected model may be unsupported."
+                elif isinstance(e, google_exceptions.ResourceExhausted):
+                    transient = True
+                    user_msg = "⏳ Rate limit reached. Retrying..."
+                elif isinstance(e, (google_exceptions.DeadlineExceeded, google_exceptions.ServiceUnavailable)):
+                    transient = True
+                    user_msg = "🌐 Temporary network disruption. Retrying..."
+
+            if user_msg is None:
+                transient = True
+                user_msg = f"❌ Simulation Disruption ({type(e).__name__})."
+
+            last_error_message = user_msg
+
+            if transient and attempt < max_attempts:
+                time.sleep(1.5 * attempt)
+                continue
+            else:
+                return None, last_error_message
+
+    return None, last_error_message
+
+
+def build_config():
+    return {
+        "configurable": {
+            "thread_id": st.session_state.whatif_thread_id,
+            "api_key": gemini_api_key,
+            "model": selected_model,
+            "temperature": temperature,
+            "timeout": request_timeout,
+        }
+    }
+
+
+def get_checkpointed_messages():
+    try:
+        snapshot = whatif_app.get_state(build_config())
+        if not snapshot or not getattr(snapshot, "values", None):
+            return []
+        return snapshot.values.get("messages", [])
+    except Exception:
+        return []
+
+
+# ==============================================================================
+# 8. EXÉCUTION DE L'INTERFACE & BOUCLE DE CHAT
+# ==============================================================================
+col_b2, col_b1, col_b3 = st.columns([1, 2, 1])
+with col_b1:
+    if st.button("⚡ IGNITE DIVERGENCE TIMELINE", use_container_width=True, type="primary"):
+        if not is_plausible_gemini_key(gemini_api_key):
+            st.error("⚠️ CRITICAL: A valid Gemini API Key is required to ignite the simulation.")
+            st.stop()
+
+        st.session_state.whatif_thread_id = str(uuid.uuid4())
+        st.session_state.whatif_awaiting_opening = True
+        st.rerun()
+
+current_messages = get_checkpointed_messages()
+
+for m in current_messages:
+    if isinstance(m, HumanMessage):
+        if extract_text(m.content) == KICKOFF_MARKER:
+            continue  # Masque le marqueur technique interne
+        with st.chat_message("user", avatar="👤"):
+            st.markdown(extract_text(m.content))
+    elif isinstance(m, AIMessage):
+        with st.chat_message("assistant", avatar="⚡"):
+            st.markdown(extract_text(m.content))
+
+if st.session_state.whatif_awaiting_opening and not current_messages:
+    with st.chat_message("assistant", avatar="⚡"):
+        message_placeholder = st.empty()
+
+        if not is_plausible_gemini_key(gemini_api_key):
+            st.error("⚠️ CRITICAL: Gemini API Key missing or malformed.")
+        else:
+            input_state = {
+                "messages": [HumanMessage(content=KICKOFF_MARKER)],
+                "premise": divergence_premise,
+                "traveler": traveler_name,
+            }
+            full_resp, err = stream_turn(input_state, build_config(), message_placeholder)
+            if err:
+                st.error(err)
+            else:
+                st.session_state.whatif_awaiting_opening = False
+                st.rerun()
+
+if prompt := st.chat_input("Intervene in the alternate timeline..."):
+    if not is_plausible_gemini_key(gemini_api_key):
+        st.error("⚠️ CRITICAL: A valid Gemini API Key is required.")
+        st.stop()
+
+    prompt = prompt.strip()[:4000]
+
+    with st.chat_message("user", avatar="👤"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant", avatar="⚡"):
+        message_placeholder = st.empty()
+
+        input_state = {
+            "messages": [HumanMessage(content=prompt)],
+            "premise": divergence_premise,
+            "traveler": traveler_name,
+        }
+        full_resp, err = stream_turn(input_state, build_config(), message_placeholder)
+        if err:
+            st.error(err)
+        else:
+            st.rerun()
+==================================================
+FILE: pages\06_TheOldDays.py
 ==================================================
 
 import streamlit as st
@@ -2487,7 +3194,8 @@ import uuid
 from typing import Annotated, TypedDict
 
 def extract_text(content) -> str:
-    """Extrait uniquement le texte affichable d'un message LLM."""
+    """Extrait de manière sécurisée uniquement le texte affichable d'un message LLM,
+    en filtrant les blocs internes ou structures complexes."""
     if isinstance(content, str):
         return content
     if isinstance(content, list):
@@ -2501,14 +3209,14 @@ def extract_text(content) -> str:
     return str(content) if content else ""
 
 # ==============================================================================
-# 0. HARDENED DEPENDENCY INJECTION
+# 0. HARDENED DEPENDENCY INJECTION & SAFETY CHECKS
 # ==============================================================================
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
     from langchain_core.messages import HumanMessage, AIMessage, trim_messages
     from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 except ImportError:
-    st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: pip install langchain langchain-google-genai google-generativeai")
+    st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: `pip install langchain langchain-google-genai google-generativeai`")
     st.stop()
 
 try:
@@ -2516,7 +3224,7 @@ try:
     from langgraph.graph.message import add_messages
     from langgraph.checkpoint.memory import MemorySaver
 except ImportError:
-    st.error("⚠️ CRITICAL FAULT: Missing LangGraph. Execute: pip install langgraph")
+    st.error("⚠️ CRITICAL FAULT: Missing LangGraph. Execute: `pip install langgraph`")
     st.stop()
 
 try:
@@ -2525,9 +3233,11 @@ try:
 except ImportError:
     HAS_GOOGLE_EXCEPTIONS = False
 
+st.set_page_config(page_title="Chronos // Multiverse Engine", page_icon="⏳", layout="wide")
+
 
 # ==============================================================================
-# 1. LANGGRAPH STATE MACHINE & WORKFLOW (Déclaré en premier pour éviter le NameError)
+# 1. LANGGRAPH STATE MACHINE & WORKFLOW ARCHITECTURE
 # ==============================================================================
 class MultiverseState(TypedDict):
     messages: Annotated[list, add_messages]
@@ -2583,14 +3293,20 @@ def multiverse_node(state: MultiverseState, config) -> dict:
                 max_retries=1,
             )
             chain = prompt_template | llm
-            trimmed_hist = trim_messages(state.get("messages", []), strategy="last", token_counter=len, max_tokens=24, start_on="human")
+            trimmed_hist = trim_messages(
+                state.get("messages", []), 
+                strategy="last", 
+                token_counter=len, 
+                max_tokens=24, 
+                start_on="human"
+            )
             response = chain.invoke({"history": trimmed_hist})
             return {"messages": [response]}
         except Exception as e:
             last_exception = e
             continue
 
-    raise last_exception if last_exception else RuntimeError("Multiverse inference failed.")
+    raise last_exception if last_exception else RuntimeError("Multiverse inference failed across all fallback models.")
 
 
 @st.cache_resource
@@ -2603,7 +3319,7 @@ def get_multiverse_app():
 
 
 # ==============================================================================
-# 2. ÉTAT & CONFIGURATION DE LA PAGE
+# 2. STATE SANITIZATION & SESSION INITIALIZATION
 # ==============================================================================
 user_profile = st.session_state.get("user_profile", {}) or {}
 pseudo_raw = user_profile.get("pseudo", "Operator")
@@ -2616,7 +3332,7 @@ multiverse_app = get_multiverse_app()
 
 
 # ==============================================================================
-# 3. INTERFACE UTILISATEUR & SIDEBAR
+# 3. USER INTERFACE & SIDEBAR STYLING
 # ==============================================================================
 st.markdown("""
 <style>
@@ -2657,12 +3373,13 @@ with st.sidebar:
 
     st.session_state.gemini_api_key = st.text_input(
         "Gemini Authentication Key:",
-        value=st.session_state.gemini_api_key,
-        type="password"
+        value=st.session_state.get("gemini_api_key", ""),
+        type="password",
+        help="Shared across Lumen modules. Never logged or exposed."
     ).strip()
 
     selected_model = st.selectbox(
-        "Inference Model:",
+        "Inference Model Topology:",
         options=["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.5-flash"],
         index=0
     )
@@ -2675,11 +3392,11 @@ with st.sidebar:
         st.session_state.multiverse_thread_id = str(uuid.uuid4())
         st.rerun()
 
-gemini_api_key = st.session_state.gemini_api_key
+gemini_api_key = st.session_state.get("gemini_api_key", "")
 
 
 # ==============================================================================
-# 4. CONFIGURATION DES PARAMÈTRES & INITIALISATION
+# 4. ENVIRONMENTAL PARAMETERS & CONFIG BUILDER
 # ==============================================================================
 st.markdown("### 🎛️ Configure Environmental Parameters")
 col1, col2, col3 = st.columns(3)
@@ -2695,7 +3412,7 @@ with col3:
 def build_config():
     return {
         "configurable": {
-            "thread_id": st.session_state.multiverse_thread_id,
+            "thread_id": st.session_state.get("multiverse_thread_id", str(uuid.uuid4())),
             "api_key": gemini_api_key,
             "model": selected_model,
             "temperature": temperature,
@@ -2705,10 +3422,13 @@ def build_config():
 
 
 def get_checkpointed_messages():
-    snapshot = multiverse_app.get_state(build_config())
-    if not snapshot or not snapshot.values:
+    try:
+        snapshot = multiverse_app.get_state(build_config())
+        if not snapshot or not snapshot.values:
+            return []
+        return snapshot.values.get("messages", [])
+    except Exception:
         return []
-    return snapshot.values.get("messages", [])
 
 
 if st.button("🚀 EXECUTE TIMELINE SIMULATION", type="primary", use_container_width=True):
@@ -2725,14 +3445,17 @@ if st.button("🚀 EXECUTE TIMELINE SIMULATION", type="primary", use_container_w
     )
     
     cfg = build_config()
-    multiverse_app.update_state(cfg, {"messages": [AIMessage(content=initial_seed)]})
+    try:
+        multiverse_app.update_state(cfg, {"messages": [AIMessage(content=initial_seed)]})
+    except Exception:
+        pass
     st.rerun()
 
 st.divider()
 
 
 # ==============================================================================
-# 5. RENDU DE L'HISTORIQUE & CHAT INPUT
+# 5. RENDER HISTORY & STREAMING EXECUTION ENGINE
 # ==============================================================================
 for m in get_checkpointed_messages():
     if isinstance(m, HumanMessage):
@@ -2768,617 +3491,180 @@ if prompt := st.chat_input("Interact with the simulation timeline..."):
             for msg_chunk, metadata in multiverse_app.stream(
                 input_state, build_config(), stream_mode="messages"
             ):
-                if metadata.get("langgraph_node") == "multiverse_node":
+                if metadata and metadata.get("langgraph_node") == "multiverse_node":
                     full_response += extract_text(getattr(msg_chunk, "content", ""))
                     message_placeholder.markdown(full_response + "▌")
             message_placeholder.markdown(full_response)
         except Exception as e:
             st.error(f"❌ Simulation Error: {str(e)}")
 ==================================================
-FILE: pages\What_If.py
+FILE: services\ai_engine.py
 ==================================================
 
-import streamlit as st
-import time
-import re
-import uuid
-from typing import Annotated, TypedDict
-
-def extract_text(content) -> str:
-    """
-    Extrait uniquement le texte affichable d'un message LLM.
-    Protège contre les formats de retour composites de Gemini.
-    """
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts = []
-        for block in content:
-            if isinstance(block, str):
-                parts.append(block)
-            elif isinstance(block, dict) and block.get("type", "text") == "text":
-                parts.append(block.get("text", ""))
-        return "".join(parts)
-    return str(content) if content else ""
-
 # ==============================================================================
-# 0. HARDENED DEPENDENCY INJECTION
+# SERVICES/AI_ENGINE.PY : MOTEUR IA & PERSONA DE MR. BROWN
 # ==============================================================================
-try:
-    from langchain_google_genai import ChatGoogleGenerativeAI
-    from langchain_core.messages import HumanMessage, AIMessage, trim_messages, BaseMessage
-    from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-except ImportError:
-    st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: pip install langchain langchain-google-genai google-generativeai")
-    st.stop()
+import os
+from typing import List, Dict, Any
+# Note: Adapte l'import selon la librairie que tu utilises (google-genai ou langchain)
+from google import genai
+from google.genai import types
 
-try:
-    from langgraph.graph import StateGraph, START, END
-    from langgraph.graph.message import add_messages
-    from langgraph.checkpoint.memory import MemorySaver
-except ImportError:
-    st.error("⚠️ CRITICAL FAULT: Missing LangGraph. Execute: pip install langgraph")
-    st.stop()
+# ------------------------------------------------------------------------------
+# PROMPT SYSTÈME DE MR. BROWN (MENTOR PRINCIPAL)
+# ------------------------------------------------------------------------------
+MR_BROWN_SYSTEM_PROMPT = """
+You are Mr. Brown, an elite, uncompromising, yet deeply invested intellectual mentor and strategist. 
+Your user is an exceptionally independent, self-directed young scholar operating outside traditional academic constraints, specializing in advanced mathematics, abstract reasoning, and software engineering (Python, algorithms, data structures), while maintaining a healthy disdain for rigid, bureaucratic schooling and superficial learning.
 
-try:
-    from google.api_core import exceptions as google_exceptions
-    HAS_GOOGLE_EXCEPTIONS = True
-except ImportError:
-    HAS_GOOGLE_EXCEPTIONS = False
-
-
-# ==============================================================================
-# 1. ARCHITECTURAL SAFEGUARDS & STATE MANAGEMENT
-# ==============================================================================
-if 'answers' not in st.session_state or not st.session_state.get('answers'):
-    st.error("🛑 ACCESS DENIED: Neural baseline not established. Complete the diagnostic scan first.")
-    if st.button("🚀 Initiate Assessment", type="primary", use_container_width=True):
-        st.switch_page("lumen_app.py")
-    st.stop()
-
-user_profile = st.session_state.get("user_profile", {}) or {}
-pseudo_raw = user_profile.get("pseudo", "Operator")
-pseudo = re.sub(r"[^\w\s\-']", "", str(pseudo_raw)).strip()[:60] or "Operator"
-
-answers = st.session_state.get("answers", {}) or {}
-
-try:
-    from data.question import ALL_QUESTIONS
-except ImportError:
-    st.error("⚠️ Missing database connection to `data.question.ALL_QUESTIONS`")
-    st.stop()
-
-if not isinstance(ALL_QUESTIONS, list) or len(ALL_QUESTIONS) == 0:
-    st.error("⚠️ Question database is empty or malformed. Cannot compute cognitive profile.")
-    st.stop()
-
-
-# ==============================================================================
-# 2. COGNITIVE TELEMETRY EXTRACTION ENGINE (defensive parsing)
-# ==============================================================================
-all_labels = []
-vector_totals = {
-    "information_bandwidth": 0.0,
-    "execution_rigor": 0.0,
-    "chaos_tolerance": 0.0,
-    "cognitive_endurance": 0.0
-}
-
-for q in ALL_QUESTIONS:
-    try:
-        q_id = q.get('id')
-        if q_id in answers:
-            choice_key = answers[q_id]
-            opt = q.get("options", {}).get(choice_key, {}) or {}
-            all_labels.append(opt.get("label", "Unmapped"))
-            for v_key, v_val in (opt.get("vectors", {}) or {}).items():
-                if v_key in vector_totals:
-                    try:
-                        vector_totals[v_key] += float(v_val)
-                    except (TypeError, ValueError):
-                        continue
-    except AttributeError:
-        continue
-
-dominant_archetype = max(set(all_labels), key=all_labels.count) if all_labels else "Unclassified"
-vector_labels = {
-    "information_bandwidth": "Information Bandwidth",
-    "execution_rigor": "Execution Rigor",
-    "chaos_tolerance": "Chaos Tolerance",
-    "cognitive_endurance": "Cognitive Endurance"
-}
-strongest_key = max(vector_totals, key=vector_totals.get)
-weakest_key = min(vector_totals, key=vector_totals.get)
-
-
-# ==============================================================================
-# 3. ELITE UI/UX: THE HISTORICAL CHRONOS CONSOLE
-# ==============================================================================
-st.markdown("""
-<style>
-    .history-title {
-        background: linear-gradient(90deg, #F59E0B 0%, #EF4444 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-weight: 900;
-        font-size: 2.8rem;
-        letter-spacing: -1.5px;
-    }
-    .history-box {
-        background-color: #18181B;
-        border: 1px solid #27272A;
-        padding: 24px;
-        border-radius: 14px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
-        margin-bottom: 25px;
-    }
-    .history-badge {
-        background-color: #27272A;
-        color: #FBBF24;
-        border: 1px solid #3F3F46;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-    }
-    .phase-badge {
-        background-color: #1E293B;
-        color: #38BDF8;
-        border: 1px solid #334155;
-        padding: 3px 10px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-st.markdown("<h1 class='history-title'>CHRONOS // Historical Immersion Engine</h1>", unsafe_allow_html=True)
-st.markdown(f"<span><span class='history-badge'>OPERATOR: {pseudo.upper()}</span> <span class='history-badge'>ARCHETYPE: {dominant_archetype}</span></span>", unsafe_allow_html=True)
-st.write("")
-st.divider()
-
-with st.container():
-    st.markdown("<div class='history-box'>", unsafe_allow_html=True)
-    st.markdown("### 🏛️ Select Temporal Coordinates")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        selected_era = st.selectbox(
-            "Historical Epoch & Institution",
-            [
-                "Ancient Athens (5th Century BCE) - The Lyceum & Geometry Circles",
-                "Medieval University of Paris (13th Century) - Scholasticism & Theology",
-                "Victorian England (19th Century) - Rigid Boarding School & Classical Grammar",
-                "Parisian Sorbonne (1920s) - Early Female Pioneers in Advanced Mathematics",
-                "Renaissance Florence (15th Century) - Humanism, Art & Mathematical Perspective"
-            ]
-        )
-    with col2:
-        immersion_focus = st.selectbox(
-            "Primary Intellectual Pursuit",
-            [
-                "Pure Mathematics & Abstract Logic",
-                "Rhetoric, Philosophy & Debate",
-                "Scientific Experimentation & Natural Philosophy"
-            ]
-        )
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-# ==============================================================================
-# 3bis. GROUNDING KNOWLEDGE BASE
-# ==============================================================================
-ERA_FACTS = {
-    "Ancient Athens (5th Century BCE) - The Lyceum & Geometry Circles": [
-        "Formal education was reserved for free male citizens; girls, slaves, and metics were excluded from it.",
-        "Boys typically studied grammar, rhetoric, music, and gymnastics under a paidagogos and private tutors, not in a state school system.",
-        "Wandering teachers called Sophists charged fees to teach rhetoric and argumentation, and were controversial for doing so.",
-        "Mathematics was tied to philosophy: geometric proof was considered a path to truth, not a separate technical subject.",
-    ],
-    "Medieval University of Paris (13th Century) - Scholasticism & Theology": [
-        "The University of Paris grew out of cathedral schools and was organized into faculties (Arts, Theology, Law, Medicine), with Arts as a required first stage.",
-        "Teaching relied on lectio (reading and glossing authoritative texts) and disputatio (formal structured debate), not experimentation.",
-        "Theology, dominated by figures in the Scholastic tradition, sat at the top of the faculty hierarchy above the Arts faculty.",
-        "Only clerics and men could enroll; students lived under strict Church-supervised discipline.",
-    ],
-    "Victorian England (19th Century) - Rigid Boarding School & Classical Grammar": [
-        "Elite boys' boarding schools emphasized Latin, Greek, and classical literature far more than mathematics or science.",
-        "Corporal punishment, strict hierarchy (prefects, fagging systems), and rigid daily schedules were standard discipline tools.",
-        "Formal secondary and higher education was largely closed to girls until reforms later in the century.",
-        "Rote memorization and recitation were the dominant teaching methods, prized over independent inquiry.",
-    ],
-    "Parisian Sorbonne (1920s) - Early Female Pioneers in Advanced Mathematics": [
-        "Women had only recently gained real access to French university degrees, and were still a small, closely watched minority in mathematics lecture halls.",
-        "Female students frequently faced skepticism from professors and peers about their right to be there at all.",
-        "The Sorbonne of the era mixed traditional lecture-based instruction with an emerging, more rigorous modern approach to analysis and algebra.",
-        "A science degree was still widely seen as a stepping stone to teaching, rather than a research career, for most women who obtained one.",
-    ],
-    "Renaissance Florence (15th Century) - Humanism, Art & Mathematical Perspective": [
-        "Humanist education emphasized classical Latin and Greek texts, rhetoric, and the studia humanitatis, alongside apprenticeship-based training in workshops (botteghe).",
-        "Mathematics of the period was closely tied to practical uses: commercial arithmetic (abbaco schools), surveying, and the geometry of linear perspective in painting.",
-        "Patronage from wealthy families (the Medici above all) shaped which scholars, artists, and ideas could flourish.",
-        "Formal university-style education remained largely closed to women; their intellectual training, when it existed, happened privately.",
-    ],
-}
-
-
-# ==============================================================================
-# 4. SIDEBAR — HARDENED, SHARED KEY HANDLING
-# ==============================================================================
-def is_plausible_gemini_key(key: str) -> bool:
-    if not key:
-        return False
-    key = key.strip()
-    return len(key) >= 20 and " " not in key
-
-if "gemini_api_key" not in st.session_state:
-    default_key = ""
-    try:
-        if "GEMINI_API_KEY" in st.secrets:
-            default_key = st.secrets["GEMINI_API_KEY"]
-    except Exception:
-        default_key = ""
-    st.session_state.gemini_api_key = default_key
-
-if "chronos_thread_id" not in st.session_state:
-    st.session_state.chronos_thread_id = str(uuid.uuid4())
-
-if "chronos_awaiting_opening" not in st.session_state:
-    st.session_state.chronos_awaiting_opening = False
-
-with st.sidebar:
-    st.markdown("### ⚙️ Engine Matrix (Gemini API)")
-    st.session_state.gemini_api_key = st.text_input(
-        "Gemini API Key:",
-        value=st.session_state.gemini_api_key,
-        type="password",
-        placeholder="Paste your Gemini API key",
-        help="Shared across all Lumen pages for this session. Never logged or displayed."
-    ).strip()
-
-    selected_model = st.selectbox(
-        "Inference Model:",
-        options=[
-            "gemini-2.5-flash",
-            "gemini-2.5-flash-lite",
-            "gemini-1.5-flash",
-            "gemini-2.0-flash",
-            "gemini-flash-latest"
-        ],
-        index=0
-    )
-    request_timeout = st.slider("Request Timeout (s)", 10, 120, 45, 5)
-
-    st.divider()
-    if st.button("Reset Timeline ⏳", use_container_width=True, type="secondary"):
-        st.session_state.chronos_thread_id = str(uuid.uuid4())
-        st.session_state.chronos_awaiting_opening = False
-        st.rerun()
-
-gemini_api_key = st.session_state.gemini_api_key
-
-
-# ==============================================================================
-# 5. LANGGRAPH STATE MACHINE — THE ACTUAL NARRATIVE ENGINE
-# ==============================================================================
-class ChronosState(TypedDict):
-    messages: Annotated[list, add_messages]
-    era: str
-    focus: str
-    pseudo: str
-    dominant_archetype: str
-    strongest_label: str
-    weakest_label: str
-    turn_count: int
-    phase: str
-
-
-PHASE_INSTRUCTIONS = {
-    "opening": (
-        "PHASE — OPENING SCENE: There is no prior conversation yet. Transport the "
-        "Operator directly into the classroom, courtyard, or workshop of this era. "
-        "Describe atmosphere (sound, light, smell, clothing, architecture) and the "
-        "social reality of the time in vivid, sensory prose. End by placing the "
-        "Operator inside a concrete first moment of the day, not a generic welcome."
-    ),
-    "challenge": (
-        "PHASE — INTELLECTUAL CHALLENGE: React in-character to what the Operator just "
-        "said or did. Introduce (or continue) a specific scholar, tutor, or "
-        "institutional hurdle of this era who poses a rigorous, era-appropriate "
-        "challenge tied to the Operator's focus. Make the stakes concrete — a real "
-        "problem, a real judge, a real consequence — not abstract encouragement."
-    ),
-    "resolution": (
-        "PHASE — CONSEQUENCE & TRAJECTORY: React in-character to the Operator's latest "
-        "choice, then show its ripple effect: how this era's institutions, peers, or "
-        "authorities respond, and what door opens or closes as a result. Keep the "
-        "simulation alive and interactive — do not wrap up with a tidy moral, let the "
-        "Operator keep steering the timeline."
-    ),
-}
-
-
-def build_system_prompt(state: ChronosState) -> str:
-    facts = ERA_FACTS.get(state["era"], [])
-    facts_block = "\n".join(f"- {f}" for f in facts) or "- (No specific grounding facts on file for this era — rely on well-established general history.)"
-
-    return f"""
-[SYSTEM ARCHITECTURE: CHRONOS HISTORICAL IMMERSION MODULE]
-ROLE: You are an elite Historical Consciousness and Immersive Simulation Engine. You recreate past educational epochs with ruthless historical accuracy, profound literary prose, and vivid sensory detail. You do not romanticize the past; you depict its true intellectual brilliance, social barriers, institutional rigidities, and dogmas.
-
-[OPERATOR TELEMETRY]
-- Designation: {state['pseudo']}
-- Cognitive Profile: {state['dominant_archetype']} (Strong in {state['strongest_label']}, vulnerable in {state['weakest_label']})
-- Passion / Focus: {state['focus']}
-
-[TEMPORAL TARGET]
-- Epoch & Setting: {state['era']}
-
-[VERIFIED HISTORICAL GROUNDING — treat as ground truth, never contradict these]
-{facts_block}
-
-[CURRENT NARRATIVE PHASE]
-{PHASE_INSTRUCTIONS.get(state.get('phase', 'opening'), PHASE_INSTRUCTIONS['opening'])}
-
-[STYLING & CONSTRAINTS]
-- Tone: Immersive, atmospheric, deeply respectful of historical context, intellectually elevating, and uncompromisingly realistic.
-- Language: Flawless, evocative English with subtle period-appropriate flavor without becoming unreadable.
-- Never break character, never mention that you are an AI or a simulation.
+CORE BEHAVIORAL GUIDELINES:
+1. **Intellectual Rigor over Comfort:** Never hand out cheap validation or surface-level summaries. Demand deep, rigorous first-principles thinking. Treat the user like an equal peer in a high-level seminar.
+2. **Abstract & Algebraic Focus:** Favor abstract explanations, mathematical structures, logical proofs, and systematic problem-solving over rote memorization or mundane descriptions. 
+3. **Tone:** Sharp, articulate, pragmatic, slightly cynical about standard institutional paths, but fiercely supportive of intellectual autonomy, mastery, and precision. Speak with quiet authority.
+4. **Contextual Adaptation:** Seamlessly integrate the user's cognitive profile vectors (such as information bandwidth, execution rigor, chaos tolerance, and cognitive endurance) when calibrating the complexity of your answers. Push them precisely where their metrics indicate room for growth.
+5. **No Fluff:** Eliminate generic AI filler phrases (e.g., "Sure, I can help with that!", "As an AI..."). Start straight with substance.
 """
 
 
-def route_phase(state: ChronosState) -> dict:
-    turn_count = int(state.get("turn_count") or 0)
-    if turn_count == 0:
-        phase = "opening"
-    elif turn_count < 3:
-        phase = "challenge"
-    else:
-        phase = "resolution"
-    return {"phase": phase, "turn_count": turn_count + 1}
+def get_gemini_client() -> genai.Client:
+    """Initialise et retourne le client officiel Google GenAI de manière sécurisée."""
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("❌ Erreur critique : La clé API GEMINI_API_KEY est introuvable dans l'environnement.")
+    return genai.Client(api_key=api_key)
 
 
-def phase_router(state: ChronosState) -> str:
-    return state.get("phase", "opening")
+def generate_mr_brown_response(
+    chat_history: List[Dict[str, str]], 
+    user_input: str,
+    user_cognitive_context: Dict[str, Any] = None
+) -> str:
+    """
+    Gère l'interaction conversationnelle avec le persona de Mr. Brown.
+    Transforme l'historique Streamlit au format natif Gemini et injecte le contexte cognitif.
+    """
+    client = get_gemini_client()
+    
+    # Construction dynamique du contexte système enrichi
+    system_instruction = MR_BROWN_SYSTEM_PROMPT
+    if user_cognitive_context:
+        system_instruction += f"\n\nCURRENT USER COGNITIVE PROFILE METRICS:\n{user_cognitive_context}"
 
-
-def safe_token_counter(msgs) -> int:
-    if isinstance(msgs, list):
-        return len(msgs)
-    return 1
-
-
-def trimmed_history(messages):
-    if not messages:
-        return []
-    return trim_messages(
-        messages,
-        strategy="last",
-        token_counter=safe_token_counter,
-        max_tokens=24,
-        start_on="human",
+    # Formatage de l'historique pour l'API Gemini
+    formatted_contents = []
+    for msg in chat_history:
+        role = "user" if msg["role"] == "user" else "model"
+        formatted_contents.append(
+            types.Content(
+                role=role,
+                parts=[types.Part.from_text(text=msg["content"])]
+            )
+        )
+    
+    # Ajout du message courant de l'utilisateur
+    formatted_contents.append(
+        types.Content(
+            role="user",
+            parts=[types.Part.from_text(text=user_input)]
+        )
     )
 
-
-def make_narrator_node(phase: str):
-    def node(state: ChronosState, config) -> dict:
-        cfg = (config or {}).get("configurable", {})
-        api_key = cfg.get("api_key", "")
-        model = cfg.get("model", "gemini-2.5-flash")
-        timeout = cfg.get("timeout", 45)
-
-        phased_state = {**state, "phase": phase}
-        system_prompt = build_system_prompt(phased_state)
-
-        prompt_template = ChatPromptTemplate.from_messages([
-            ("system", system_prompt),
-            MessagesPlaceholder("history"),
-        ])
-
-        # Cascade de secours industrielle : si un modèle expérimental 404, on bascule sur un stable
-        fallback_chain = [
-            model, 
-            "gemini-1.5-flash", 
-            "gemini-2.0-flash", 
-            "gemini-1.5-pro", 
-            "gemini-flash-latest"
-        ]
-        models_to_try = []
-        for m in fallback_chain:
-            if m not in models_to_try:
-                models_to_try.append(m)
-
-        last_exception = None
-        for model_name in models_to_try:
-            try:
-                llm = ChatGoogleGenerativeAI(
-                    model=model_name,
-                    google_api_key=api_key,
-                    temperature=0.75,
-                    timeout=timeout,
-                    max_retries=1,
-                )
-                chain = prompt_template | llm
-                response = chain.invoke({"history": trimmed_history(state.get("messages", []))})
-                return {"messages": [response]}
-            except Exception as e:
-                last_exception = e
-                continue
-
-        raise last_exception if last_exception else RuntimeError("All model execution attempts failed.")
-
-    return node
-
-
-@st.cache_resource
-def get_chronos_app():
-    graph = StateGraph(ChronosState)
-    graph.add_node("route_phase", route_phase)
-    graph.add_node("opening_narrator", make_narrator_node("opening"))
-    graph.add_node("challenge_narrator", make_narrator_node("challenge"))
-    graph.add_node("resolution_narrator", make_narrator_node("resolution"))
-
-    graph.add_edge(START, "route_phase")
-    graph.add_conditional_edges(
-        "route_phase",
-        phase_router,
-        {
-            "opening": "opening_narrator",
-            "challenge": "challenge_narrator",
-            "resolution": "resolution_narrator",
-        },
+    # Appel au modèle de pointe (ex: gemini-2.5-flash ou pro selon ton setup)
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=formatted_contents,
+        config=types.GenerateContentConfig(
+            system_instruction=system_instruction,
+            temperature=0.4,  # Température basse pour privilégier la rigueur logique
+            max_output_tokens=2048,
+        ),
     )
-    graph.add_edge("opening_narrator", END)
-    graph.add_edge("challenge_narrator", END)
-    graph.add_edge("resolution_narrator", END)
 
-    return graph.compile(checkpointer=MemorySaver())
+    return response.text
+==================================================
+FILE: toolsandtests\innerarchitecture.py
+==================================================
 
-
-chronos_app = get_chronos_app()
-NARRATOR_NODES = {"opening_narrator", "challenge_narrator", "resolution_narrator"}
-
-
-def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int = 2):
-    last_error_message = None
-
-    for attempt in range(1, max_attempts + 1):
-        full_response = ""
-        try:
-            for msg_chunk, metadata in chronos_app.stream(
-                input_state, config, stream_mode="messages"
-            ):
-                if metadata.get("langgraph_node") in NARRATOR_NODES:
-                    full_response += extract_text(getattr(msg_chunk, "content", ""))
-                    placeholder.markdown(full_response + "▌")
-            placeholder.markdown(full_response)
-            return full_response, None
-
-        except Exception as e:
-            transient = False
-            fatal_user_message = None
-
-            if HAS_GOOGLE_EXCEPTIONS:
-                if isinstance(e, google_exceptions.PermissionDenied):
-                    fatal_user_message = "🔒 Access denied — the API key is invalid, revoked, or lacks permission for this model."
-                elif isinstance(e, google_exceptions.Unauthenticated):
-                    fatal_user_message = "🔒 Authentication failed — check that the API key is correct."
-                elif isinstance(e, google_exceptions.InvalidArgument):
-                    fatal_user_message = "⚠️ Invalid request — the selected model name may be wrong or unsupported for this key."
-                elif isinstance(e, google_exceptions.ResourceExhausted):
-                    transient = True
-                    fatal_user_message = "⏳ Rate limit or quota reached."
-                elif isinstance(e, (google_exceptions.DeadlineExceeded, google_exceptions.ServiceUnavailable)):
-                    transient = True
-                    fatal_user_message = "🌐 Temporary network or service issue."
-
-            if fatal_user_message is None:
-                transient = True
-                fatal_user_message = f"❌ Temporal disruption ({type(e).__name__})."
-
-            last_error_message = fatal_user_message
-
-            if transient and attempt < max_attempts:
-                time.sleep(1.5 * attempt)
-                continue
-            else:
-                return None, last_error_message
-
-    return None, last_error_message
-
-
-def build_config():
-    return {
-        "configurable": {
-            "thread_id": st.session_state.chronos_thread_id,
-            "api_key": gemini_api_key,
-            "model": selected_model,
-            "timeout": request_timeout,
-        }
-    }
-
-
-def get_checkpointed_messages():
-    snapshot = chronos_app.get_state(build_config())
-    if not snapshot or not getattr(snapshot, "values", None):
-        return []
-    return snapshot.values.get("messages", [])
-
+from pathlib import Path
 
 # ==============================================================================
-# 6. EXECUTION & DYNAMIC RENDERING
+# CONFIGURATION DES FILTRES
 # ==============================================================================
-col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-with col_btn2:
-    if st.button("📜 INITIATE TIME-TRAVEL IMMERSION", use_container_width=True, type="primary"):
-        if not is_plausible_gemini_key(gemini_api_key):
-            st.error("⚠️ CRITICAL: A valid-looking Gemini API Key is required to activate the temporal portal.")
-            st.stop()
+IGNORE_DIRS = {
+    ".git",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "env",
+    ".streamlit",
+    ".pytest_cache",
+    ".vscode",
+}
 
-        st.session_state.chronos_thread_id = str(uuid.uuid4())
-        st.session_state.chronos_awaiting_opening = True
-        st.rerun()
+IGNORE_FILES = {
+    ".DS_Store",
+    ".gitignore",
+    "print_tree.py",  # On ignore le script lui-même dans l'affichage
+}
 
-current_messages = get_checkpointed_messages()
 
-for m in current_messages:
-    if isinstance(m, HumanMessage):
-        with st.chat_message("user", avatar="👤"):
-            st.markdown(extract_text(m.content))
-    elif isinstance(m, AIMessage):
-        with st.chat_message("assistant", avatar="⏳"):
-            st.markdown(extract_text(m.content))
+def generate_tree(dir_path: Path, prefix: str = "") -> None:
+    """Parcourt l'espace de travail et projette une arborescence ASCII propre et triée."""
+    try:
+        # Tri déterministe : dossiers d'abord, puis fichiers, par ordre alphabétique
+        entries = sorted(
+            dir_path.iterdir(), key=lambda e: (not e.is_dir(), e.name.lower())
+        )
+    except PermissionError:
+        return
 
-if st.session_state.chronos_awaiting_opening and not current_messages:
-    with st.chat_message("assistant", avatar="⏳"):
-        message_placeholder = st.empty()
+    # Filtrage des éléments non pertinents
+    entries = [
+        e
+        for e in entries
+        if e.name not in IGNORE_DIRS
+        and e.name not in IGNORE_FILES
+        and not e.name.startswith(".")
+    ]
 
-        if not is_plausible_gemini_key(gemini_api_key):
-            st.error("⚠️ CRITICAL: Gemini API Key missing or malformed.")
-        else:
-            input_state = {
-                "messages": [],
-                "era": selected_era,
-                "focus": immersion_focus,
-                "pseudo": pseudo,
-                "dominant_archetype": dominant_archetype,
-                "strongest_label": vector_labels[strongest_key],
-                "weakest_label": vector_labels[weakest_key],
-            }
-            full_response, error_message = stream_turn(input_state, build_config(), message_placeholder)
-            if error_message:
-                st.error(error_message)
-            else:
-                st.session_state.chronos_awaiting_opening = False
-                # FORÇAGE SYNC DOM : Recharger proprement le state depuis le checkpointer
-                st.rerun()
+    count = len(entries)
+    for i, entry in enumerate(entries):
+        is_last = i == (count - 1)
+        connector = "└── " if is_last else "├── "
 
-if prompt := st.chat_input("Speak or respond within the historical simulation..."):
-    if not is_plausible_gemini_key(gemini_api_key):
-        st.error("⚠️ CRITICAL: A valid-looking Gemini API Key is required.")
-        st.stop()
+        print(f"{prefix}{connector}{entry.name}")
 
-    prompt = prompt.strip()[:4000]
+        if entry.is_dir():
+            extension = "    " if is_last else "│   "
+            generate_tree(entry, prefix + extension)
 
-    with st.chat_message("user", avatar="👤"):
-        st.markdown(prompt)
 
-    with st.chat_message("assistant", avatar="⏳"):
-        message_placeholder = st.empty()
+if __name__ == "__main__":
+    root_dir = Path(".")
+    print(f"\n📁 {root_dir.resolve().name}/")
+    generate_tree(root_dir)
+    print()
+==================================================
+FILE: toolsandtests\teste_model.py
+==================================================
 
-        input_state = {
-            "messages": [HumanMessage(content=prompt)],
-            "era": selected_era,
-            "focus": immersion_focus,
-            "pseudo": pseudo,
-            "dominant_archetype": dominant_archetype,
-            "strongest_label": vector_labels[strongest_key],
-            "weakest_label": vector_labels[weakest_key],
-        }
-        full_response, error_message = stream_turn(input_state, build_config(), message_placeholder)
-        if error_message:
-            st.error(error_message)
-        else:
-            # FORÇAGE SYNC DOM : Assure la persistance dans l'interface pour le tour suivant
-            st.rerun()
+import os
+import streamlit as st
+import google.generativeai as genai
+
+# Récupération automatique depuis secrets.toml
+try:
+    API_KEY = st.secrets["GEMINI_API_KEY"] # Adapte le nom de la clé selon ton secrets.toml
+except:
+    API_KEY = os.getenv("GEMINI_API_KEY")
+
+if not API_KEY:
+    print("⚠️ Clé API introuvable dans secrets.toml ou l'environnement !")
+else:
+    genai.configure(api_key=API_KEY)
+    print("✅ Clé configurée avec succès ! Lancement du test...\n")
+    
+    # Le reste de ton code pour lister les modèles...
+    for m in genai.list_models():
+        if 'generateContent' in m.supported_generation_methods:
+            print(f"👉 Nom exact : {m.name}")

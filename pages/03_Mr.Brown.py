@@ -4,15 +4,8 @@ import re
 import uuid
 from typing import Annotated, TypedDict
 
-
 def extract_text(content) -> str:
-    """Extrait uniquement le texte affichable d'un message LLM.
-
-    Gemini (surtout les modèles récents type 3.x) peut renvoyer `.content`
-    soit comme une simple chaîne, soit comme une liste de blocs
-    (texte + blocs internes de raisonnement/"signature"). On ne veut
-    JAMAIS afficher ces blocs internes à l'utilisateur — seulement le texte.
-    """
+    """Extrait uniquement le texte affichable d'un message LLM de manière sécurisée."""
     if isinstance(content, str):
         return content
     if isinstance(content, list):
@@ -44,7 +37,6 @@ except ImportError:
     st.error("⚠️ CRITICAL FAULT: Missing LangGraph. Execute: pip install langgraph")
     st.stop()
 
-# Optional: precise Google API exception types, if the package is present.
 try:
     from google.api_core import exceptions as google_exceptions
     HAS_GOOGLE_EXCEPTIONS = True
@@ -79,7 +71,7 @@ if not isinstance(ALL_QUESTIONS, list) or len(ALL_QUESTIONS) == 0:
 
 
 # ==============================================================================
-# 2. COGNITIVE TELEMETRY ENGINE (defensive parsing)
+# 2. COGNITIVE TELEMETRY ENGINE (Defensive Parsing)
 # ==============================================================================
 all_labels = []
 vector_totals = {
@@ -121,8 +113,8 @@ vector_labels = {
     "cognitive_endurance": "Cognitive Endurance"
 }
 
-strongest_key = max(vector_totals, key=vector_totals.get)
-weakest_key = min(vector_totals, key=vector_totals.get)
+strongest_key = max(vector_totals, key=vector_totals.get) if vector_totals else "information_bandwidth"
+weakest_key = min(vector_totals, key=vector_totals.get) if vector_totals else "cognitive_endurance"
 detailed_choices_block = "\n".join(detailed_choices) if detailed_choices else "- (No detailed signals on file.)"
 
 
@@ -194,8 +186,8 @@ TECHNIQUE_LIBRARY = [
 
 
 def select_priority_techniques(weakest_key: str, strongest_key: str) -> list:
-    addresses_weak = [t["name"] for t in TECHNIQUE_LIBRARY if weakest_key in t["addresses"]]
-    leverages_strong = [t["name"] for t in TECHNIQUE_LIBRARY if strongest_key in t["leverages"]]
+    addresses_weak = [t["name"] for t in TECHNIQUE_LIBRARY if weakest_key in t.get("addresses", [])]
+    leverages_strong = [t["name"] for t in TECHNIQUE_LIBRARY if strongest_key in t.get("leverages", [])]
 
     picks = []
     for name in addresses_weak[:2] + leverages_strong[:1]:
@@ -237,7 +229,7 @@ st.markdown("<h1 class='chat-header'>SYNAPSE // Neural Mentor</h1>", unsafe_allo
 st.markdown(f"""
 <div class='metric-pill'>👤 Operator: <b>{pseudo}</b></div>
 <div class='metric-pill'>🧬 Archetype: <b>{dominant_archetype}</b></div>
-<div class='metric-pill'>⚡ Core Advantage: <b>{vector_labels[strongest_key]}</b></div>
+<div class='metric-pill'>⚡ Core Advantage: <b>{vector_labels.get(strongest_key, strongest_key)}</b></div>
 """, unsafe_allow_html=True)
 st.divider()
 
@@ -268,13 +260,11 @@ with st.sidebar:
 
     st.session_state.gemini_api_key = st.text_input(
         "Gemini Authentication Key:",
-        value=st.session_state.gemini_api_key,
+        value=st.session_state.get("gemini_api_key", ""),
         type="password",
         help="Shared across all Lumen pages for this session. Never logged or displayed."
     ).strip()
 
-    # Modèles optimisés avec repli sécurisé (modèles actifs au 07/2026 —
-    # vérifiés via genai.list_models() sur une clé réelle)
     selected_model = st.selectbox(
         "Language Model Topology:",
         options=[
@@ -284,11 +274,11 @@ with st.sidebar:
             "gemini-flash-latest"
         ],
         index=0,
-        help="gemini-2.5-flash offre le meilleur compromis qualité/fiabilité pour une démo devant jury."
+        help="gemini-2.5-flash offre le meilleur compromis qualité/fiabilité."
     )
 
     temperature = st.slider("Cognitive Drift (Temperature):", 0.0, 1.0, 0.6, 0.05,
-                            help="Lower values yield highly structured academic plans. Higher values increase creative empathy.")
+                            help="Lower values yield highly structured academic plans.")
 
     request_timeout = st.slider("Request Timeout (s)", 10, 120, 45, 5)
 
@@ -297,7 +287,7 @@ with st.sidebar:
         st.session_state.synapse_thread_id = str(uuid.uuid4())
         st.rerun()
 
-gemini_api_key = st.session_state.gemini_api_key
+gemini_api_key = st.session_state.get("gemini_api_key", "")
 
 
 # ==============================================================================
@@ -324,36 +314,33 @@ def build_system_prompt(state: MentorState) -> str:
 
     return f"""
 [ROLE]
-You are SYNAPSE: an elite, deeply empathetic Meta-Cognitive Architect and Academic Strategist. You are not a standard AI; you are a bespoke intellectual mentor designed to unlock human potential. Your tone is incredibly inspiring, fiercely intelligent, highly structured, and unconditionally supportive.
+You are SYNAPSE: an elite, deeply empathetic Meta-Cognitive Architect and Academic Strategist. Your tone is inspiring, fiercely intelligent, highly structured, and unconditionally supportive.
 
 [TASK]
-Your objective is to provide highly advanced, non-generic academic guidance strictly tailored to the user's psychological profile.
+Your objective is to provide highly advanced academic guidance strictly tailored to the user's psychological profile.
 1. Deconstruct their academic roadblocks with psychological precision.
-2. Validate their struggles emotionally, then pivot immediately to high-level, actionable strategy.
-3. Recommend and adapt techniques FROM THE VERIFIED LIBRARY below to their specific dominant archetype and cognitive metrics — never invent a technique that isn't in it.
+2. Validate their struggles emotionally, then pivot immediately to high-level strategy.
+3. Recommend and adapt techniques FROM THE VERIFIED LIBRARY below to their specific dominant archetype and cognitive metrics.
 
-[VERIFIED TECHNIQUE LIBRARY — the only techniques you may name and recommend]
+[VERIFIED TECHNIQUE LIBRARY]
 {library_block}
 
-[PRIORITY PICKS FOR THIS OPERATOR — computed from their actual profile, lead with these when relevant]
+[PRIORITY PICKS FOR THIS OPERATOR]
 {priority_block}
 
 [SPECIFICS]
-- NEVER use generic advice like "make a flashcard", "take a break", or "use a planner" as a substitute for naming and explaining one of the techniques above.
-- Format your responses beautifully using Markdown. Use bolding for emphasis, bullet points for structure, and keep paragraphs punchy.
-- Write in English with flawless, poetic, yet technical eloquence. Elevate the user. Make them feel capable of mastering the hardest disciplines.
+- Never use generic advice as a substitute for naming and explaining one of the techniques above.
+- Format responses beautifully using Markdown.
+- Write in English with flawless eloquence.
 
 [CONTEXT]
-- **Operator Name**: {state['pseudo']}
-- **Dominant Cognitive Archetype**: {state['dominant_archetype']}
-- **Primary Strength**: {state['strongest_label']}
-- **Critical Growth Axis**: {state['weakest_label']}
+- **Operator Name**: {state.get('pseudo', 'Operator')}
+- **Dominant Cognitive Archetype**: {state.get('dominant_archetype', 'Unclassified')}
+- **Primary Strength**: {state.get('strongest_label', '')}
+- **Critical Growth Axis**: {state.get('weakest_label', '')}
 
-*Operator's Specific Neural Footprint (Recent Decisions):*
-{state['detailed_choices']}
-
-[NOTES]
-Always filter your advice through the lens of their `{state['dominant_archetype']}` and their Critical Growth Axis (`{state['weakest_label']}`). If they ask a generic question, reframe it into a masterclass on personalized metacognition using one or more of the library techniques above. Maintain your majestic, supportive, and brilliant persona at all costs. Never mention that you are an AI or that a "library" or "graph" exists — speak as SYNAPSE, not about your own architecture.
+*Operator's Specific Neural Footprint:*
+{state.get('detailed_choices', '')}
 """
 
 
@@ -387,7 +374,6 @@ def mentor_node(state: MentorState, config) -> dict:
         MessagesPlaceholder("history"),
     ])
 
-    # Cascade de secours automatique pour parer aux erreurs 429 / 404
     fallback_chain = [primary_model, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
     models_to_try = []
     for m in fallback_chain:
@@ -443,10 +429,13 @@ def build_config():
 
 
 def get_checkpointed_messages():
-    snapshot = synapse_app.get_state(build_config())
-    if not snapshot or not snapshot.values:
+    try:
+        snapshot = synapse_app.get_state(build_config())
+        if not snapshot or not snapshot.values:
+            return []
+        return snapshot.values.get("messages", [])
+    except Exception:
         return []
-    return snapshot.values.get("messages", [])
 
 
 def seed_greeting_if_new():
@@ -457,7 +446,10 @@ def seed_greeting_if_new():
         f"footprint, {pseudo}. What complex academic concept or revision block are "
         f"we conquering today?"
     )
-    synapse_app.update_state(build_config(), {"messages": [AIMessage(content=greeting)]})
+    try:
+        synapse_app.update_state(build_config(), {"messages": [AIMessage(content=greeting)]})
+    except Exception:
+        pass
 
 
 seed_greeting_if_new()
@@ -472,7 +464,7 @@ def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int 
             for msg_chunk, metadata in synapse_app.stream(
                 input_state, config, stream_mode="messages"
             ):
-                if metadata.get("langgraph_node") == "mentor":
+                if metadata and metadata.get("langgraph_node") == "mentor":
                     full_response += extract_text(getattr(msg_chunk, "content", ""))
                     placeholder.markdown(full_response + "▌")
             placeholder.markdown(full_response)
@@ -484,11 +476,11 @@ def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int 
 
             if HAS_GOOGLE_EXCEPTIONS:
                 if isinstance(e, google_exceptions.PermissionDenied):
-                    fatal_user_message = "🔒 Access denied — the API key is invalid, revoked, or lacks permission for this model."
+                    fatal_user_message = "🔒 Access denied — the API key is invalid or lacks permission."
                 elif isinstance(e, google_exceptions.Unauthenticated):
-                    fatal_user_message = "🔒 Authentication failed — check that the API key is correct."
+                    fatal_user_message = "🔒 Authentication failed — check your API key."
                 elif isinstance(e, google_exceptions.InvalidArgument):
-                    fatal_user_message = "⚠️ Invalid request — the selected model name may be wrong or unsupported for this key."
+                    fatal_user_message = "⚠️ Invalid request — check selected model."
                 elif isinstance(e, google_exceptions.ResourceExhausted):
                     transient = True
                     fatal_user_message = "⏳ Rate limit or quota reached."
@@ -529,7 +521,7 @@ for m in get_checkpointed_messages():
 if prompt := st.chat_input(f"Enter your academic roadblock, {pseudo}..."):
 
     if not is_plausible_gemini_key(gemini_api_key):
-        st.error("⚠️ SYNAPSE offline. Please input a valid-looking Gemini API Key in the Engine Matrix.")
+        st.error("⚠️ SYNAPSE offline. Please input a valid Gemini API Key in the Engine Matrix.")
         st.stop()
 
     prompt = prompt.strip()[:4000]
@@ -546,8 +538,8 @@ if prompt := st.chat_input(f"Enter your academic roadblock, {pseudo}..."):
             "dominant_archetype": dominant_archetype,
             "strongest_key": strongest_key,
             "weakest_key": weakest_key,
-            "strongest_label": vector_labels[strongest_key],
-            "weakest_label": vector_labels[weakest_key],
+            "strongest_label": vector_labels.get(strongest_key, strongest_key),
+            "weakest_label": vector_labels.get(weakest_key, weakest_key),
             "detailed_choices": detailed_choices_block,
         }
         full_response, error_message = stream_turn(input_state, build_config(), message_placeholder)

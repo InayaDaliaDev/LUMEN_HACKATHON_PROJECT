@@ -1,5 +1,12 @@
 import streamlit as st
+from core.centralstate import init_session_state  # FIX: était "core.state" (fichier inexistant -> ModuleNotFoundError)
+from core.disclaimer import render_lumen_disclaimer
 
+# 1. Initialisation de l'état
+init_session_state()
+
+# 2. Affichage du disclaimer tout en haut de la page principale
+render_lumen_disclaimer()
 # ------------------------------------------------------------------------------
 # 1. PAGE CONFIGURATION
 # ------------------------------------------------------------------------------
@@ -107,20 +114,31 @@ def home_view():
 home_page = st.Page(home_view, title="00 // Entry Protocol", icon="🚨", default=True)
 
 # Pages secondaires (fichiers dans le dossier pages/)
+# FIX: chaque chemin ci-dessous correspond maintenant au VRAI nom de fichier sur disque.
+# Avant: "pages/Advices.py", "pages/Chatbot.py", "pages/What_If.py", "pages/TheOldDays.py"
+# n'existaient pas -> st.navigation() plantait avec StreamlitAPIException.
 assessment_page = st.Page("pages/01_Assessment.py", title="01 // Neural Assessment", icon="🔍")
-advices_page = st.Page("pages/Advices.py", title="02 // Strategic Countermeasures", icon="📊")
-chatbot_page = st.Page("pages/Chatbot.py", title="03 // Containment AI", icon="💬")
-what_if_page = st.Page("pages/What_If.py", title="04 // Simulation Engine", icon="🔮")
-old_days_page = st.Page("pages/TheOldDays.py", title="05 // Temporal Logs", icon="⏳")
+advices_page = st.Page("pages/02_Advices.py", title="02 // Strategic Countermeasures", icon="📊")
+chatbot_page = st.Page("pages/03_Mr.Brown.py", title="03 // Containment AI", icon="💬")
+what_if_page = st.Page("pages/05_What_If.py", title="04 // Simulation Engine", icon="🔮")
+old_days_page = st.Page("pages/06_TheOldDays.py", title="05 // Temporal Logs", icon="⏳")
+
+# FIX: ces deux pages existaient sur le disque (07_Quiz_Generator.py, 08_Planning_Generator.py)
+# mais n'étaient jamais enregistrées ici -> impossible d'y accéder depuis la sidebar.
+# Adapte les titres/icônes si besoin, mais il faut au minimum les déclarer.
+quiz_page = st.Page("pages/07_Quiz_Generator.py", title="06 // Quiz Generator", icon="🧩")
+planning_page = st.Page("pages/08_Planning_Generator.py", title="07 // Neural Roadmap", icon="📅")
 
 # Initialisation du menu de navigation
 pg = st.navigation([
-    home_page, 
-    assessment_page, 
-    advices_page, 
-    chatbot_page, 
-    what_if_page, 
-    old_days_page
+    home_page,
+    assessment_page,
+    advices_page,
+    chatbot_page,
+    what_if_page,
+    old_days_page,
+    quiz_page,
+    planning_page,
 ])
 
 pg.run()
