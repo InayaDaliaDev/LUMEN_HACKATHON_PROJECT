@@ -17,38 +17,15 @@ st.set_page_config(
 )
 
 # ------------------------------------------------------------------------------
-# 2. SESSION STATE INITIALIZATION (Garantie Anti-Crash Global)
+# 2. SESSION STATE INITIALIZATION
 # ------------------------------------------------------------------------------
-# Profil utilisateur
-if "user_profile" not in st.session_state:
-    st.session_state.user_profile = {
-        "pseudo": "",
-        "age": 25,
-        "gender": "Alien 🛸"
-    }
-
-# Réponses au questionnaire
-if "answers" not in st.session_state:
-    st.session_state.answers = {}
-
-# Index de la question courante (requis par 01_Assessment.py et Advices.py)
-if "current_q_idx" not in st.session_state:
-    st.session_state.current_q_idx = 0
-
-# Vecteurs cognitifs (évite les KeyError si accès direct aux pages filles)
-if "core_vectors" not in st.session_state:
-    st.session_state.core_vectors = {}
-
-# Drapeaux d'état
-if "flags" not in st.session_state:
-    st.session_state.flags = {
-        "scan_completed": False,
-        "chatbot_unlocked": True
-    }
-
-# Historique de discussion pour Chatbot / TheOldDays
-if "history_messages" not in st.session_state:
-    st.session_state.history_messages = []
+# UPGRADE : ce bloc dupliquait à la main exactement ce que
+# core.centralstate.init_session_state() fait déjà (appelé plus haut), mais
+# avec un schéma qui pouvait diverger silencieusement de celui-ci au fil du
+# temps. init_session_state() est désormais l'unique source de vérité —
+# voir core/centralstate.py pour la liste complète des clés initialisées
+# (user_profile, answers, current_q_idx, core_vectors, flags,
+# history_messages, gemini_api_key).
 
 # ------------------------------------------------------------------------------
 # 3. HOME / INTRODUCTION VIEW
@@ -114,20 +91,15 @@ def home_view():
 home_page = st.Page(home_view, title="00 // Entry Protocol", icon="🚨", default=True)
 
 # Pages secondaires (fichiers dans le dossier pages/)
-# FIX: chaque chemin ci-dessous correspond maintenant au VRAI nom de fichier sur disque.
-# Avant: "pages/Advices.py", "pages/Chatbot.py", "pages/What_If.py", "pages/TheOldDays.py"
-# n'existaient pas -> st.navigation() plantait avec StreamlitAPIException.
+# FIX: chemins remis à jour après ton renommage de fichiers
+# (05_What_If→04, 06_TheOldDays→05, 07_Quiz_Generator→06, 08_Planning_Generator→07).
 assessment_page = st.Page("pages/01_Assessment.py", title="01 // Neural Assessment", icon="🔍")
 advices_page = st.Page("pages/02_Advices.py", title="02 // Strategic Countermeasures", icon="📊")
 chatbot_page = st.Page("pages/03_Mr.Brown.py", title="03 // Containment AI", icon="💬")
-what_if_page = st.Page("pages/05_What_If.py", title="04 // Simulation Engine", icon="🔮")
-old_days_page = st.Page("pages/06_TheOldDays.py", title="05 // Temporal Logs", icon="⏳")
-
-# FIX: ces deux pages existaient sur le disque (07_Quiz_Generator.py, 08_Planning_Generator.py)
-# mais n'étaient jamais enregistrées ici -> impossible d'y accéder depuis la sidebar.
-# Adapte les titres/icônes si besoin, mais il faut au minimum les déclarer.
-quiz_page = st.Page("pages/07_Quiz_Generator.py", title="06 // Quiz Generator", icon="🧩")
-planning_page = st.Page("pages/08_Planning_Generator.py", title="07 // Neural Roadmap", icon="📅")
+what_if_page = st.Page("pages/04_What_If.py", title="04 // Simulation Engine", icon="🔮")
+old_days_page = st.Page("pages/05_TheOldDays.py", title="05 // Temporal Logs", icon="⏳")
+quiz_page = st.Page("pages/06_Quiz_Generator.py", title="06 // Quiz Generator", icon="🧩")
+planning_page = st.Page("pages/07_Planning_Generator.py", title="07 // Neural Roadmap", icon="📅")
 
 # Initialisation du menu de navigation
 pg = st.navigation([

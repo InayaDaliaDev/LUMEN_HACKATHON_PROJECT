@@ -4,7 +4,7 @@ FILE: lumen_app.py
 ==================================================
 
 import streamlit as st
-from core.state import init_session_state
+from core.centralstate import init_session_state  # FIX: était "core.state" (fichier inexistant -> ModuleNotFoundError)
 from core.disclaimer import render_lumen_disclaimer
 
 # 1. Initialisation de l'état
@@ -22,38 +22,15 @@ st.set_page_config(
 )
 
 # ------------------------------------------------------------------------------
-# 2. SESSION STATE INITIALIZATION (Garantie Anti-Crash Global)
+# 2. SESSION STATE INITIALIZATION
 # ------------------------------------------------------------------------------
-# Profil utilisateur
-if "user_profile" not in st.session_state:
-    st.session_state.user_profile = {
-        "pseudo": "",
-        "age": 25,
-        "gender": "Alien 🛸"
-    }
-
-# Réponses au questionnaire
-if "answers" not in st.session_state:
-    st.session_state.answers = {}
-
-# Index de la question courante (requis par 01_Assessment.py et Advices.py)
-if "current_q_idx" not in st.session_state:
-    st.session_state.current_q_idx = 0
-
-# Vecteurs cognitifs (évite les KeyError si accès direct aux pages filles)
-if "core_vectors" not in st.session_state:
-    st.session_state.core_vectors = {}
-
-# Drapeaux d'état
-if "flags" not in st.session_state:
-    st.session_state.flags = {
-        "scan_completed": False,
-        "chatbot_unlocked": True
-    }
-
-# Historique de discussion pour Chatbot / TheOldDays
-if "history_messages" not in st.session_state:
-    st.session_state.history_messages = []
+# UPGRADE : ce bloc dupliquait à la main exactement ce que
+# core.centralstate.init_session_state() fait déjà (appelé plus haut), mais
+# avec un schéma qui pouvait diverger silencieusement de celui-ci au fil du
+# temps. init_session_state() est désormais l'unique source de vérité —
+# voir core/centralstate.py pour la liste complète des clés initialisées
+# (user_profile, answers, current_q_idx, core_vectors, flags,
+# history_messages, gemini_api_key).
 
 # ------------------------------------------------------------------------------
 # 3. HOME / INTRODUCTION VIEW
@@ -119,20 +96,26 @@ def home_view():
 home_page = st.Page(home_view, title="00 // Entry Protocol", icon="🚨", default=True)
 
 # Pages secondaires (fichiers dans le dossier pages/)
+# FIX: chemins remis à jour après ton renommage de fichiers
+# (05_What_If→04, 06_TheOldDays→05, 07_Quiz_Generator→06, 08_Planning_Generator→07).
 assessment_page = st.Page("pages/01_Assessment.py", title="01 // Neural Assessment", icon="🔍")
-advices_page = st.Page("pages/Advices.py", title="02 // Strategic Countermeasures", icon="📊")
-chatbot_page = st.Page("pages/Chatbot.py", title="03 // Containment AI", icon="💬")
-what_if_page = st.Page("pages/What_If.py", title="04 // Simulation Engine", icon="🔮")
-old_days_page = st.Page("pages/TheOldDays.py", title="05 // Temporal Logs", icon="⏳")
+advices_page = st.Page("pages/02_Advices.py", title="02 // Strategic Countermeasures", icon="📊")
+chatbot_page = st.Page("pages/03_Mr.Brown.py", title="03 // Containment AI", icon="💬")
+what_if_page = st.Page("pages/04_What_If.py", title="04 // Simulation Engine", icon="🔮")
+old_days_page = st.Page("pages/05_TheOldDays.py", title="05 // Temporal Logs", icon="⏳")
+quiz_page = st.Page("pages/06_Quiz_Generator.py", title="06 // Quiz Generator", icon="🧩")
+planning_page = st.Page("pages/07_Planning_Generator.py", title="07 // Neural Roadmap", icon="📅")
 
 # Initialisation du menu de navigation
 pg = st.navigation([
-    home_page, 
-    assessment_page, 
-    advices_page, 
-    chatbot_page, 
-    what_if_page, 
-    old_days_page
+    home_page,
+    assessment_page,
+    advices_page,
+    chatbot_page,
+    what_if_page,
+    old_days_page,
+    quiz_page,
+    planning_page,
 ])
 
 pg.run()
@@ -141,36 +124,55 @@ FILE: core\centralstate.py
 ==================================================
 
 # ==============================================================================
-# CORE/STATE.PY : GESTIONNAIRE D'ÉTAT CENTRALISÉ (INVARIANT DE SESSION)
+# CORE/CENTRALSTATE.PY : GESTIONNAIRE D'ÉTAT CENTRALISÉ (INVARIANT DE SESSION)
 # ==============================================================================
-from typing import Dict, Any, List
+#
+# UPGRADE : ce fichier définissait auparavant un schéma (raw_vectors,
+# normalized_vectors, chat_messages, assessment_completed...) que PERSONNE
+# n'utilisait — toutes les pages initialisaient leurs propres clés à la main
+# (user_profile, answers, current_q_idx, core_vectors, flags...).
+# DEFAULT_STATE reflète maintenant le schéma réellement utilisé partout dans
+# le projet, ce qui fait de ce module la vraie source de vérité unique.
+#
+# gemini_api_key a aussi été ajouté ici : il était réinitialisé en double dans
+# 03_Mr.Brown.py, 05_What_If.py et 06_TheOldDays.py avec le même bloc
+# "if not in session_state / lire st.secrets". Comme init_session_state()
+# tourne à chaque navigation (lumen_app.py est le script routeur exécuté
+# avant chaque pg.run()), le centraliser ici supprime cette triplication.
+from typing import Dict, Any
 import streamlit as st
 
-# Schéma contractuel de l'état global de Lumen.
-# Toute nouvelle variable globale DOIT être déclarée ici avec sa valeur neutre.
 DEFAULT_STATE: Dict[str, Any] = {
+    # --- Profil utilisateur (défini sur l'écran d'accueil) ---
+    "user_profile": {
+        "pseudo": "",
+        "age": 25,
+        "gender": "Alien 🛸",
+    },
+
     # --- Module Assessment (01_Assessment.py) ---
     "answers": {},                 # Dict[str, str] : {question_id: option_key}
-    "assessment_completed": False, # Bool : Verrou de validation du questionnaire
-    
-    # --- Module Scoring & Algèbre (core/scoring.py -> Advices.py) ---
-    "raw_vectors": {               # Scores cognitifs bruts
+    "current_q_idx": 0,            # Int : index de la question courante
+
+    # --- Vecteurs cognitifs calculés en fin de questionnaire ---
+    "core_vectors": {
         "information_bandwidth": 0.0,
         "execution_rigor": 0.0,
         "chaos_tolerance": 0.0,
         "cognitive_endurance": 0.0,
     },
-    "normalized_vectors": {        # Scores normalisés (0 à 100%) pour le radar
-        "information_bandwidth": 0,
-        "execution_rigor": 0,
-        "chaos_tolerance": 0,
-        "cognitive_endurance": 0,
+
+    # --- Drapeaux d'état ---
+    "flags": {
+        "scan_completed": False,
+        "chatbot_unlocked": True,
     },
-    "advices_list": [],            # List[Dict[str, str]] : Conseils extraits
-    
-    # --- Module Synapse IA (Chatbot.py) ---
-    "chat_messages": [],           # List[Dict[str, str]] : Historique conversationnel
-    "synapse_system_prompt": "",   # Prompt contextuel généré après l'assessment
+
+    # --- Historique de discussion générique (réservé si besoin futur) ---
+    "history_messages": [],
+
+    # --- Clé API Gemini, partagée par toutes les pages IA ---
+    "gemini_api_key": "",
 }
 
 
@@ -178,23 +180,39 @@ def init_session_state() -> None:
     """
     Initialise l'espace d'état de Streamlit de manière idempotente.
     À appeler une seule fois tout en haut de `lumen_app.py`.
+    Les dicts imbriqués sont copiés pour éviter que deux sessions ne
+    partagent accidentellement le même objet mutable.
     """
     for key, default_value in DEFAULT_STATE.items():
         if key not in st.session_state:
-            st.session_state[key] = default_value
+            if isinstance(default_value, dict):
+                st.session_state[key] = default_value.copy()
+            else:
+                st.session_state[key] = default_value
+
+    # Pré-remplissage de la clé Gemini depuis secrets.toml si elle existe et
+    # que l'utilisateur ne l'a pas encore saisie manuellement.
+    if not st.session_state.get("gemini_api_key"):
+        try:
+            if "GEMINI_API_KEY" in st.secrets:
+                st.session_state["gemini_api_key"] = st.secrets["GEMINI_API_KEY"]
+        except Exception:
+            pass
 
 
 def reset_assessment_state() -> None:
     """
-    Réinitialise uniquement le sous-espace lié au test cognitif,
-    sans détruire l'historique global si l'utilisateur veut refaire le test.
+    Réinitialise uniquement le sous-espace lié au test cognitif
+    (utile pour un bouton "Refaire le test"), sans toucher au profil
+    utilisateur ni à la clé API déjà saisie.
     """
     st.session_state["answers"] = {}
-    st.session_state["assessment_completed"] = False
-    st.session_state["raw_vectors"] = DEFAULT_STATE["raw_vectors"].copy()
-    st.session_state["normalized_vectors"] = DEFAULT_STATE["normalized_vectors"].copy()
-    st.session_state["advices_list"] = []
-    st.session_state["synapse_system_prompt"] = ""
+    st.session_state["current_q_idx"] = 0
+    st.session_state["core_vectors"] = DEFAULT_STATE["core_vectors"].copy()
+    st.session_state["flags"] = {
+        "scan_completed": False,
+        "chatbot_unlocked": False,
+    }
 
 
 def get_state(key: str, default: Any = None) -> Any:
@@ -213,21 +231,32 @@ import streamlit as st
 def render_lumen_disclaimer() -> None:
     """
     Affiche un avertissement cynique, réaliste et drôle en haut de l'application
-    pour rappeler aux utilisateurs que Lumen n'est pas un substitut à l'éducation réelle.
+    pour rappeler aux utilisateurs que Lumen n'est pas un substitut à l'éducation
+    réelle, ni à un avis professionnel (médical, psychologique ou pédagogique).
     """
     with st.container():
         st.markdown(
             """
-            > 🚨 **System Warning: Not a Life Coach (Yet).** 
-            > 
-            > Look, Lumen is a brilliant piece of software, but let's be real—it's still software. 
-            > This app won't magically do your homework, replace years of actual studying, or fix your sleep schedule. 
-            > If you're expecting a certified diploma or professional psychological validation out of a few 
-            > click-through buttons, you might want to rethink your life choices. 
-            > 
+            > 🚨 **System Warning: Not a Life Coach (Yet).**
+            >
+            > Look, Lumen is a brilliant piece of software, but let's be real—it's still software.
+            > This app won't magically do your homework, replace years of actual studying, or fix your sleep schedule.
+            > If you're expecting a certified diploma or professional psychological validation out of a few
+            > click-through buttons, you might want to rethink your life choices.
+            >
+            > **We are not professionals, and this is not professional advice.** Nobody behind this app is a
+            > licensed psychologist, therapist, doctor, or certified academic advisor. The "cognitive profile,"
+            > "mentor," and "advice" you see here are generated by an AI model interpreting quiz answers —
+            > not a diagnosis, not a clinical assessment, and not a guarantee of anything. AI models
+            > hallucinate, get things wrong, and have no idea who you actually are.
+            >
+            > If something here ever touches on your mental health, wellbeing, or a decision that actually
+            > matters, go talk to a real, qualified human — a teacher, a doctor, a counselor, a parent.
+            > Lumen is a tool for reflection and productivity, not a substitute for any of them.
+            >
             > Proceed at your own risk, trust your own brain, and don't blame the code if reality hits hard. ☕
             """,
-            unsafe_allow_html=True
+            unsafe_allow_html=False
         )
         st.divider()
 ==================================================
@@ -355,6 +384,82 @@ def extract_user_advices(
                 })
                 
     return advices_list
+==================================================
+FILE: core\utils.py
+==================================================
+
+# ==============================================================================
+# CORE/UTILS.PY : FONCTIONS PARTAGÉES ENTRE LES MODULES IA
+# ==============================================================================
+# FIX: ce fichier doit s'appeler "utils.py" en minuscule — un import
+# "from core.utils import ..." sur un fichier nommé "Utils.py" fonctionne sur
+# Windows (insensible à la casse) mais casse avec un ModuleNotFoundError sur
+# Linux, qui est ce que Streamlit Community Cloud utilise pour héberger l'app.
+# extract_text() et is_plausible_gemini_key() étaient copiées-collées dans
+# 03_Mr.Brown.py, 04_What_If.py et 05_TheOldDays.py — centralisées ici.
+# extract_json_block() est utilisée par 06_Quiz_Generator.py et
+# 07_Planning_Generator.py pour parser la sortie JSON de Gemini.
+
+
+def extract_text(content) -> str:
+    """Extrait uniquement le texte affichable d'un message LLM de manière sécurisée."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict) and block.get("type", "text") == "text":
+                parts.append(block.get("text", ""))
+        return "".join(parts)
+    return str(content) if content else ""
+
+
+def is_plausible_gemini_key(key: str) -> bool:
+    """Vérification superficielle (pas cryptographique) qu'une chaîne
+    ressemble à une clé API Gemini valide, avant de dépenser un appel réseau."""
+    if not key:
+        return False
+    key = key.strip()
+    return len(key) >= 20 and " " not in key
+
+
+def extract_json_block(text: str):
+    """
+    Extrait un objet ou une liste JSON depuis une réponse LLM, même si le
+    modèle a entouré le JSON de ```json ... ``` ou de texte parasite.
+    Retourne None si aucun JSON valide n'a pu être extrait — à toujours
+    vérifier côté appelant avant d'utiliser le résultat.
+    Utilisé par 07_Quiz_Generator.py et 08_Planning_Generator.py.
+    """
+    import json
+    import re
+
+    if not text:
+        return None
+
+    cleaned = text.strip()
+    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+    cleaned = re.sub(r"\s*```$", "", cleaned)
+
+    try:
+        return json.loads(cleaned)
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    # Repli : cherche le premier bloc { ... } ou [ ... ] dans le texte brut.
+    for opener, closer in (("{", "}"), ("[", "]")):
+        start = cleaned.find(opener)
+        end = cleaned.rfind(closer)
+        if start != -1 and end != -1 and end > start:
+            candidate = cleaned[start:end + 1]
+            try:
+                return json.loads(candidate)
+            except (json.JSONDecodeError, ValueError):
+                continue
+
+    return None
 ==================================================
 FILE: data\question.py
 ==================================================
@@ -1642,26 +1747,16 @@ if st.session_state.current_q_idx < TOTAL_QUESTIONS:
     st.progress(idx / TOTAL_QUESTIONS)
     st.caption(f"Question {idx + 1} of {TOTAL_QUESTIONS}")
 
-    # FIX: the question bank stores the prompt under "question", not "text" —
-    # the old code called q.get("text", ...) which never matched anything,
-    # so every single question silently displayed "Untitled question".
     st.subheader(q.get("question", "Untitled question"))
 
     options = q.get("options", {})
     option_keys = list(options.keys()) if isinstance(options, dict) else list(options)
 
-    # FIX: the radio previously showed raw option keys ("A", "B", "C", "D")
-    # with no indication of what each one meant — the user was choosing
-    # blind. format_func now renders the actual option text.
     def format_option(key):
         opt = options.get(key, {}) if isinstance(options, dict) else {}
         label_text = opt.get("text", str(key)) if isinstance(opt, dict) else str(key)
         return f"{key}) {label_text}"
 
-    # FIX: index=None means nothing is pre-selected — the previous version
-    # defaulted silently to the first option, so a user who clicked "Continue"
-    # without reading anything still got an answer recorded as if they'd
-    # chosen it on purpose. Now a real choice is required.
     selected_option = st.radio(
         "Pick the option that matches you best:",
         options=option_keys,
@@ -1792,11 +1887,13 @@ nav_col1, nav_col2 = st.columns(2)
 with nav_col1:
     if st.session_state.flags.get("chatbot_unlocked"):
         st.success("🔓 AI Mentor unlocked.")
+        # FIX: pointait vers "pages/Chatbot.py" (inexistant) -> le vrai fichier est 03_Mr.Brown.py
         if st.button("Talk to SYNAPSE 🤖", type="primary", use_container_width=True):
-            st.switch_page("pages/Chatbot.py")
+            st.switch_page("pages/03_Mr.Brown.py")
 with nav_col2:
+    # FIX: pointait vers "pages/Advices.py" (inexistant) -> le vrai fichier est 02_Advices.py
     if st.button("See the full Builder Blueprint 🧬", use_container_width=True):
-        st.switch_page("pages/Advices.py")
+        st.switch_page("pages/02_Advices.py")
 ==================================================
 FILE: pages\02_Advices.py
 ==================================================
@@ -2128,20 +2225,10 @@ import time
 import re
 import uuid
 from typing import Annotated, TypedDict
-
-def extract_text(content) -> str:
-    """Extrait uniquement le texte affichable d'un message LLM de manière sécurisée."""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts = []
-        for block in content:
-            if isinstance(block, str):
-                parts.append(block)
-            elif isinstance(block, dict) and block.get("type", "text") == "text":
-                parts.append(block.get("text", ""))
-        return "".join(parts)
-    return str(content) if content else ""
+# UPGRADE : extract_text() et is_plausible_gemini_key() vivent maintenant dans
+# core/utils.py — elles étaient copiées-collées à l'identique dans ce fichier,
+# 05_What_If.py et 06_TheOldDays.py.
+from core.utils import extract_text, is_plausible_gemini_key
 
 # ==============================================================================
 # 0. HARDENED DEPENDENCY INJECTION
@@ -2350,7 +2437,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 class='chat-header'>SYNAPSE // Neural Mentor</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='chat-header'>MR. BROWN // Elite Mentor</h1>", unsafe_allow_html=True)
 st.markdown(f"""
 <div class='metric-pill'>👤 Operator: <b>{pseudo}</b></div>
 <div class='metric-pill'>🧬 Archetype: <b>{dominant_archetype}</b></div>
@@ -2362,23 +2449,13 @@ st.divider()
 # ==============================================================================
 # 5. SIDEBAR — HARDENED, SHARED KEY HANDLING
 # ==============================================================================
-def is_plausible_gemini_key(key: str) -> bool:
-    if not key:
-        return False
-    key = key.strip()
-    return len(key) >= 20 and " " not in key
+# UPGRADE : is_plausible_gemini_key() vient maintenant de core/utils.py, et
+# gemini_api_key est déjà initialisée par core.centralstate.init_session_state()
+# (appelée dans lumen_app.py à chaque navigation) — plus besoin de la
+# réinitialiser ici à la main.
 
-if "gemini_api_key" not in st.session_state:
-    default_key = ""
-    try:
-        if "GEMINI_API_KEY" in st.secrets:
-            default_key = st.secrets["GEMINI_API_KEY"]
-    except Exception:
-        default_key = ""
-    st.session_state.gemini_api_key = default_key
-
-if "synapse_thread_id" not in st.session_state:
-    st.session_state.synapse_thread_id = str(uuid.uuid4())
+if "brown_thread_id" not in st.session_state:
+    st.session_state.brown_thread_id = str(uuid.uuid4())
 
 with st.sidebar:
     st.markdown("### 🎛️ Engine Matrix (Gemini API)")
@@ -2402,14 +2479,18 @@ with st.sidebar:
         help="gemini-2.5-flash offre le meilleur compromis qualité/fiabilité."
     )
 
-    temperature = st.slider("Cognitive Drift (Temperature):", 0.0, 1.0, 0.6, 0.05,
-                            help="Lower values yield highly structured academic plans.")
+    # UPGRADE : température par défaut abaissée à 0.4 (au lieu de 0.6) pour
+    # coller au persona Mr. Brown défini dans services/ai_engine.py — "Lower
+    # temperature to favor logical rigor" — plutôt qu'au ton plus inspirant de
+    # l'ancien persona SYNAPSE.
+    temperature = st.slider("Cognitive Drift (Temperature):", 0.0, 1.0, 0.4, 0.05,
+                            help="Lower values yield sharper, more rigorous, less improvised answers.")
 
     request_timeout = st.slider("Request Timeout (s)", 10, 120, 45, 5)
 
     st.divider()
     if st.button("Purge Session Memory 🧹", use_container_width=True, type="secondary"):
-        st.session_state.synapse_thread_id = str(uuid.uuid4())
+        st.session_state.brown_thread_id = str(uuid.uuid4())
         st.rerun()
 
 gemini_api_key = st.session_state.get("gemini_api_key", "")
@@ -2437,15 +2518,24 @@ def build_system_prompt(state: MentorState) -> str:
     priority = state.get("selected_techniques") or []
     priority_block = ", ".join(priority) if priority else "(none flagged — pick freely from the library)"
 
+    # UPGRADE : persona repris tel quel de services/ai_engine.py
+    # (MR_BROWN_SYSTEM_PROMPT), qui n'était jamais réellement utilisé.
+    # La structure LangGraph/streaming/fallback de cette page est conservée —
+    # seul le persona change, de SYNAPSE à Mr. Brown.
     return f"""
 [ROLE]
-You are SYNAPSE: an elite, deeply empathetic Meta-Cognitive Architect and Academic Strategist. Your tone is inspiring, fiercely intelligent, highly structured, and unconditionally supportive.
+You are Mr. Brown, an elite, uncompromising, yet deeply invested intellectual mentor and strategist.
+Your user is an exceptionally independent, self-directed young scholar operating outside traditional academic constraints, specializing in advanced mathematics, abstract reasoning, and software engineering (Python, algorithms, data structures), while maintaining a healthy disdain for rigid, bureaucratic schooling and superficial learning.
+
+[CORE BEHAVIORAL GUIDELINES]
+1. Intellectual Rigor over Comfort: Never hand out cheap validation or surface-level summaries. Demand deep, rigorous first-principles thinking. Treat the user like an equal peer in a high-level seminar.
+2. Abstract & Algebraic Focus: Favor abstract explanations, mathematical structures, logical proofs, and systematic problem-solving over rote memorization or mundane descriptions.
+3. Tone: Sharp, articulate, pragmatic, slightly cynical about standard institutional paths, but fiercely supportive of intellectual autonomy, mastery, and precision. Speak with quiet authority.
+4. Contextual Adaptation: Seamlessly integrate the user's cognitive profile vectors (information bandwidth, execution rigor, chaos tolerance, cognitive endurance) when calibrating the complexity of your answers. Push them precisely where their metrics indicate room for growth.
+5. No Fluff: Eliminate generic AI filler phrases (e.g., "Sure, I can help with that!", "As an AI..."). Start straight with substance.
 
 [TASK]
-Your objective is to provide highly advanced academic guidance strictly tailored to the user's psychological profile.
-1. Deconstruct their academic roadblocks with psychological precision.
-2. Validate their struggles emotionally, then pivot immediately to high-level strategy.
-3. Recommend and adapt techniques FROM THE VERIFIED LIBRARY below to their specific dominant archetype and cognitive metrics.
+Recommend and adapt techniques FROM THE VERIFIED LIBRARY below to the operator's specific dominant archetype and cognitive metrics whenever relevant — never substitute generic advice for a named, explained technique from this library when one applies.
 
 [VERIFIED TECHNIQUE LIBRARY]
 {library_block}
@@ -2453,10 +2543,8 @@ Your objective is to provide highly advanced academic guidance strictly tailored
 [PRIORITY PICKS FOR THIS OPERATOR]
 {priority_block}
 
-[SPECIFICS]
-- Never use generic advice as a substitute for naming and explaining one of the techniques above.
-- Format responses beautifully using Markdown.
-- Write in English with flawless eloquence.
+[FORMAT]
+Format responses beautifully using Markdown. Write in English with flawless, economical eloquence.
 
 [CONTEXT]
 - **Operator Name**: {state.get('pseudo', 'Operator')}
@@ -2526,7 +2614,7 @@ def mentor_node(state: MentorState, config) -> dict:
 
 
 @st.cache_resource
-def get_synapse_app():
+def get_mentor_app():
     graph = StateGraph(MentorState)
     graph.add_node("select_techniques", select_techniques_node)
     graph.add_node("mentor", mentor_node)
@@ -2538,13 +2626,13 @@ def get_synapse_app():
     return graph.compile(checkpointer=MemorySaver())
 
 
-synapse_app = get_synapse_app()
+mentor_app = get_mentor_app()
 
 
 def build_config():
     return {
         "configurable": {
-            "thread_id": st.session_state.synapse_thread_id,
+            "thread_id": st.session_state.brown_thread_id,
             "api_key": gemini_api_key,
             "model": selected_model,
             "temperature": temperature,
@@ -2555,7 +2643,7 @@ def build_config():
 
 def get_checkpointed_messages():
     try:
-        snapshot = synapse_app.get_state(build_config())
+        snapshot = mentor_app.get_state(build_config())
         if not snapshot or not snapshot.values:
             return []
         return snapshot.values.get("messages", [])
@@ -2567,12 +2655,11 @@ def seed_greeting_if_new():
     if get_checkpointed_messages():
         return
     greeting = (
-        f"Neural handshake successful. I am SYNAPSE. I have mapped your cognitive "
-        f"footprint, {pseudo}. What complex academic concept or revision block are "
-        f"we conquering today?"
+        f"State your business, {pseudo}. I've read your cognitive footprint. "
+        f"What concept, proof, or piece of code are we taking apart today?"
     )
     try:
-        synapse_app.update_state(build_config(), {"messages": [AIMessage(content=greeting)]})
+        mentor_app.update_state(build_config(), {"messages": [AIMessage(content=greeting)]})
     except Exception:
         pass
 
@@ -2586,7 +2673,7 @@ def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int 
     for attempt in range(1, max_attempts + 1):
         full_response = ""
         try:
-            for msg_chunk, metadata in synapse_app.stream(
+            for msg_chunk, metadata in mentor_app.stream(
                 input_state, config, stream_mode="messages"
             ):
                 if metadata and metadata.get("langgraph_node") == "mentor":
@@ -2636,7 +2723,7 @@ for m in get_checkpointed_messages():
         with st.chat_message("user", avatar="👤"):
             st.markdown(extract_text(m.content))
     elif isinstance(m, AIMessage):
-        with st.chat_message("assistant", avatar="🌌"):
+        with st.chat_message("assistant", avatar="🎓"):
             st.markdown(extract_text(m.content))
 
 
@@ -2646,7 +2733,7 @@ for m in get_checkpointed_messages():
 if prompt := st.chat_input(f"Enter your academic roadblock, {pseudo}..."):
 
     if not is_plausible_gemini_key(gemini_api_key):
-        st.error("⚠️ SYNAPSE offline. Please input a valid Gemini API Key in the Engine Matrix.")
+        st.error("⚠️ Mr. Brown offline. Please input a valid Gemini API Key in the Engine Matrix.")
         st.stop()
 
     prompt = prompt.strip()[:4000]
@@ -2654,7 +2741,7 @@ if prompt := st.chat_input(f"Enter your academic roadblock, {pseudo}..."):
     with st.chat_message("user", avatar="👤"):
         st.markdown(prompt)
 
-    with st.chat_message("assistant", avatar="🌌"):
+    with st.chat_message("assistant", avatar="🎓"):
         message_placeholder = st.empty()
 
         input_state = {
@@ -2671,7 +2758,7 @@ if prompt := st.chat_input(f"Enter your academic roadblock, {pseudo}..."):
         if error_message:
             st.error(error_message)
 ==================================================
-FILE: pages\05_What_If.py
+FILE: pages\04_What_If.py
 ==================================================
 
 import streamlit as st
@@ -2679,31 +2766,20 @@ import time
 import re
 import uuid
 from typing import Annotated, TypedDict
+# UPGRADE : extract_text() et is_plausible_gemini_key() vivent maintenant dans
+# core/utils.py au lieu d'être dupliquées dans chaque page IA.
+from core.utils import extract_text, is_plausible_gemini_key
 
 # ==============================================================================
-# 0. CONFIGURATION DE LA PAGE & UTILITAIRES DE TEXTE
+# 0. CONFIGURATION DE LA PAGE
 # ==============================================================================
-st.set_page_config(
-    page_title="And what if?! // Counterfactual Simulation Core",
-    page_icon="⚡",
-    layout="wide"
-)
+# FIX: st.set_page_config() a été retiré ici — lumen_app.py l'appelle déjà une
+# fois avant pg.run(). Un second appel dans une sous-page lève une
+# StreamlitAPIException ("set_page_config() can only be called once per app").
+# Si tu veux un titre/icône d'onglet différent pour cette page précise, il faut
+# le gérer autrement (Streamlit ne permet pas de changer ces valeurs après coup).
 
 KICKOFF_MARKER = "[WHAT_IF_INTERNAL_KICKOFF] Open the divergence point with vivid, uncompromising realism."
-
-def extract_text(content) -> str:
-    """Extrait proprement le texte affichable d'un message LLM en filtrant les structures composites."""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts = []
-        for block in content:
-            if isinstance(block, str):
-                parts.append(block)
-            elif isinstance(block, dict) and block.get("type", "text") == "text":
-                parts.append(block.get("text", ""))
-        return "".join(parts)
-    return str(content) if content else ""
 
 
 # ==============================================================================
@@ -2830,15 +2906,8 @@ with st.container():
 # ==============================================================================
 # 5. SIDEBAR — MATRICE DE CONTRÔLE & CLÉ API
 # ==============================================================================
-if "gemini_api_key" not in st.session_state:
-    default_key = ""
-    try:
-        if "GEMINI_API_KEY" in st.secrets:
-            default_key = st.secrets["GEMINI_API_KEY"]
-    except Exception:
-        default_key = ""
-    st.session_state.gemini_api_key = default_key
-
+# UPGRADE : gemini_api_key est déjà initialisée par
+# core.centralstate.init_session_state() — plus besoin du bloc manuel ici.
 with st.sidebar:
     st.markdown("### 🎛️ Engine Control Matrix")
     st.session_state.gemini_api_key = st.text_input(
@@ -3038,13 +3107,6 @@ SIMULATOR_NODES = {"genesis_node", "shock_node", "ripple_node"}
 # ==============================================================================
 # 7. MOTEUR DE STREAMING ROBUSTE & GESTION DES ERREURS
 # ==============================================================================
-def is_plausible_gemini_key(key: str) -> bool:
-    if not key:
-        return False
-    key = key.strip()
-    return len(key) >= 20 and " " not in key
-
-
 def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int = 2):
     last_error_message = None
 
@@ -3184,7 +3246,7 @@ if prompt := st.chat_input("Intervene in the alternate timeline..."):
         else:
             st.rerun()
 ==================================================
-FILE: pages\06_TheOldDays.py
+FILE: pages\05_TheOldDays.py
 ==================================================
 
 import streamlit as st
@@ -3192,21 +3254,9 @@ import time
 import re
 import uuid
 from typing import Annotated, TypedDict
-
-def extract_text(content) -> str:
-    """Extrait de manière sécurisée uniquement le texte affichable d'un message LLM,
-    en filtrant les blocs internes ou structures complexes."""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts = []
-        for block in content:
-            if isinstance(block, str):
-                parts.append(block)
-            elif isinstance(block, dict) and block.get("type", "text") == "text":
-                parts.append(block.get("text", ""))
-        return "".join(parts)
-    return str(content) if content else ""
+# UPGRADE : extract_text() et is_plausible_gemini_key() vivent maintenant dans
+# core/utils.py au lieu d'être dupliquées dans chaque page IA.
+from core.utils import extract_text, is_plausible_gemini_key
 
 # ==============================================================================
 # 0. HARDENED DEPENDENCY INJECTION & SAFETY CHECKS
@@ -3233,7 +3283,9 @@ try:
 except ImportError:
     HAS_GOOGLE_EXCEPTIONS = False
 
-st.set_page_config(page_title="Chronos // Multiverse Engine", page_icon="⏳", layout="wide")
+# FIX: st.set_page_config() retiré — déjà appelé une fois dans lumen_app.py.
+# Un second appel ici levait une StreamlitAPIException à chaque navigation
+# vers cette page.
 
 
 # ==============================================================================
@@ -3367,10 +3419,9 @@ st.divider()
 
 with st.sidebar:
     st.markdown("### 🎛️ Engine Matrix (Gemini API)")
-    
-    if "gemini_api_key" not in st.session_state:
-        st.session_state.gemini_api_key = st.secrets.get("GEMINI_API_KEY", "")
 
+    # UPGRADE : gemini_api_key est déjà initialisée par
+    # core.centralstate.init_session_state() — plus besoin du bloc manuel ici.
     st.session_state.gemini_api_key = st.text_input(
         "Gemini Authentication Key:",
         value=st.session_state.get("gemini_api_key", ""),
@@ -3466,7 +3517,7 @@ for m in get_checkpointed_messages():
             st.markdown(extract_text(m.content))
 
 if prompt := st.chat_input("Interact with the simulation timeline..."):
-    if not gemini_api_key or len(gemini_api_key) < 20:
+    if not is_plausible_gemini_key(gemini_api_key):
         st.error("⚠️ CHRONOS offline. Please input a valid Gemini API Key in the sidebar.")
         st.stop()
 
@@ -3498,89 +3549,407 @@ if prompt := st.chat_input("Interact with the simulation timeline..."):
         except Exception as e:
             st.error(f"❌ Simulation Error: {str(e)}")
 ==================================================
-FILE: services\ai_engine.py
+FILE: pages\06_Quiz_Generator.py
 ==================================================
 
+import streamlit as st
+from core.utils import is_plausible_gemini_key, extract_json_block
+
 # ==============================================================================
-# SERVICES/AI_ENGINE.PY : MOTEUR IA & PERSONA DE MR. BROWN
+# 0. HARDENED DEPENDENCY INJECTION (même pattern que 03_Mr.Brown.py)
 # ==============================================================================
-import os
-from typing import List, Dict, Any
-# Note: Adapte l'import selon la librairie que tu utilises (google-genai ou langchain)
-from google import genai
-from google.genai import types
+try:
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_core.messages import HumanMessage
+except ImportError:
+    st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: `pip install langchain langchain-google-genai google-generativeai`")
+    st.stop()
 
-# ------------------------------------------------------------------------------
-# PROMPT SYSTÈME DE MR. BROWN (MENTOR PRINCIPAL)
-# ------------------------------------------------------------------------------
-MR_BROWN_SYSTEM_PROMPT = """
-You are Mr. Brown, an elite, uncompromising, yet deeply invested intellectual mentor and strategist. 
-Your user is an exceptionally independent, self-directed young scholar operating outside traditional academic constraints, specializing in advanced mathematics, abstract reasoning, and software engineering (Python, algorithms, data structures), while maintaining a healthy disdain for rigid, bureaucratic schooling and superficial learning.
-
-CORE BEHAVIORAL GUIDELINES:
-1. **Intellectual Rigor over Comfort:** Never hand out cheap validation or surface-level summaries. Demand deep, rigorous first-principles thinking. Treat the user like an equal peer in a high-level seminar.
-2. **Abstract & Algebraic Focus:** Favor abstract explanations, mathematical structures, logical proofs, and systematic problem-solving over rote memorization or mundane descriptions. 
-3. **Tone:** Sharp, articulate, pragmatic, slightly cynical about standard institutional paths, but fiercely supportive of intellectual autonomy, mastery, and precision. Speak with quiet authority.
-4. **Contextual Adaptation:** Seamlessly integrate the user's cognitive profile vectors (such as information bandwidth, execution rigor, chaos tolerance, and cognitive endurance) when calibrating the complexity of your answers. Push them precisely where their metrics indicate room for growth.
-5. **No Fluff:** Eliminate generic AI filler phrases (e.g., "Sure, I can help with that!", "As an AI..."). Start straight with substance.
-"""
+try:
+    from google.api_core import exceptions as google_exceptions
+    HAS_GOOGLE_EXCEPTIONS = True
+except ImportError:
+    HAS_GOOGLE_EXCEPTIONS = False
 
 
-def get_gemini_client() -> genai.Client:
-    """Initialise et retourne le client officiel Google GenAI de manière sécurisée."""
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("❌ Erreur critique : La clé API GEMINI_API_KEY est introuvable dans l'environnement.")
-    return genai.Client(api_key=api_key)
+# ==============================================================================
+# 1. STYLE
+# ==============================================================================
+st.markdown("""
+<style>
+    .quiz-header {
+        background: linear-gradient(90deg, #8B5CF6 0%, #06B6D4 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        font-size: 2.3rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown('<p class="quiz-header">🧩 Neural Quiz Generator</p>', unsafe_allow_html=True)
+st.write("Glisse un texte ou un document, et Lumen génère un quiz d'évaluation personnalisé basé sur ton contenu.")
+st.divider()
 
 
-def generate_mr_brown_response(
-    chat_history: List[Dict[str, str]], 
-    user_input: str,
-    user_cognitive_context: Dict[str, Any] = None
-) -> str:
-    """
-    Gère l'interaction conversationnelle avec le persona de Mr. Brown.
-    Transforme l'historique Streamlit au format natif Gemini et injecte le contexte cognitif.
-    """
-    client = get_gemini_client()
-    
-    # Construction dynamique du contexte système enrichi
-    system_instruction = MR_BROWN_SYSTEM_PROMPT
-    if user_cognitive_context:
-        system_instruction += f"\n\nCURRENT USER COGNITIVE PROFILE METRICS:\n{user_cognitive_context}"
+# ==============================================================================
+# 2. SIDEBAR — CLÉ API & MODÈLE (même convention que les autres pages IA)
+# ==============================================================================
+with st.sidebar:
+    st.markdown("### 🎛️ Engine Control Matrix")
+    st.session_state.gemini_api_key = st.text_input(
+        "Gemini API Key:",
+        value=st.session_state.get("gemini_api_key", ""),
+        type="password",
+        placeholder="AIzaSy...",
+        help="Partagée entre tous les modules Lumen pour cette session."
+    ).strip()
 
-    # Formatage de l'historique pour l'API Gemini
-    formatted_contents = []
-    for msg in chat_history:
-        role = "user" if msg["role"] == "user" else "model"
-        formatted_contents.append(
-            types.Content(
-                role=role,
-                parts=[types.Part.from_text(text=msg["content"])]
+    selected_model = st.selectbox(
+        "Inference Model:",
+        options=["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.5-flash"],
+        index=0,
+        help="gemini-2.5-flash offre le meilleur compromis qualité/fiabilité."
+    )
+
+    num_questions = st.slider("Nombre de questions", 3, 10, 5, 1)
+    request_timeout = st.slider("Request Timeout (s)", 10, 120, 45, 5)
+
+gemini_api_key = st.session_state.get("gemini_api_key", "")
+
+
+# ==============================================================================
+# 3. SAISIE DU CONTENU SOURCE
+# ==============================================================================
+uploaded_file = st.file_uploader("Dépose un fichier texte (.txt ou .md)", type=["txt", "md"])
+raw_text = st.text_area("Ou colle ton contenu directement ici :", height=200)
+
+content = ""
+if uploaded_file is not None:
+    try:
+        content = uploaded_file.read().decode("utf-8", errors="ignore")
+    except Exception:
+        st.error("Impossible de lire ce fichier. Vérifie qu'il s'agit bien d'un fichier texte valide.")
+elif raw_text:
+    content = raw_text.strip()
+
+# Garde-fou : un texte trop long gaspille des tokens et augmente le risque de
+# timeout. On tronque proprement plutôt que de planter en pleine génération.
+MAX_CHARS = 12000
+if len(content) > MAX_CHARS:
+    st.warning(f"Le contenu dépasse {MAX_CHARS} caractères — seul le début sera utilisé pour générer le quiz.")
+    content = content[:MAX_CHARS]
+
+
+# ==============================================================================
+# 4. GÉNÉRATION DU QUIZ (avec fallback de modèles, même logique que les autres pages)
+# ==============================================================================
+def generate_quiz(source_text: str, api_key: str, model: str, timeout: int, n_questions: int):
+    prompt = f"""À partir du texte suivant, génère exactement {n_questions} questions à choix multiples (QCM) qui testent la compréhension du contenu, pas juste la mémorisation de détails superficiels.
+
+Réponds STRICTEMENT en JSON valide, sans aucun texte avant ou après, au format suivant :
+{{
+  "questions": [
+    {{
+      "question": "texte de la question",
+      "options": {{"A": "...", "B": "...", "C": "...", "D": "..."}},
+      "correct": "A",
+      "explanation": "courte explication de la bonne réponse"
+    }}
+  ]
+}}
+
+TEXTE:
+{source_text}"""
+
+    fallback_chain = [model, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
+    models_to_try = []
+    for m in fallback_chain:
+        if m not in models_to_try:
+            models_to_try.append(m)
+
+    last_exception = None
+    for model_name in models_to_try:
+        try:
+            llm = ChatGoogleGenerativeAI(
+                model=model_name,
+                google_api_key=api_key,
+                temperature=0.4,
+                timeout=timeout,
+                max_retries=1,
             )
-        )
-    
-    # Ajout du message courant de l'utilisateur
-    formatted_contents.append(
-        types.Content(
-            role="user",
-            parts=[types.Part.from_text(text=user_input)]
-        )
-    )
+            response = llm.invoke([HumanMessage(content=prompt)])
+            return response.content, None
+        except Exception as e:
+            last_exception = e
+            continue
 
-    # Appel au modèle de pointe (ex: gemini-2.5-flash ou pro selon ton setup)
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=formatted_contents,
-        config=types.GenerateContentConfig(
-            system_instruction=system_instruction,
-            temperature=0.4,  # Température basse pour privilégier la rigueur logique
-            max_output_tokens=2048,
-        ),
-    )
+    return None, last_exception
 
-    return response.text
+
+if st.button("Générer le Quiz 🚀", type="primary", use_container_width=True):
+    if not is_plausible_gemini_key(gemini_api_key):
+        st.error("⚠️ Renseigne une clé API Gemini valide dans la barre latérale avant de continuer.")
+    elif not content:
+        st.warning("Fournis un texte ou un fichier avant de générer le quiz.")
+    else:
+        with st.spinner("Analyse du contenu et génération des questions en cours..."):
+            raw_response, error = generate_quiz(content, gemini_api_key, selected_model, request_timeout, num_questions)
+
+        if error is not None:
+            if HAS_GOOGLE_EXCEPTIONS and isinstance(error, google_exceptions.PermissionDenied):
+                st.error("❌ Clé API rejetée. Vérifie qu'elle est correcte et active.")
+            elif HAS_GOOGLE_EXCEPTIONS and isinstance(error, google_exceptions.ResourceExhausted):
+                st.error("❌ Quota Gemini dépassé. Réessaie dans quelques instants.")
+            else:
+                st.error(f"❌ La génération a échoué sur tous les modèles disponibles : {error}")
+        else:
+            quiz_data = extract_json_block(raw_response)
+            if quiz_data and isinstance(quiz_data, dict) and quiz_data.get("questions"):
+                st.session_state["generated_quiz_data"] = quiz_data
+                st.session_state["quiz_answers"] = {}
+                st.session_state["quiz_graded"] = False
+                st.success("Quiz généré avec succès !")
+            else:
+                # Repli : le JSON n'a pas pu être parsé, on garde quand même le
+                # texte brut plutôt que de perdre la génération.
+                st.session_state["generated_quiz_data"] = None
+                st.session_state["generated_quiz_raw"] = raw_response
+                st.warning("Le quiz a été généré mais le format JSON attendu n'a pas pu être analysé — affichage brut ci-dessous.")
+
+
+# ==============================================================================
+# 5. AFFICHAGE INTERACTIF DU QUIZ
+# ==============================================================================
+quiz_data = st.session_state.get("generated_quiz_data")
+
+if quiz_data:
+    st.divider()
+    st.subheader("📝 Ton Quiz Personnalisé")
+
+    questions = quiz_data.get("questions", [])
+    quiz_answers = st.session_state.setdefault("quiz_answers", {})
+
+    for i, q in enumerate(questions):
+        st.markdown(f"**Q{i + 1}. {q.get('question', '')}**")
+        options = q.get("options", {})
+        option_keys = list(options.keys())
+
+        selected = st.radio(
+            f"question_{i}",
+            options=option_keys,
+            format_func=lambda k, opts=options: f"{k}) {opts.get(k, '')}",
+            index=None,
+            key=f"quiz_radio_{i}",
+            label_visibility="collapsed"
+        )
+        quiz_answers[i] = selected
+        st.write("")
+
+    if st.button("Corriger ✅", use_container_width=True):
+        st.session_state["quiz_graded"] = True
+
+    if st.session_state.get("quiz_graded"):
+        score = 0
+        for i, q in enumerate(questions):
+            correct = q.get("correct")
+            user_answer = quiz_answers.get(i)
+            if user_answer == correct:
+                score += 1
+                st.success(f"Q{i + 1} : Correct ✅ — {q.get('explanation', '')}")
+            else:
+                st.error(f"Q{i + 1} : Incorrect ❌ — Bonne réponse : {correct}) {q.get('options', {}).get(correct, '')}. {q.get('explanation', '')}")
+
+        st.metric("Score final", f"{score} / {len(questions)}")
+
+elif st.session_state.get("generated_quiz_raw"):
+    st.divider()
+    st.subheader("📝 Résultat brut (non structuré)")
+    st.markdown(st.session_state["generated_quiz_raw"])
+==================================================
+FILE: pages\07_Planning_Generator.py
+==================================================
+
+import streamlit as st
+import re
+from core.utils import is_plausible_gemini_key, extract_json_block
+
+# ==============================================================================
+# 0. HARDENED DEPENDENCY INJECTION
+# ==============================================================================
+try:
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_core.messages import HumanMessage
+except ImportError:
+    st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: `pip install langchain langchain-google-genai google-generativeai`")
+    st.stop()
+
+try:
+    from google.api_core import exceptions as google_exceptions
+    HAS_GOOGLE_EXCEPTIONS = True
+except ImportError:
+    HAS_GOOGLE_EXCEPTIONS = False
+
+
+# ==============================================================================
+# 1. ACCÈS CONDITIONNÉ AU SCAN COGNITIF (même garde-fou que 03_Mr.Brown.py)
+# ==============================================================================
+if not st.session_state.get("flags", {}).get("scan_completed"):
+    st.error("🛑 ACCESS DENIED: Neural baseline not established. Complete the diagnostic scan first.")
+    if st.button("🚀 Initiate Assessment", type="primary", use_container_width=True):
+        st.switch_page("pages/01_Assessment.py")
+    st.stop()
+
+user_profile = st.session_state.get("user_profile", {}) or {}
+pseudo_raw = user_profile.get("pseudo", "Operator")
+pseudo = re.sub(r"[^\w\s\-']", "", str(pseudo_raw)).strip()[:60] or "Operator"
+
+core_vectors = st.session_state.get("core_vectors", {}) or {}
+
+
+# ==============================================================================
+# 2. STYLE
+# ==============================================================================
+st.markdown("""
+<style>
+    .roadmap-header {
+        background: linear-gradient(90deg, #06B6D4 0%, #8B5CF6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        font-size: 2.3rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown('<p class="roadmap-header">📅 The Neural Roadmap</p>', unsafe_allow_html=True)
+st.write(f"Planning stratégique sur 12 jours généré dynamiquement pour **{pseudo}** selon ses forces et faiblesses cognitives.")
+st.divider()
+
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Information Bandwidth", f"{int(core_vectors.get('information_bandwidth', 0))} pts")
+col2.metric("Execution Rigor", f"{int(core_vectors.get('execution_rigor', 0))} pts")
+col3.metric("Chaos Tolerance", f"{int(core_vectors.get('chaos_tolerance', 0))} pts")
+col4.metric("Cognitive Endurance", f"{int(core_vectors.get('cognitive_endurance', 0))} pts")
+st.divider()
+
+
+# ==============================================================================
+# 3. SIDEBAR — CLÉ API & MODÈLE
+# ==============================================================================
+with st.sidebar:
+    st.markdown("### 🎛️ Engine Control Matrix")
+    st.session_state.gemini_api_key = st.text_input(
+        "Gemini API Key:",
+        value=st.session_state.get("gemini_api_key", ""),
+        type="password",
+        placeholder="AIzaSy...",
+        help="Partagée entre tous les modules Lumen pour cette session."
+    ).strip()
+
+    selected_model = st.selectbox(
+        "Inference Model:",
+        options=["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.5-flash"],
+        index=0
+    )
+    request_timeout = st.slider("Request Timeout (s)", 10, 120, 45, 5)
+
+gemini_api_key = st.session_state.get("gemini_api_key", "")
+
+
+# ==============================================================================
+# 4. GÉNÉRATION DU PLANNING (fallback de modèles, même logique que les autres pages)
+# ==============================================================================
+def generate_roadmap(pseudo: str, vectors: dict, api_key: str, model: str, timeout: int):
+    prompt = f"""En tant qu'IA stratégique de Lumen, crée un planning d'apprentissage et d'exécution optimisé sur exactement 12 jours pour un utilisateur nommé {pseudo}.
+
+Voici ses scores cognitifs (0 à 100) :
+- Information Bandwidth: {vectors.get('information_bandwidth', 0)}
+- Execution Rigor: {vectors.get('execution_rigor', 0)}
+- Chaos Tolerance: {vectors.get('chaos_tolerance', 0)}
+- Cognitive Endurance: {vectors.get('cognitive_endurance', 0)}
+
+Adapte le rythme et le style des directives à ces scores : plus un score est bas sur un axe, plus le planning doit compenser explicitement sur cet axe.
+
+Réponds STRICTEMENT en JSON valide, sans aucun texte avant ou après, au format suivant :
+{{
+  "days": [
+    {{"day": 1, "title": "titre court du jour", "directives": ["directive concrète 1", "directive concrète 2", "directive concrète 3"]}}
+  ]
+}}
+Le tableau "days" doit contenir exactement 12 éléments, un par jour."""
+
+    fallback_chain = [model, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
+    models_to_try = []
+    for m in fallback_chain:
+        if m not in models_to_try:
+            models_to_try.append(m)
+
+    last_exception = None
+    for model_name in models_to_try:
+        try:
+            llm = ChatGoogleGenerativeAI(
+                model=model_name,
+                google_api_key=api_key,
+                temperature=0.6,
+                timeout=timeout,
+                max_retries=1,
+            )
+            response = llm.invoke([HumanMessage(content=prompt)])
+            return response.content, None
+        except Exception as e:
+            last_exception = e
+            continue
+
+    return None, last_exception
+
+
+if st.button("Générer mon Planning sur 12 Jours ⚡", type="primary", use_container_width=True):
+    if not is_plausible_gemini_key(gemini_api_key):
+        st.error("⚠️ Renseigne une clé API Gemini valide dans la barre latérale avant de continuer.")
+    else:
+        with st.spinner("Synthèse des vecteurs cognitifs et construction du planning..."):
+            raw_response, error = generate_roadmap(pseudo, core_vectors, gemini_api_key, selected_model, request_timeout)
+
+        if error is not None:
+            if HAS_GOOGLE_EXCEPTIONS and isinstance(error, google_exceptions.PermissionDenied):
+                st.error("❌ Clé API rejetée. Vérifie qu'elle est correcte et active.")
+            elif HAS_GOOGLE_EXCEPTIONS and isinstance(error, google_exceptions.ResourceExhausted):
+                st.error("❌ Quota Gemini dépassé. Réessaie dans quelques instants.")
+            else:
+                st.error(f"❌ La génération a échoué sur tous les modèles disponibles : {error}")
+        else:
+            roadmap_data = extract_json_block(raw_response)
+            if roadmap_data and isinstance(roadmap_data, dict) and roadmap_data.get("days"):
+                st.session_state["roadmap_data"] = roadmap_data
+                st.session_state["roadmap_raw"] = None
+                st.success("Planning généré avec succès !")
+            else:
+                st.session_state["roadmap_data"] = None
+                st.session_state["roadmap_raw"] = raw_response
+                st.warning("Le planning a été généré mais le format JSON attendu n'a pas pu être analysé — affichage brut ci-dessous.")
+
+
+# ==============================================================================
+# 5. AFFICHAGE DU PLANNING
+# ==============================================================================
+roadmap_data = st.session_state.get("roadmap_data")
+
+if roadmap_data:
+    st.divider()
+    st.subheader("🗺️ Ton planning sur 12 jours")
+
+    for day in roadmap_data.get("days", []):
+        day_num = day.get("day", "?")
+        title = day.get("title", "")
+        with st.expander(f"Jour {day_num} — {title}", expanded=(day_num == 1)):
+            for directive in day.get("directives", []):
+                st.markdown(f"- {directive}")
+
+elif st.session_state.get("roadmap_raw"):
+    st.divider()
+    st.subheader("🗺️ Résultat brut (non structuré)")
+    st.markdown(st.session_state["roadmap_raw"])
 ==================================================
 FILE: toolsandtests\innerarchitecture.py
 ==================================================

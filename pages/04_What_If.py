@@ -3,9 +3,12 @@ import time
 import re
 import uuid
 from typing import Annotated, TypedDict
+# UPGRADE : extract_text() et is_plausible_gemini_key() vivent maintenant dans
+# core/utils.py au lieu d'être dupliquées dans chaque page IA.
+from core.utils import extract_text, is_plausible_gemini_key
 
 # ==============================================================================
-# 0. CONFIGURATION DE LA PAGE & UTILITAIRES DE TEXTE
+# 0. CONFIGURATION DE LA PAGE
 # ==============================================================================
 # FIX: st.set_page_config() a été retiré ici — lumen_app.py l'appelle déjà une
 # fois avant pg.run(). Un second appel dans une sous-page lève une
@@ -14,20 +17,6 @@ from typing import Annotated, TypedDict
 # le gérer autrement (Streamlit ne permet pas de changer ces valeurs après coup).
 
 KICKOFF_MARKER = "[WHAT_IF_INTERNAL_KICKOFF] Open the divergence point with vivid, uncompromising realism."
-
-def extract_text(content) -> str:
-    """Extrait proprement le texte affichable d'un message LLM en filtrant les structures composites."""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts = []
-        for block in content:
-            if isinstance(block, str):
-                parts.append(block)
-            elif isinstance(block, dict) and block.get("type", "text") == "text":
-                parts.append(block.get("text", ""))
-        return "".join(parts)
-    return str(content) if content else ""
 
 
 # ==============================================================================
@@ -154,15 +143,8 @@ with st.container():
 # ==============================================================================
 # 5. SIDEBAR — MATRICE DE CONTRÔLE & CLÉ API
 # ==============================================================================
-if "gemini_api_key" not in st.session_state:
-    default_key = ""
-    try:
-        if "GEMINI_API_KEY" in st.secrets:
-            default_key = st.secrets["GEMINI_API_KEY"]
-    except Exception:
-        default_key = ""
-    st.session_state.gemini_api_key = default_key
-
+# UPGRADE : gemini_api_key est déjà initialisée par
+# core.centralstate.init_session_state() — plus besoin du bloc manuel ici.
 with st.sidebar:
     st.markdown("### 🎛️ Engine Control Matrix")
     st.session_state.gemini_api_key = st.text_input(
@@ -362,13 +344,6 @@ SIMULATOR_NODES = {"genesis_node", "shock_node", "ripple_node"}
 # ==============================================================================
 # 7. MOTEUR DE STREAMING ROBUSTE & GESTION DES ERREURS
 # ==============================================================================
-def is_plausible_gemini_key(key: str) -> bool:
-    if not key:
-        return False
-    key = key.strip()
-    return len(key) >= 20 and " " not in key
-
-
 def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int = 2):
     last_error_message = None
 

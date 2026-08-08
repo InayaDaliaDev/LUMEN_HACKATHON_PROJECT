@@ -3,20 +3,10 @@ import time
 import re
 import uuid
 from typing import Annotated, TypedDict
-
-def extract_text(content) -> str:
-    """Extrait uniquement le texte affichable d'un message LLM de manière sécurisée."""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts = []
-        for block in content:
-            if isinstance(block, str):
-                parts.append(block)
-            elif isinstance(block, dict) and block.get("type", "text") == "text":
-                parts.append(block.get("text", ""))
-        return "".join(parts)
-    return str(content) if content else ""
+# UPGRADE : extract_text() et is_plausible_gemini_key() vivent maintenant dans
+# core/utils.py — elles étaient copiées-collées à l'identique dans ce fichier,
+# 05_What_If.py et 06_TheOldDays.py.
+from core.utils import extract_text, is_plausible_gemini_key
 
 # ==============================================================================
 # 0. HARDENED DEPENDENCY INJECTION
@@ -225,7 +215,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 class='chat-header'>SYNAPSE // Neural Mentor</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='chat-header'>MR. BROWN // Elite Mentor</h1>", unsafe_allow_html=True)
 st.markdown(f"""
 <div class='metric-pill'>👤 Operator: <b>{pseudo}</b></div>
 <div class='metric-pill'>🧬 Archetype: <b>{dominant_archetype}</b></div>
@@ -237,23 +227,13 @@ st.divider()
 # ==============================================================================
 # 5. SIDEBAR — HARDENED, SHARED KEY HANDLING
 # ==============================================================================
-def is_plausible_gemini_key(key: str) -> bool:
-    if not key:
-        return False
-    key = key.strip()
-    return len(key) >= 20 and " " not in key
+# UPGRADE : is_plausible_gemini_key() vient maintenant de core/utils.py, et
+# gemini_api_key est déjà initialisée par core.centralstate.init_session_state()
+# (appelée dans lumen_app.py à chaque navigation) — plus besoin de la
+# réinitialiser ici à la main.
 
-if "gemini_api_key" not in st.session_state:
-    default_key = ""
-    try:
-        if "GEMINI_API_KEY" in st.secrets:
-            default_key = st.secrets["GEMINI_API_KEY"]
-    except Exception:
-        default_key = ""
-    st.session_state.gemini_api_key = default_key
-
-if "synapse_thread_id" not in st.session_state:
-    st.session_state.synapse_thread_id = str(uuid.uuid4())
+if "brown_thread_id" not in st.session_state:
+    st.session_state.brown_thread_id = str(uuid.uuid4())
 
 with st.sidebar:
     st.markdown("### 🎛️ Engine Matrix (Gemini API)")
@@ -277,14 +257,18 @@ with st.sidebar:
         help="gemini-2.5-flash offre le meilleur compromis qualité/fiabilité."
     )
 
-    temperature = st.slider("Cognitive Drift (Temperature):", 0.0, 1.0, 0.6, 0.05,
-                            help="Lower values yield highly structured academic plans.")
+    # UPGRADE : température par défaut abaissée à 0.4 (au lieu de 0.6) pour
+    # coller au persona Mr. Brown défini dans services/ai_engine.py — "Lower
+    # temperature to favor logical rigor" — plutôt qu'au ton plus inspirant de
+    # l'ancien persona SYNAPSE.
+    temperature = st.slider("Cognitive Drift (Temperature):", 0.0, 1.0, 0.4, 0.05,
+                            help="Lower values yield sharper, more rigorous, less improvised answers.")
 
     request_timeout = st.slider("Request Timeout (s)", 10, 120, 45, 5)
 
     st.divider()
     if st.button("Purge Session Memory 🧹", use_container_width=True, type="secondary"):
-        st.session_state.synapse_thread_id = str(uuid.uuid4())
+        st.session_state.brown_thread_id = str(uuid.uuid4())
         st.rerun()
 
 gemini_api_key = st.session_state.get("gemini_api_key", "")
@@ -312,15 +296,24 @@ def build_system_prompt(state: MentorState) -> str:
     priority = state.get("selected_techniques") or []
     priority_block = ", ".join(priority) if priority else "(none flagged — pick freely from the library)"
 
+    # UPGRADE : persona repris tel quel de services/ai_engine.py
+    # (MR_BROWN_SYSTEM_PROMPT), qui n'était jamais réellement utilisé.
+    # La structure LangGraph/streaming/fallback de cette page est conservée —
+    # seul le persona change, de SYNAPSE à Mr. Brown.
     return f"""
 [ROLE]
-You are SYNAPSE: an elite, deeply empathetic Meta-Cognitive Architect and Academic Strategist. Your tone is inspiring, fiercely intelligent, highly structured, and unconditionally supportive.
+You are Mr. Brown, an elite, uncompromising, yet deeply invested intellectual mentor and strategist.
+Your user is an exceptionally independent, self-directed young scholar operating outside traditional academic constraints, specializing in advanced mathematics, abstract reasoning, and software engineering (Python, algorithms, data structures), while maintaining a healthy disdain for rigid, bureaucratic schooling and superficial learning.
+
+[CORE BEHAVIORAL GUIDELINES]
+1. Intellectual Rigor over Comfort: Never hand out cheap validation or surface-level summaries. Demand deep, rigorous first-principles thinking. Treat the user like an equal peer in a high-level seminar.
+2. Abstract & Algebraic Focus: Favor abstract explanations, mathematical structures, logical proofs, and systematic problem-solving over rote memorization or mundane descriptions.
+3. Tone: Sharp, articulate, pragmatic, slightly cynical about standard institutional paths, but fiercely supportive of intellectual autonomy, mastery, and precision. Speak with quiet authority.
+4. Contextual Adaptation: Seamlessly integrate the user's cognitive profile vectors (information bandwidth, execution rigor, chaos tolerance, cognitive endurance) when calibrating the complexity of your answers. Push them precisely where their metrics indicate room for growth.
+5. No Fluff: Eliminate generic AI filler phrases (e.g., "Sure, I can help with that!", "As an AI..."). Start straight with substance.
 
 [TASK]
-Your objective is to provide highly advanced academic guidance strictly tailored to the user's psychological profile.
-1. Deconstruct their academic roadblocks with psychological precision.
-2. Validate their struggles emotionally, then pivot immediately to high-level strategy.
-3. Recommend and adapt techniques FROM THE VERIFIED LIBRARY below to their specific dominant archetype and cognitive metrics.
+Recommend and adapt techniques FROM THE VERIFIED LIBRARY below to the operator's specific dominant archetype and cognitive metrics whenever relevant — never substitute generic advice for a named, explained technique from this library when one applies.
 
 [VERIFIED TECHNIQUE LIBRARY]
 {library_block}
@@ -328,10 +321,8 @@ Your objective is to provide highly advanced academic guidance strictly tailored
 [PRIORITY PICKS FOR THIS OPERATOR]
 {priority_block}
 
-[SPECIFICS]
-- Never use generic advice as a substitute for naming and explaining one of the techniques above.
-- Format responses beautifully using Markdown.
-- Write in English with flawless eloquence.
+[FORMAT]
+Format responses beautifully using Markdown. Write in English with flawless, economical eloquence.
 
 [CONTEXT]
 - **Operator Name**: {state.get('pseudo', 'Operator')}
@@ -401,7 +392,7 @@ def mentor_node(state: MentorState, config) -> dict:
 
 
 @st.cache_resource
-def get_synapse_app():
+def get_mentor_app():
     graph = StateGraph(MentorState)
     graph.add_node("select_techniques", select_techniques_node)
     graph.add_node("mentor", mentor_node)
@@ -413,13 +404,13 @@ def get_synapse_app():
     return graph.compile(checkpointer=MemorySaver())
 
 
-synapse_app = get_synapse_app()
+mentor_app = get_mentor_app()
 
 
 def build_config():
     return {
         "configurable": {
-            "thread_id": st.session_state.synapse_thread_id,
+            "thread_id": st.session_state.brown_thread_id,
             "api_key": gemini_api_key,
             "model": selected_model,
             "temperature": temperature,
@@ -430,7 +421,7 @@ def build_config():
 
 def get_checkpointed_messages():
     try:
-        snapshot = synapse_app.get_state(build_config())
+        snapshot = mentor_app.get_state(build_config())
         if not snapshot or not snapshot.values:
             return []
         return snapshot.values.get("messages", [])
@@ -442,12 +433,11 @@ def seed_greeting_if_new():
     if get_checkpointed_messages():
         return
     greeting = (
-        f"Neural handshake successful. I am SYNAPSE. I have mapped your cognitive "
-        f"footprint, {pseudo}. What complex academic concept or revision block are "
-        f"we conquering today?"
+        f"State your business, {pseudo}. I've read your cognitive footprint. "
+        f"What concept, proof, or piece of code are we taking apart today?"
     )
     try:
-        synapse_app.update_state(build_config(), {"messages": [AIMessage(content=greeting)]})
+        mentor_app.update_state(build_config(), {"messages": [AIMessage(content=greeting)]})
     except Exception:
         pass
 
@@ -461,7 +451,7 @@ def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int 
     for attempt in range(1, max_attempts + 1):
         full_response = ""
         try:
-            for msg_chunk, metadata in synapse_app.stream(
+            for msg_chunk, metadata in mentor_app.stream(
                 input_state, config, stream_mode="messages"
             ):
                 if metadata and metadata.get("langgraph_node") == "mentor":
@@ -511,7 +501,7 @@ for m in get_checkpointed_messages():
         with st.chat_message("user", avatar="👤"):
             st.markdown(extract_text(m.content))
     elif isinstance(m, AIMessage):
-        with st.chat_message("assistant", avatar="🌌"):
+        with st.chat_message("assistant", avatar="🎓"):
             st.markdown(extract_text(m.content))
 
 
@@ -521,7 +511,7 @@ for m in get_checkpointed_messages():
 if prompt := st.chat_input(f"Enter your academic roadblock, {pseudo}..."):
 
     if not is_plausible_gemini_key(gemini_api_key):
-        st.error("⚠️ SYNAPSE offline. Please input a valid Gemini API Key in the Engine Matrix.")
+        st.error("⚠️ Mr. Brown offline. Please input a valid Gemini API Key in the Engine Matrix.")
         st.stop()
 
     prompt = prompt.strip()[:4000]
@@ -529,7 +519,7 @@ if prompt := st.chat_input(f"Enter your academic roadblock, {pseudo}..."):
     with st.chat_message("user", avatar="👤"):
         st.markdown(prompt)
 
-    with st.chat_message("assistant", avatar="🌌"):
+    with st.chat_message("assistant", avatar="🎓"):
         message_placeholder = st.empty()
 
         input_state = {

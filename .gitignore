@@ -1,2 +1,7 @@
 # Ignore Streamlit local secrets
 .streamlit/secrets.toml
+
+toolsandtests/full_code.txt
+toolsandtests/wholecode.py
+__pycache__/
+*.pyc

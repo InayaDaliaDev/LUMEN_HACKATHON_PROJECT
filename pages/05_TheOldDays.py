@@ -3,21 +3,9 @@ import time
 import re
 import uuid
 from typing import Annotated, TypedDict
-
-def extract_text(content) -> str:
-    """Extrait de manière sécurisée uniquement le texte affichable d'un message LLM,
-    en filtrant les blocs internes ou structures complexes."""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts = []
-        for block in content:
-            if isinstance(block, str):
-                parts.append(block)
-            elif isinstance(block, dict) and block.get("type", "text") == "text":
-                parts.append(block.get("text", ""))
-        return "".join(parts)
-    return str(content) if content else ""
+# UPGRADE : extract_text() et is_plausible_gemini_key() vivent maintenant dans
+# core/utils.py au lieu d'être dupliquées dans chaque page IA.
+from core.utils import extract_text, is_plausible_gemini_key
 
 # ==============================================================================
 # 0. HARDENED DEPENDENCY INJECTION & SAFETY CHECKS
@@ -44,7 +32,9 @@ try:
 except ImportError:
     HAS_GOOGLE_EXCEPTIONS = False
 
-st.set_page_config(page_title="Chronos // Multiverse Engine", page_icon="⏳", layout="wide")
+# FIX: st.set_page_config() retiré — déjà appelé une fois dans lumen_app.py.
+# Un second appel ici levait une StreamlitAPIException à chaque navigation
+# vers cette page.
 
 
 # ==============================================================================
@@ -178,10 +168,9 @@ st.divider()
 
 with st.sidebar:
     st.markdown("### 🎛️ Engine Matrix (Gemini API)")
-    
-    if "gemini_api_key" not in st.session_state:
-        st.session_state.gemini_api_key = st.secrets.get("GEMINI_API_KEY", "")
 
+    # UPGRADE : gemini_api_key est déjà initialisée par
+    # core.centralstate.init_session_state() — plus besoin du bloc manuel ici.
     st.session_state.gemini_api_key = st.text_input(
         "Gemini Authentication Key:",
         value=st.session_state.get("gemini_api_key", ""),
@@ -277,7 +266,7 @@ for m in get_checkpointed_messages():
             st.markdown(extract_text(m.content))
 
 if prompt := st.chat_input("Interact with the simulation timeline..."):
-    if not gemini_api_key or len(gemini_api_key) < 20:
+    if not is_plausible_gemini_key(gemini_api_key):
         st.error("⚠️ CHRONOS offline. Please input a valid Gemini API Key in the sidebar.")
         st.stop()
 
