@@ -5,8 +5,7 @@ from core.disclaimer import render_lumen_disclaimer
 # 1. Initialisation de l'état
 init_session_state()
 
-# 2. Affichage du disclaimer tout en haut de la page principale
-render_lumen_disclaimer()
+
 # ------------------------------------------------------------------------------
 # 1. PAGE CONFIGURATION
 # ------------------------------------------------------------------------------
@@ -31,6 +30,7 @@ st.set_page_config(
 # 3. HOME / INTRODUCTION VIEW
 # ------------------------------------------------------------------------------
 def home_view():
+    render_lumen_disclaimer()
     st.title("👋 Welcome to Lumen")
     st.subheader("We need to know who we're talking to. Set up your profile before diving in.")
 

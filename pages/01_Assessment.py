@@ -172,16 +172,16 @@ for item in rendered_advices:
         st.info(f"**Directive:** {item['advice']}")
 
 st.write("")
-st.write("")
+bash
 
+cat << 'EOF'
 nav_col1, nav_col2 = st.columns(2)
 with nav_col1:
     if st.session_state.flags.get("chatbot_unlocked"):
         st.success("🔓 AI Mentor unlocked.")
-        # FIX: pointait vers "pages/Chatbot.py" (inexistant) -> le vrai fichier est 03_Mr.Brown.py
-        if st.button("Talk to SYNAPSE 🤖", type="primary", use_container_width=True):
+        if st.button("Talk to Mr. Brown 🤖", use_container_width=True):
             st.switch_page("pages/03_Mr.Brown.py")
 with nav_col2:
-    # FIX: pointait vers "pages/Advices.py" (inexistant) -> le vrai fichier est 02_Advices.py
-    if st.button("See the full Builder Blueprint 🧬", use_container_width=True):
+    if st.button("See the full Builder Blueprint 🧬", type="primary", use_container_width=True):
         st.switch_page("pages/02_Advices.py")
+EOF

@@ -5,1230 +5,780 @@
 # NOTE: 'vectors' are internal app weights, not a scientifically validated
 # psychometric scale. Advice text intentionally avoids diagnostic/clinical
 # language.
-
+#
+# ALL_QUESTIONS est une liste de 24 dictionnaires.
+# ==============================================================================
+# ==============================================================================
+# DEV SHORTCUT (test uniquement — a retirer ou cacher avant la vraie demo jury)
+# ==============================================================================
+from turtle import st
+            
 ALL_QUESTIONS = [
+    # ---------- Questions 1 à 12 ----------
     {
         "id": "q1",
         "section": "Phase 01: The Execution Engine",
-        "question": "You’re facing an overwhelming exam or thesis deadline in 14 days. Your energy is low and the pressure is rising. What do you do?",
+        "question": "It's 11pm, you have a huge deadline in 14 days, and you're running on fumes. Be honest about the FIRST thing you actually do - not what you think you should do.",
         "options": {
             "A": {
-                "text": "I force myself to map out every single day into precise study blocks, sticking to the structure to keep my anxiety at bay.",
-                "label": "ORDERLY ARCHITECT",
-                "advice": "Structuring your time this tightly is a real strength, but watch the line between planning and actually learning: two hours building a perfect schedule can feel productive while your brain hasn't touched the material yet. Next time, deliberately make the plan a little messy and move faster into real practice — that's where the learning actually happens.",
-                "vectors": {
-                    "information_bandwidth": 1.5,
-                    "execution_rigor": 2.0,
-                    "chaos_tolerance": -0.5,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "I open a planner and block out all 14 days hour by hour before I let myself touch the actual work.",
+                "label": "THE BLUEPRINT BUILDER",
+                "advice": "Building the perfect schedule feels productive and calms the panic fast - but a flawless plan with zero work done is still zero work done. This is a form of present-bias: planning feels like progress because it's easier than starting. Cap planning at 15 minutes, then force the first real block of work before the plan gets 'perfect'.",
+                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 2.0, "chaos_tolerance": -0.5, "cognitive_endurance": 1.5}
             },
             "B": {
-                "text": "I freeze or distract myself for 12 days, relying on a brutal, adrenaline-fueled 36-hour all-nighter right before the deadline. I am a procrastinator, but I thrive under extreme pressure!",
-                "label": "PRESSURE SPRINTER",
-                "advice": "You can produce real focus under pressure, and that's a genuine skill. The issue isn't time management — it's starting something when success isn't guaranteed, and cramming rarely leaves anything in long-term memory. Next time, commit to just five minutes on the task with no goal of finishing it — that's usually enough to break the initial resistance.",
-                "vectors": {
-                    "information_bandwidth": 0.5,
-                    "execution_rigor": -1.0,
-                    "chaos_tolerance": 2.0,
-                    "cognitive_endurance": 0.5
-                }
+                "text": "I close the laptop, tell myself '13 days is basically 14', and go do literally anything else.",
+                "label": "THE DISCOUNTER",
+                "advice": "This is textbook hyperbolic discounting: a reward 13 days away feels almost worthless compared to comfort right now, so your brain treats the deadline as fake until it isn't. Cramming can produce a result, but it skips the spacing effect that actually builds long-term memory. Try committing to just 10 minutes tonight, with permission to stop after - most resistance breaks in the first 5.",
+                "vectors": {"information_bandwidth": 0.5, "execution_rigor": -1.0, "chaos_tolerance": 2.0, "cognitive_endurance": 0.5}
             },
             "C": {
-                "text": "I spend days obsessing over finding the 'best' study methodology, gathering endless resources, and feeling too paralyzed to actually start.",
-                "label": "SYSTEMIC PERFECTIONIST",
-                "advice": "Looking for the 'best' method comes from a good place, but it can quietly become a way to delay facing the material, where getting something wrong feels risky. Give yourself permission to write a rough, imperfect first attempt — a flawed method you actually use beats a perfect one you never try.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": 1.5,
-                    "chaos_tolerance": -1.5,
-                    "cognitive_endurance": 0.0
-                }
+                "text": "I spend two hours watching 'how to study effectively' videos, convinced I just haven't found the right method yet.",
+                "label": "THE METHOD SHOPPER",
+                "advice": "Searching for the perfect method can quietly become a socially-acceptable form of procrastination - it feels like effort, but it never touches the actual material, so it never risks being wrong. Pick literally any reasonable method in the next 5 minutes and start; you can switch tomorrow if it's bad. A mediocre method used today beats a perfect one you're still researching in three days.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.5, "chaos_tolerance": -1.5, "cognitive_endurance": 0.0}
             },
             "D": {
-                "text": "I jump randomly between subjects whenever I get bored, following my curiosity rather than any linear study guide.",
-                "label": "CHAOS ENGINE",
-                "advice": "Your brain grasps big ideas fast through novelty, but topics that need repetition lose you quickly. That's not a lack of discipline, it's a real need for stimulation. Try 25-minute timed sprints on a single subject before switching — it gives you an external constraint without having to fight the urge to jump around alone.",
-                "vectors": {
-                    "information_bandwidth": 1.0,
-                    "execution_rigor": -1.5,
-                    "chaos_tolerance": 2.5,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "I start on the deadline, get bored in 20 minutes, and end up reorganizing something completely unrelated instead.",
+                "label": "THE SIDETRACK ENGINE",
+                "advice": "Low-stakes, novel tasks (reorganizing, tidying, random research) release a small dopamine hit that the actual deadline can't compete with yet - it's not weak willpower, it's a stimulation mismatch. Set a 25-minute timer on the real task with the sidetrack activity as the explicit reward after, so the dopamine loop works for you instead of against you.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": -1.5, "chaos_tolerance": 2.5, "cognitive_endurance": 1.0}
             }
         }
     },
     {
         "id": "q2",
         "section": "Category 01: Attention Architecture",
-        "question": "You are sitting down for a mandatory 4-hour self-study session on a dry, dense topic. How does your attention span naturally unfold over time?",
+        "question": "Four hours, one dry topic, mandatory. Describe - precisely - what your attention actually does over those four hours, not what you wish it did.",
         "options": {
             "A": {
-                "text": "I lock in instantly for 3 hours straight, completely losing track of time, physical posture, and bodily needs until the entire module is finished.",
-                "label": "HYPERFOCUS ISOLATIONIST",
-                "advice": "You can go deep into a subject for hours, and that's valuable. The flip side is ignoring fatigue signals until you crash. Set an alarm every 90 minutes for a 5-minute break — not to break your focus, but to make it last.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": 1.0,
-                    "chaos_tolerance": -0.5,
-                    "cognitive_endurance": 2.0
-                }
+                "text": "I vanish into it for 3 hours straight and only resurface because my back is screaming or I realize I never ate lunch.",
+                "label": "THE INTEROCEPTIVE BLACKOUT",
+                "advice": "You can sustain deep, uninterrupted focus for hours - a genuinely rare skill - but the cost is losing track of your own body's signals (hunger, posture, fatigue) while it's happening. This isn't discipline, it's a narrowing of attentional bandwidth that crowds out interoception. Set a silent 90-minute alarm - not to stop you, just to force one body-check.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.0, "chaos_tolerance": -0.5, "cognitive_endurance": 2.0}
             },
             "B": {
-                "text": "My mind begins drifting after 20 minutes unless I am constantly switching tasks, pacing around the room, or playing ambient background sound.",
-                "label": "STIMULUS-SEEKING EXPLORER",
-                "advice": "Your attention needs movement and novelty to stay active — that's not a lack of willpower, just how you're wired. Passive reading will almost never work for you. Turn chapters into quick self-quizzes, and give yourself permission to move physically between 15-minute sprints.",
-                "vectors": {
-                    "information_bandwidth": 0.5,
-                    "execution_rigor": -1.5,
-                    "chaos_tolerance": 2.0,
-                    "cognitive_endurance": -0.5
-                }
+                "text": "Sharp for maybe 18 minutes, then I need to get up, switch tabs, or touch something else before I can come back.",
+                "label": "THE STIMULATION CYCLER",
+                "advice": "Your attentional system needs a higher baseline of novelty to stay engaged - passive, unchanging input reads as 'nothing happening' to your brain and it looks elsewhere. This tracks with what attention researchers call low tonic arousal needing external stimulation to reach an optimal level. Break the topic into self-quiz sprints every 15 minutes instead of one continuous block - you're not broken, you're just running on a shorter clock.",
+                "vectors": {"information_bandwidth": 0.5, "execution_rigor": -1.5, "chaos_tolerance": 2.0, "cognitive_endurance": -0.5}
             },
             "C": {
-                "text": "I can comfortably sustain focus for 45 to 60 minutes at a time, but only if I have a clear syllabus and zero unexpected interruptions.",
-                "label": "SYSTEMIC PLANNER",
-                "advice": "You hold focus well as long as the setup is clear and predictable — that's real stability. Your weak point is the unexpected: a noise, a vague instruction, a shift in plan throws you off more than fatigue does. Prep your space in advance, but also practice absorbing a small surprise without stopping everything.",
-                "vectors": {
-                    "information_bandwidth": 1.0,
-                    "execution_rigor": 2.0,
-                    "chaos_tolerance": -1.5,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "Rock solid for 45-60 minutes, but one unexpected interruption and I basically have to restart my whole engine from zero.",
+                "label": "THE PREDICTABILITY-LOCKED FOCUSER",
+                "advice": "Your focus is genuinely strong - it just runs on predictability, not just willpower. An unplanned interruption doesn't just cost you the interruption's length, it resets your whole attentional state, which is disproportionate to the actual disruption. Practice absorbing tiny planned surprises (a 30-second interruption you set up yourself) to build tolerance before an exam room does it for you.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 2.0, "chaos_tolerance": -1.5, "cognitive_endurance": 1.5}
             },
             "D": {
-                "text": "I struggle to focus at all in total isolation, but my attention skyrockets the moment I am discussing the material out loud or studying near others.",
-                "label": "SOCIAL CATALYST",
-                "advice": "You retain information better when it passes through a conversation — working alone in silence drains your motivation. That's not a weakness, your brain just processes things better out loud. Actively look for a study partner or small group instead of a quiet library corner: it will genuinely work better for you.",
-                "vectors": {
-                    "information_bandwidth": 1.5,
-                    "execution_rigor": -0.5,
-                    "chaos_tolerance": 1.5,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "I can barely hold 5 minutes alone, but the second I'm explaining it to someone out loud, I could go for hours.",
+                "label": "THE CO-REGULATED THINKER",
+                "advice": "Silent solo reading probably feels close to impossible for you, and that's not a motivation problem - your attention is externally scaffolded by dialogue. Talking activates a different, more engaged processing mode than passive intake does. Stop fighting this: actively recruit a study partner or record yourself explaining the material out loud, instead of forcing solo silence that was never going to work.",
+                "vectors": {"information_bandwidth": 1.5, "execution_rigor": -0.5, "chaos_tolerance": 1.5, "cognitive_endurance": 1.0}
             }
         }
     },
     {
         "id": "q3",
         "section": "Category 02: Processing Channels",
-        "question": "You are handed an abstract, theoretical concept with zero real-world examples. What is your mind's immediate translation mechanism?",
+        "question": "Someone hands you a dense, abstract concept with zero real-world example attached. Before you even try to understand the CONTENT, what does your brain do with the FORM of it?",
         "options": {
             "A": {
-                "text": "I instantly translate the theory into visual structures—spatial diagrams, color-coded hierarchies, or mental flowcharts.",
-                "label": "VISUO-SPATIAL ARCHITECT",
-                "advice": "You naturally turn abstract ideas into visual structures, which gives you a fast overview. The trap: assessments usually want a precise written or spoken explanation, not a diagram. After sketching it out, force yourself to restate it in a full sentence, as if explaining it with no drawing allowed.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": 1.5,
-                    "chaos_tolerance": 0.0,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "It instantly becomes a diagram in my head - boxes, arrows, spatial layout - before I've processed a single word of actual meaning.",
+                "label": "THE SPATIAL ENCODER",
+                "advice": "You're running what dual coding theory calls the visuospatial channel first - turning meaning into structure gives you a fast overview. The trap: most grading rubrics want a precise written or spoken explanation, not a diagram. After you sketch it, force a full verbal restatement with the drawing hidden - that's the version an exam will actually ask for.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.5, "chaos_tolerance": 0.0, "cognitive_endurance": 1.0}
             },
             "B": {
-                "text": "I need to talk through the logic out loud, record myself explaining it, or debate the steps sequentially until it sounds right.",
-                "label": "AUDITORY SEQUENCER",
-                "advice": "A concept doesn't feel real to you until you can say it out loud or debate it — silent reading is probably your worst method. Record yourself explaining it to an imaginary audience, or find a group where debate is welcome. In a silent exam, run an internal monologue that walks through the logic step by step.",
-                "vectors": {
-                    "information_bandwidth": 1.0,
-                    "execution_rigor": 0.5,
-                    "chaos_tolerance": 0.5,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "It doesn't feel real until I've said it out loud, argued about it, or heard my own voice explaining the logic step by step.",
+                "label": "THE VERBAL-SEQUENTIAL PROCESSOR",
+                "advice": "You're running the phonological/verbal channel - a concept only 'locks in' once it's been spoken and sequenced, not just read. Silent reading is probably your least effective method, even though it's the one school assumes everyone uses. Record yourself explaining it as if to someone who knows nothing, or run an internal monologue during silent exams to simulate the process.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 0.5, "chaos_tolerance": 0.5, "cognitive_endurance": 1.5}
             },
             "C": {
-                "text": "I cannot grasp it theoretically; I have to physically write out problems by hand, manipulate tangible variables, or build a concrete model.",
-                "label": "KINESTHETIC PRAGMATIST",
-                "advice": "You need to physically handle things — write by hand, build, test — before an abstract idea becomes real to you. Typing or passive reading leaves little trace. Keep a physical notepad within reach, and move from theory to practice as fast as you can.",
-                "vectors": {
-                    "information_bandwidth": 0.0,
-                    "execution_rigor": 1.0,
-                    "chaos_tolerance": 1.0,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "Nothing happens until my hands are physically doing something with it - writing it out, building a model, moving pieces around.",
+                "label": "THE MANIPULATIVE ENCODER",
+                "advice": "Typing or passively reading probably leaves almost no trace for you - you need motor engagement (writing by hand, building, physically testing) to convert theory into something real. Keep a physical notepad within arm's reach at all times, and shorten the gap between 'theory' and 'hands-on practice' as much as you can.",
+                "vectors": {"information_bandwidth": 0.0, "execution_rigor": 1.0, "chaos_tolerance": 1.0, "cognitive_endurance": 1.0}
             },
             "D": {
-                "text": "I look for underlying patterns and intuitive metaphors, connecting the concept to totally different fields or real-life analogies.",
-                "label": "LATERAL SYNTHESIZER",
-                "advice": "You connect a concept to other fields through metaphor, which gives you a fast, creative grip on it. Just remember that grading rubrics rarely accept a nice analogy instead of the exact expected definition. Use your metaphor to understand it, then still learn the precise academic wording for the exam.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": -1.5,
-                    "chaos_tolerance": 2.0,
-                    "cognitive_endurance": 0.5
-                }
+                "text": "I immediately go 'oh, this is basically like [totally unrelated thing]' and understand it through that comparison instead of the actual definition.",
+                "label": "THE ANALOGICAL MAPPER",
+                "advice": "You default to metaphor and cross-domain pattern-matching - a fast, creative way in, but grading rubrics almost never accept 'it's kind of like X' instead of the precise expected wording. Use your analogy to build real understanding, then explicitly translate it back into the exact academic phrasing before the exam - the two steps aren't optional, they're sequential.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": -1.5, "chaos_tolerance": 2.0, "cognitive_endurance": 0.5}
             }
         }
     },
     {
         "id": "q4",
         "section": "Category 03: Executive Regulation",
-        "question": "You have a major assignment due in two weeks, but the prompt is extremely vague and open-ended. What triggers your initial delay or action?",
+        "question": "A teacher assigns a project with genuinely no fixed criteria - no rubric, no example, no 'right shape'. There's no deadline pressure yet, just pure open-endedness. What's your gut reaction to the ambiguity itself?",
         "options": {
             "A": {
-                "text": "I delay starting because the lack of clear criteria triggers intense perfectionist anxiety—I fear wasting effort on the wrong direction.",
-                "label": "PERFECTIONIST FREEZER",
-                "advice": "This isn't laziness: the lack of clear criteria triggers real fear of aiming in the wrong direction, and that delays starting. Lower the stakes on purpose by giving yourself permission to write a deliberately rough first draft — its only job is to give you raw material to improve later, not to be good right away.",
-                "vectors": {
-                    "information_bandwidth": 1.0,
-                    "execution_rigor": 2.0,
-                    "chaos_tolerance": -2.0,
-                    "cognitive_endurance": -0.5
-                }
+                "text": "I latch onto the very first interpretation that comes to mind and commit hard, mostly just to make the uncertainty stop.",
+                "label": "THE PREMATURE CLOSER",
+                "advice": "This matches what psychologists call a high need for closure - an open question feels genuinely uncomfortable, so you grab the first 'good enough' answer to end the discomfort, sometimes before better options surface. Force yourself to write down two alternative interpretations before committing to one - you don't have to pick them, just prove to yourself they existed.",
+                "vectors": {"information_bandwidth": -0.5, "execution_rigor": 1.0, "chaos_tolerance": -0.5, "cognitive_endurance": 0.5}
             },
             "B": {
-                "text": "I put it off simply because it's boring, only working when the panic of an impending deadline creates enough dopamine to force action.",
-                "label": "REACTIVE SPRINTER",
-                "advice": "You rely on urgency to get moving, and it works short-term — but it caps how deeply you can actually learn, since solid memory isn't built in 24 hours of panic. Try setting artificial mini-deadlines with a friend or teacher well before the real one, to trigger action earlier without burning out.",
-                "vectors": {
-                    "information_bandwidth": -0.5,
-                    "execution_rigor": -1.5,
-                    "chaos_tolerance": 2.0,
-                    "cognitive_endurance": 0.5
-                }
+                "text": "I genuinely enjoy sitting with it unresolved for a while, turning it over from a few angles before committing to anything.",
+                "label": "THE AMBIGUITY-TOLERANT EXPLORER",
+                "advice": "You have a real capacity to tolerate an unresolved question without rushing to close it - this is a documented trait (ambiguity tolerance) that correlates with more original, better-integrated solutions. The only failure mode is letting 'exploring' quietly become 'never deciding' - give the exploration phase a hard end date, even a generous one.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 0.5, "chaos_tolerance": 1.5, "cognitive_endurance": 1.5}
             },
             "C": {
-                "text": "I break the ambiguous prompt down into structured sub-tasks and create my own rigid operational framework before writing anything.",
-                "label": "SYSTEMIC PLANNER",
-                "advice": "You handle ambiguity well by imposing your own structure on it — a real organizational strength. The risk is spending 80% of your time polishing the plan and only 20% actually producing. Set a hard time limit on the planning phase, then move to execution even if the plan isn't perfect yet.",
-                "vectors": {
-                    "information_bandwidth": 1.5,
-                    "execution_rigor": 2.0,
-                    "chaos_tolerance": 0.0,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "I spend way more energy trying to guess what the teacher secretly wants than actually exploring what I think is interesting.",
+                "label": "THE INTENT-DECODER",
+                "advice": "You're solving a different problem than the one assigned: 'what will satisfy the evaluator' instead of 'what's the best answer'. That's a real skill in reading hidden expectations, but it can quietly override your own judgment before you've even tried it. When the criteria are truly open, deliberately protect 20% of the project for the version you'd build if grades didn't exist.",
+                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 2.0, "chaos_tolerance": -1.0, "cognitive_endurance": 1.0}
             },
             "D": {
-                "text": "I start exploring three radically different interpretations at once, enjoying the freedom until I am forced to pick one at the last minute.",
-                "label": "HYPERACTIVE EXPLORER",
-                "advice": "You explore several directions at once with real creativity, which generates original ideas. The danger is spreading your time across too many paths and having to rush everything together at the end. Set an early limit on how many directions you chase in parallel (two max), to leave room to actually finish.",
-                "vectors": {
-                    "information_bandwidth": 2.5,
-                    "execution_rigor": -2.0,
-                    "chaos_tolerance": 2.5,
-                    "cognitive_endurance": 0.0
-                }
+                "text": "Total freeze. No fixed shape to react against means I genuinely don't know where to even start.",
+                "label": "THE STRUCTURE-DEPENDENT STARTER",
+                "advice": "Without an external structure to push against, you don't have a natural starting point - this isn't a lack of ideas, it's a missing anchor. Manufacture a fake constraint before you start (a page limit, a due-tomorrow mini-version, a random format) - an artificial rule is often enough to unlock movement when a real one isn't there.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 1.5, "chaos_tolerance": -2.0, "cognitive_endurance": -0.5}
             }
         }
     },
     {
         "id": "q5",
         "section": "Category 03: Executive Regulation",
-        "question": "Midway through solving a complex problem or writing a long paper, your initial strategy completely falls apart. How do you pivot?",
+        "question": "Halfway through a long paper or a complex problem, your original strategy completely falls apart. What happens in the next five minutes?",
         "options": {
             "A": {
-                "text": "I feel deeply demoralized, wipe the slate clean, and start from step one with a completely new methodical framework.",
-                "label": "SYSTEMIC PLANNER",
-                "advice": "Wiping the slate clean and starting fresh feels reassuring when a plan collapses, but it costs you real time. Try instead to spot what's still usable in your previous work — a partial failure isn't a total one.",
-                "vectors": {
-                    "information_bandwidth": 1.0,
-                    "execution_rigor": 1.5,
-                    "chaos_tolerance": -1.5,
-                    "cognitive_endurance": 0.5
-                }
+                "text": "I feel like everything up to this point is now worthless, and I want to wipe it and start over from a totally clean plan.",
+                "label": "THE RESET REFLEX",
+                "advice": "Starting over feels reassuring - a clean plan promises to fix what the old one couldn't - but it usually costs more time than it saves, and it treats a partial failure as a total one. Before deleting anything, force yourself to list three things from the broken attempt that are still usable. There's almost always more salvageable material than the panic suggests.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 1.5, "chaos_tolerance": -1.5, "cognitive_endurance": 0.5}
             },
             "B": {
-                "text": "I don't panic at all—I immediately patch together a quick, improvised alternative using whatever partial data or logic I have on hand.",
-                "label": "EMPIRICAL PRAGMATIST",
-                "advice": "You adapt well under pressure without panicking, patching together a working solution from whatever you have — a genuine strength. The flip side is that quick fixes can hide an unresolved underlying issue. Once the fire's out, take a few minutes to understand why the original plan broke, so it doesn't happen again.",
-                "vectors": {
-                    "information_bandwidth": 0.0,
-                    "execution_rigor": -1.0,
-                    "chaos_tolerance": 2.0,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "No real panic - I just duct-tape together whatever partial logic or data I already have into something that works well enough.",
+                "label": "THE IMPROVISED PATCHER",
+                "advice": "You adapt under pressure without losing momentum, which is a genuinely strong trait under real deadlines. The risk is that a quick patch can hide the actual reason the original plan broke, so the same failure can quietly resurface later. Once the fire's out, spend five honest minutes diagnosing why it broke - not to redo the work, just to not repeat the mistake.",
+                "vectors": {"information_bandwidth": 0.0, "execution_rigor": -1.0, "chaos_tolerance": 2.0, "cognitive_endurance": 1.0}
             },
             "C": {
-                "text": "I freeze up completely, second-guessing my baseline intelligence and needing to step away for hours before I can face the problem again.",
-                "label": "PERFECTIONIST FREEZER",
-                "advice": "A mistake can hit harder than expected and make you need to step back before continuing — that's a human reaction. Try treating the error as neutral information about what didn't work, rather than a verdict on your ability: that's still the fastest path to real mastery.",
-                "vectors": {
-                    "information_bandwidth": 0.5,
-                    "execution_rigor": 1.0,
-                    "chaos_tolerance": -2.0,
-                    "cognitive_endurance": -1.0
-                }
+                "text": "It stops feeling like a strategy problem and starts feeling like proof I'm just not smart enough for this. I need to step away.",
+                "label": "THE COMPETENCE-THREAT RESPONDER",
+                "advice": "A collapsed plan is landing as a verdict on your ability, not as neutral information about a strategy that didn't pan out - that's an ego-involved reading of failure, and it makes stepping away feel necessary. Try relabeling the moment out loud as 'this approach failed', not 'I failed' - the distinction sounds small but changes what you do next.",
+                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 1.0, "chaos_tolerance": -2.0, "cognitive_endurance": -1.0}
             },
             "D": {
-                "text": "I view the failure as an exciting pivot point, using it as an excuse to take a radically creative, non-conventional detour.",
-                "label": "HYPERACTIVE EXPLORER",
-                "advice": "You bounce back from setbacks by exploring a completely different direction, which shows real creative resilience. Just check that the new path still answers the actual question being asked — originality only counts if it stays relevant to the assignment.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": -2.0,
-                    "chaos_tolerance": 2.5,
-                    "cognitive_endurance": 0.5
-                }
+                "text": "Honestly? I get a little excited - the collapse is an excuse to go try the weirder idea I was talked out of earlier.",
+                "label": "THE COLLAPSE OPPORTUNIST",
+                "advice": "You treat a broken plan as license to pivot toward something more original - a real form of resilience most people don't have. Just sanity-check that the new direction still answers the actual assignment; novelty only counts as a strength if it's still solving the right problem, not just a more interesting one.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": -2.0, "chaos_tolerance": 2.5, "cognitive_endurance": 0.5}
             }
         }
     },
     {
         "id": "q6",
         "section": "Category 04: Environment & Ecosystem",
-        "question": "You have spent 5 consecutive hours working in a bustling study group or crowded classroom. What state is your internal system in?",
+        "question": "Five straight hours in a loud, crowded study group or classroom. Walk away right now - what's your actual internal state, physically and mentally?",
         "options": {
             "A": {
-                "text": "I am completely drained and sensory-overloaded. I need immediate, silent isolation in a dark, quiet room to restore my energy.",
-                "label": "DEEP FOCUS ISOLATIONIST",
-                "advice": "Noise and crowding genuinely drain you — part of your brain's energy goes into filtering the environment, leaving less for actual thinking. That's not a preference to override: treat a quiet space as a real work tool, and noise-canceling headphones as worth the investment.",
-                "vectors": {
-                    "information_bandwidth": 1.5,
-                    "execution_rigor": 1.0,
-                    "chaos_tolerance": -2.0,
-                    "cognitive_endurance": -0.5
-                }
+                "text": "Completely wiped. I need silence and a dark, empty room immediately or I genuinely can't think straight.",
+                "label": "THE HIGH-AROUSAL DRAINEE",
+                "advice": "Under an arousal-based model of personality, your baseline nervous system arousal is already higher, so extra social/sensory input pushes you into overload faster than it would others - this isn't low stamina, it's a lower stimulation ceiling. Treat a quiet recovery window as a non-negotiable tool, the same way you'd treat sleep - not a nice-to-have.",
+                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 1.0, "chaos_tolerance": -2.0, "cognitive_endurance": -0.5}
             },
             "B": {
-                "text": "I feel highly energized and sharp—the social momentum and active exchanges kept my brain fully stimulated and awake.",
-                "label": "SOCIAL CATALYST",
-                "advice": "Group energy keeps you sharp and awake — it saves you from passive boredom. Just make sure those group sessions stay productive and not purely social: surround yourself with people who actually challenge you rather than distract you.",
-                "vectors": {
-                    "information_bandwidth": 0.5,
-                    "execution_rigor": -0.5,
-                    "chaos_tolerance": 1.5,
-                    "cognitive_endurance": 2.0
-                }
+                "text": "Weirdly more awake than when I started - the noise and back-and-forth actually kept my brain switched on the whole time.",
+                "label": "THE STIMULATION-SEEKER",
+                "advice": "Under the same arousal model, your baseline sits lower - external stimulation from people and noise actually pulls you up toward your optimal focus zone instead of overwhelming it. Just make sure the group stays substantively productive, not purely social, or the same stimulation that sharpens you can just as easily distract you.",
+                "vectors": {"information_bandwidth": 0.5, "execution_rigor": -0.5, "chaos_tolerance": 1.5, "cognitive_endurance": 2.0}
             },
             "C": {
-                "text": "I feel okay physically, but mentally frustrated if the group spent time on off-topic chatter instead of strictly executing the work.",
-                "label": "SYSTEMIC PLANNER",
-                "advice": "You judge an environment by how efficient it is, and off-topic chatter bothers you fast. That's a valuable discipline, but don't discount unstructured discussion entirely — some of the best insights come from a tangent. If you run a group, take on the role of timekeeper to stay on track without frustration.",
-                "vectors": {
-                    "information_bandwidth": 1.0,
-                    "execution_rigor": 2.0,
-                    "chaos_tolerance": -1.0,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "Physically fine, but genuinely annoyed if the group spent real time off-topic instead of just executing the work.",
+                "label": "THE EFFICIENCY GUARDIAN",
+                "advice": "You judge a shared environment almost entirely by output-per-minute, and off-topic drift registers as a real cost to you. That's a valuable discipline for group deadlines, but some genuinely useful insight comes from unstructured tangents - don't fully shut that door. If you lead groups, take the timekeeper role explicitly instead of getting quietly frustrated.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 2.0, "chaos_tolerance": -1.0, "cognitive_endurance": 1.0}
             },
             "D": {
-                "text": "I barely noticed the people or noise at all; I was locked inside my own head playing with ideas the entire time.",
-                "label": "HYPERFOCUS ISOLATIONIST",
-                "advice": "You have a real internal filter that keeps you focused even in noise or chaos — a rare skill. The trade-off is missing important announcements or a group decision because you tuned the environment out completely. Build in short check-ins to reconnect with what's happening around you.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": -1.0,
-                    "chaos_tolerance": 2.0,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "Honestly didn't clock the noise or the people at all - I was somewhere else in my head the entire five hours.",
+                "label": "THE INTERNAL-FILTER OPERATOR",
+                "advice": "You have an unusually strong ability to filter out ambient environment and stay locked inside your own reasoning - genuinely rare, and useful in chaotic settings. The cost is missing real-time information: an announcement, a group decision, a shift in plan. Build in a deliberate check-in every hour or so to resurface, on purpose.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": -1.0, "chaos_tolerance": 2.0, "cognitive_endurance": 1.5}
             }
         }
     },
     {
         "id": "q7",
         "section": "Category 04: Environment & Ecosystem",
-        "question": "If you could design your ideal academic framework, what ratio of external authority vs. personal autonomy would you demand?",
+        "question": "Design your ideal academic setup with total honesty. How much outside authority do you actually want telling you what to do and when?",
         "options": {
             "A": {
-                "text": "Complete autonomy (CNED / Independent study)—give me the full syllabus and exam dates, then leave me entirely alone to manage my time.",
-                "label": "AUTONOMOUS ARCHITECT",
-                "advice": "You need to control your own pace and resent being micromanaged — autonomy is what gets you moving. The risk of total freedom is the absence of outside feedback: without it, blind spots can build up without you noticing. Deliberately seek external checkpoints (a teacher, a mentor, a peer) to validate your progress now and then.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": 1.0,
-                    "chaos_tolerance": 0.5,
-                    "cognitive_endurance": 2.0
-                }
+                "text": "None. Give me the syllabus and the exam date, then disappear completely and let me manage every hour myself.",
+                "label": "THE AUTONOMY-MAXIMIZER",
+                "advice": "Self-determination theory identifies autonomy as one of three core psychological needs, and yours runs high - being micromanaged doesn't just annoy you, it actively kills your motivation. The real risk of total freedom is losing outside feedback: blind spots can build silently with no one to flag them. Deliberately seek out a mentor or peer check-in on a schedule you still control.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.0, "chaos_tolerance": 0.5, "cognitive_endurance": 2.0}
             },
             "B": {
-                "text": "A structured, highly disciplined environment with clear professor expectations, weekly mandatory deadlines, and strict accountability.",
-                "label": "SYSTEMIC PLANNER",
-                "advice": "You perform best inside a clear framework, with explicit expectations and fixed deadlines — structure is what makes you feel safe enough to focus. Without those guardrails, open-ended freedom can lead to decision fatigue. Look for structured programs, but also practice setting your own deadlines little by little to build autonomy.",
-                "vectors": {
-                    "information_bandwidth": 0.5,
-                    "execution_rigor": 2.5,
-                    "chaos_tolerance": -1.5,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "A lot, actually. Clear weekly deadlines and someone checking my work - without that I just drift.",
+                "label": "THE STRUCTURE-DEPENDENT",
+                "advice": "You perform best when the competence need from self-determination theory is met through visible, external checkpoints - structure isn't a crutch, it's literally what turns your effort on. Without those guardrails, decision fatigue eats your focus before the actual work starts. Seek structured environments, but also practice setting one small self-imposed deadline per week to slowly build the muscle.",
+                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 2.5, "chaos_tolerance": -1.5, "cognitive_endurance": 1.0}
             },
             "C": {
-                "text": "A mentorship-driven framework—a dedicated tutor or coach who provides high-level guidance, but lets me execute my own projects.",
-                "label": "SOCIAL CATALYST",
-                "advice": "You make the most progress with a mentor who guides you without locking you into rigid bureaucracy — you need quality feedback, not constant oversight. If your current setting is too institutional, actively seek out office hours or mentors who can offer that closer feedback loop.",
-                "vectors": {
-                    "information_bandwidth": 1.5,
-                    "execution_rigor": 0.5,
-                    "chaos_tolerance": 1.0,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "Someone in my corner who gives real guidance when I ask for it, but otherwise lets me run my own projects.",
+                "label": "THE MENTORSHIP-OPTIMIZER",
+                "advice": "You're optimizing for the relatedness need - high-quality, responsive feedback from one trusted person, without the bureaucratic overhead of constant oversight. If your current environment is too institutional to offer that, actively hunt for office hours or informal mentors instead of waiting for the system to provide one.",
+                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 0.5, "chaos_tolerance": 1.0, "cognitive_endurance": 1.5}
             },
             "D": {
-                "text": "A fast-paced, high-stakes competition model (Olympiads / Hackathons) where I am pushed to my limit by elite peers.",
-                "label": "COMPETITIVE SPRINTER",
-                "advice": "Competition and stakes push you to give your best — a slow academic pace bores you fast. That drive leads to real peak performances, but be careful not to turn every learning situation into a fight to win — it can wear you out over time.",
-                "vectors": {
-                    "information_bandwidth": 1.0,
-                    "execution_rigor": -0.5,
-                    "chaos_tolerance": 2.0,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "Almost adversarial, honestly - I want to be up against elite peers in something high-stakes, not just following instructions.",
+                "label": "THE COMPETITIVE-ARENA SEEKER",
+                "advice": "You're substituting authority with competition as your structuring force - stakes and rivalry generate the drive that a syllabus alone can't. That produces real peak performances, but turning every learning situation into a fight to win is exhausting to sustain long-term. Reserve the competitive framing for a few genuinely high-stakes moments, not everything.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": -0.5, "chaos_tolerance": 2.0, "cognitive_endurance": 1.0}
             }
         }
     },
     {
         "id": "q8",
         "section": "Category 04: Environment & Ecosystem",
-        "question": "How does your processing performance shift when you are exposed to micro-distractions (blaring light, background noise, messy desk)?",
+        "question": "Blaring light, background chatter, a messy desk - nothing dramatic, just low-level sensory noise. How much of your actual processing power does that quietly eat?",
         "options": {
             "A": {
-                "text": "My performance plummets. I waste huge amounts of cognitive energy feeling irritated by the environment, making deep work impossible.",
-                "label": "DEEP FOCUS ISOLATIONIST",
-                "advice": "Your brain processes background noise at nearly the same priority as the material itself, which makes chaotic spaces genuinely exhausting for you. That's not a discipline problem to fix: treat a quiet, tidy space as an essential tool, not an optional comfort.",
-                "vectors": {
-                    "information_bandwidth": 1.0,
-                    "execution_rigor": 1.5,
-                    "chaos_tolerance": -2.5,
-                    "cognitive_endurance": -0.5
-                }
+                "text": "A lot more than it should. I burn real energy just being irritated by the mess before I've done any actual work.",
+                "label": "THE HIGH-SENSITIVITY FILTER",
+                "advice": "This lines up with what's called sensory processing sensitivity - your nervous system processes background stimuli at nearly the same priority as the material itself, which is genuinely exhausting in chaotic spaces. This isn't a discipline gap to fix; a clean, quiet space is a real productivity tool for you, not an optional comfort.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 1.5, "chaos_tolerance": -2.5, "cognitive_endurance": -0.5}
             },
             "B": {
-                "text": "I actually need a baseline level of environmental activity—a coffee shop background or music—to keep my brain engaged.",
-                "label": "STIMULUS-SEEKING EXPLORER",
-                "advice": "Complete silence sometimes pushes you to generate your own internal distractions; a controlled background (music, café noise) actually helps you stay engaged. Keep using this, just make sure the background stays constant rather than becoming distracting itself.",
-                "vectors": {
-                    "information_bandwidth": 0.0,
-                    "execution_rigor": -1.0,
-                    "chaos_tolerance": 2.0,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "Basically none - if anything, dead silence is worse for me than a bit of background noise or music.",
+                "label": "THE BASELINE STIMULATION-SEEKER",
+                "advice": "Complete silence sometimes pushes low-arousal brains to manufacture their own internal distractions just to reach an engaging stimulation level - a controlled background actually helps you stay locked in. Keep using it, just make sure the background stays constant rather than becoming novel enough to distract you itself.",
+                "vectors": {"information_bandwidth": 0.0, "execution_rigor": -1.0, "chaos_tolerance": 2.0, "cognitive_endurance": 1.5}
             },
             "C": {
-                "text": "I am bothered by visual clutter, so I must clean, organize, and align my desk completely before I can process a single page.",
-                "label": "SYSTEMIC PLANNER",
-                "advice": "Visual clutter really weighs on you, and tidying up helps you get started. Just watch that this reset doesn't become a polished way of delaying the real work — cap it at two minutes before you dive in.",
-                "vectors": {
-                    "information_bandwidth": 0.5,
-                    "execution_rigor": 2.0,
-                    "chaos_tolerance": -1.5,
-                    "cognitive_endurance": 0.5
-                }
+                "text": "I can't touch the actual work until the visual mess is gone - desk cleared, tabs closed, everything aligned first.",
+                "label": "THE VISUAL-ORDER GATEKEEPER",
+                "advice": "Visual clutter genuinely weighs on your working memory before you've even started - tidying isn't stalling, it's clearing real cognitive load. Just cap the reset at two minutes; past that point it can quietly become a polished way of delaying work that has nothing to do with the desk.",
+                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 2.0, "chaos_tolerance": -1.5, "cognitive_endurance": 0.5}
             },
             "D": {
-                "text": "I possess complete sensory immunity. Once my brain finds an interesting problem, the physical world completely fades out.",
-                "label": "HYPERFOCUS ISOLATIONIST",
-                "advice": "Once you're locked into an interesting problem, the outside world disappears for you — a real asset in noisy or chaotic places. Keep an eye on your physical fatigue anyway: tuning out noise doesn't mean your body isn't absorbing stress from bad posture or lighting.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": -0.5,
-                    "chaos_tolerance": 2.5,
-                    "cognitive_endurance": 2.0
-                }
+                "text": "Zero. Once I lock onto something interesting, the physical world just stops registering entirely.",
+                "label": "THE PROBLEM-LOCKED PROCESSOR",
+                "advice": "Once genuinely engaged, external sensory noise fails to compete for your attention at all - a real asset in noisy or chaotic real-world settings. Just watch your physical state anyway: tuning out the room doesn't mean your body isn't quietly absorbing strain from bad posture or eye fatigue while you're locked in.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": -0.5, "chaos_tolerance": 2.5, "cognitive_endurance": 2.0}
             }
         }
     },
     {
         "id": "q9",
         "section": "Category 05: Motivational Engine",
-        "question": "What is the primary internal engine that keeps you studying late into the night when nobody is watching?",
+        "question": "It's late, nobody's checking, no grade is on the line tonight. What's the actual force still keeping you at the desk?",
         "options": {
             "A": {
-                "text": "Pure, unadulterated intellectual curiosity—I get obsessed with uncovering how the system works, regardless of grades.",
-                "label": "INTRINSIC ARCHITECT",
-                "advice": "You're driven by genuine curiosity — understanding how something works is motivation enough, grades aside. That's a real, sustainable energy. The risk is spending hours on fascinating but off-syllabus rabbit holes while neglecting the required basics. Remember that clearing the required work is what buys you the freedom to keep exploring what you actually love.",
-                "vectors": {
-                    "information_bandwidth": 2.5,
-                    "execution_rigor": 0.5,
-                    "chaos_tolerance": 1.0,
-                    "cognitive_endurance": 2.0
-                }
+                "text": "Pure curiosity about how the thing actually works underneath - the grade genuinely isn't part of the thought.",
+                "label": "THE INTRINSICALLY DRIVEN",
+                "advice": "This is intrinsic motivation in its clearest form - self-determination theory calls it the most durable kind of drive because it doesn't depend on anyone watching. The trap: hours can vanish into a fascinating but off-syllabus rabbit hole while the required basics wait. Remember that clearing the required work is what buys you the freedom to keep exploring what you love.",
+                "vectors": {"information_bandwidth": 2.5, "execution_rigor": 0.5, "chaos_tolerance": 1.0, "cognitive_endurance": 2.0}
             },
             "B": {
-                "text": "A relentless drive for performance, high ranking, and tangible proof that I am at the top of my field.",
-                "label": "COMPETITIVE SPRINTER",
-                "advice": "Ranking and recognition push you to perform, and that competitive drive gets real short-term results. Just be careful not to tie your whole confidence to a ranking or grade — a bad result or a stronger rival can hit hard. Try building an internal standard of excellence that doesn't depend on the scoreboard.",
-                "vectors": {
-                    "information_bandwidth": 0.5,
-                    "execution_rigor": 1.5,
-                    "chaos_tolerance": 0.5,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "Wanting tangible proof - a rank, a score, something visible - that I'm actually at the top of this.",
+                "label": "THE PERFORMANCE-ORIENTED",
+                "advice": "You're running on what achievement goal theory calls performance-approach motivation: proving relative competence to others. It produces real short-term results, but tying your whole confidence to a ranking makes a bad result - or a stronger rival - hit disproportionately hard. Try building an internal bar of quality that doesn't move with the scoreboard.",
+                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 1.5, "chaos_tolerance": 0.5, "cognitive_endurance": 1.0}
             },
             "C": {
-                "text": "The intense fear of failure or falling behind.",
-                "label": "ANXIETY DRIVER",
-                "advice": "Working from fear of failing or falling behind gets things done, but it's a costly, hard-to-sustain kind of fuel. Try to find one thing you're genuinely curious about in what you're studying, even something small — it can gradually become a steadier engine than fear.",
-                "vectors": {
-                    "information_bandwidth": 0.0,
-                    "execution_rigor": 1.0,
-                    "chaos_tolerance": -1.0,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "If I stop, the falling-behind feeling gets loud enough that continuing is honestly the easier option.",
+                "label": "THE AVOIDANCE-DRIVEN",
+                "advice": "This is fear-of-falling-behind fuel - it gets real work done, but it's an expensive kind of engine to run on night after night. Try to locate one genuinely interesting angle in what you're studying, however small; a sliver of real curiosity is a far more sustainable co-pilot than avoidance alone.",
+                "vectors": {"information_bandwidth": 0.0, "execution_rigor": 1.0, "chaos_tolerance": -1.0, "cognitive_endurance": 1.0}
             },
             "D": {
-                "text": "A desire to prove myself and push past my limits.",
-                "label": "SELF-OVERCOMER",
-                "advice": "Wanting to prove to yourself that you can push past your limits is a healthy, self-directed motivation, not dependent on anyone else's opinion. To keep it sustainable, set clear, reachable goals rather than a vague, ever-rising bar — otherwise this drive can wear you down too.",
-                "vectors": {
-                    "information_bandwidth": 1.0,
-                    "execution_rigor": 1.0,
-                    "chaos_tolerance": 0.0,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "Wanting to prove to MYSELF, specifically, that I can actually push past where I usually stop.",
+                "label": "THE SELF-REFERENTIAL ACHIEVER",
+                "advice": "You're chasing mastery relative to your own past self rather than anyone else's opinion - a healthy, sustainable form of motivation. To keep it that way, anchor it to specific, reachable targets rather than a vague, ever-rising bar; an undefined 'push past my limits' can quietly wear you down just as much as external pressure would.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 1.0, "chaos_tolerance": 0.0, "cognitive_endurance": 1.5}
             }
         }
     },
     {
         "id": "q10",
         "section": "Category 05: Motivational Engine",
-        "question": "You are given a choice between two academic tracks for the upcoming year. Which path does your brain instinctively select?",
+        "question": "Two tracks on the table for next year. One is safe and near-guaranteed to go well. The other has real odds of an impressive win - or a visible failure. Which one does your gut pick before your brain gets a vote?",
         "options": {
             "A": {
-                "text": "An ultra-challenging, elite track (e.g., Olympiad-level problems, advanced honors thesis) with a high risk of failure but massive growth.",
-                "label": "INTRINSIC ARCHITECT",
-                "advice": "You seek out challenge and avoid comfort zones — you'd rather struggle with something hard than coast to an easy grade. That pushes you toward real mastery. Just don't take on too many demanding commitments at once: mastery needs focus and actual recovery time.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": 1.0,
-                    "chaos_tolerance": 1.5,
-                    "cognitive_endurance": 2.0
-                }
+                "text": "The risky one, honestly, before I've even weighed the odds properly.",
+                "label": "THE APPROACH-ORIENTED RISK-TAKER",
+                "advice": "Motivation research calls this approach-success orientation: the pull of a possible win outweighs the fear of visible failure for you. That pushes you toward real growth most people avoid. Just don't stack too many high-variance bets at once - mastery still needs enough focus and recovery time to actually land.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.0, "chaos_tolerance": 1.5, "cognitive_endurance": 2.0}
             },
             "B": {
-                "text": "A clear, well-structured, predictable track where consistent, linear effort guarantees top grades and a secure outcome.",
-                "label": "SYSTEMIC PLANNER",
-                "advice": "You value efficiency and predictability, building a solid track record with managed risk — a real strategic strength. Just don't play it so safe that you avoid every uncertain challenge: real growth often happens exactly where failure is possible.",
-                "vectors": {
-                    "information_bandwidth": 0.5,
-                    "execution_rigor": 2.5,
-                    "chaos_tolerance": -1.5,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "The safe one. Predictable, linear effort for a guaranteed decent outcome beats a coin flip every time for me.",
+                "label": "THE FAILURE-AVOIDANT PLANNER",
+                "advice": "You're running avoid-failure motivation: managing downside risk feels more urgent to you than chasing an upside. That builds a genuinely solid track record with controlled risk - a real strategic strength. Just don't let it become so consistent that you never take an uncertain shot; real growth often lives exactly where failure is possible.",
+                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 2.5, "chaos_tolerance": -1.5, "cognitive_endurance": 1.5}
             },
             "C": {
-                "text": "A highly practical, fast-paced track focused on direct skill acquisition, real-world case studies, and rapid portfolio building.",
-                "label": "EMPIRICAL PRAGMATIST",
-                "advice": "You prefer skills you can use right away over theory for its own sake — a real edge in applied fields. Just don't shortchange the fundamentals: the strongest problem-solvers combine solid theory with practical execution.",
-                "vectors": {
-                    "information_bandwidth": 0.0,
-                    "execution_rigor": -0.5,
-                    "chaos_tolerance": 1.5,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "Neither, really - I'd want to know which one teaches me something I can actually use immediately.",
+                "label": "THE UTILITY-FIRST CHOOSER",
+                "advice": "Prestige and risk don't move you much - applicability does. That's a real edge for building a usable portfolio fast, but don't shortchange the theory that doesn't look immediately useful: the strongest problem-solvers still combine solid fundamentals with hands-on execution.",
+                "vectors": {"information_bandwidth": 0.0, "execution_rigor": -0.5, "chaos_tolerance": 1.5, "cognitive_endurance": 1.0}
             },
             "D": {
-                "text": "A completely flexible, interdisciplinary track where I can design my own curriculum and jump between different domains freely.",
-                "label": "HYPERACTIVE EXPLORER",
-                "advice": "You refuse to be boxed into one lane, and you spot connections across fields that specialists miss. Your real challenge is proving depth: make sure your exploration lands on one finished, concrete result — not just a pile of scattered ideas.",
-                "vectors": {
-                    "information_bandwidth": 2.5,
-                    "execution_rigor": -2.0,
-                    "chaos_tolerance": 2.5,
-                    "cognitive_endurance": 0.5
-                }
+                "text": "I'd want to build my own third option that mixes pieces of both, honestly, rather than pick either as given.",
+                "label": "THE PATH-INVENTOR",
+                "advice": "You refuse the binary and look for a hybrid nobody offered - genuinely creative, and it often reveals options others miss entirely. The real risk is that an invented path is harder to prove finished; make sure it lands on one concrete result, not an open-ended pile of half-built ideas.",
+                "vectors": {"information_bandwidth": 2.5, "execution_rigor": -2.0, "chaos_tolerance": 2.5, "cognitive_endurance": 0.5}
             }
         }
     },
     {
         "id": "q11",
         "section": "Phase 04: The Internal Drive",
-        "question": "Be honest. How do you really feel about project managers, tech leads, or professors?",
+        "question": "Drop the diplomatic answer for a second. How do you actually feel, deep down, about project leads, teachers, and anyone whose job is to evaluate you?",
         "options": {
             "A": {
-                "text": "They're just gatekeepers. I figure out exactly what they want to see and optimize my work to easily pass their checks.",
-                "label": "Pragmatic System-Adaptor",
-                "advice": "You separate your own motivation from what an evaluator expects, and optimize your work to clear their checks — a real strategic efficiency. The risk is eventually suppressing what genuinely interests you just to pass the bar. Every so often, allow yourself a project made for you, not for the grade.",
-                "vectors": {
-                    "information_bandwidth": 1.0,
-                    "execution_rigor": 1.5,
-                    "chaos_tolerance": -0.5,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "They're gatekeepers to get past. I figure out exactly what clears their checklist and optimize for that, nothing more.",
+                "label": "THE STRATEGIC ADAPTOR",
+                "advice": "You cleanly separate your own interest from what an evaluator wants, then optimize specifically for their checklist - a real strategic efficiency, and a form of external locus of control applied deliberately rather than by default. The risk is eventually suppressing what genuinely interests you just to clear the bar every time. Every so often, build something for you, not the grade.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 1.5, "chaos_tolerance": -0.5, "cognitive_endurance": 1.5}
             },
             "B": {
-                "text": "I mostly ignore their rules. I bank on delivering a super flashy final demo that makes them forget I broke all their policies.",
-                "label": "Reward-Driven Disruptor",
-                "advice": "You count on a strong final result to make up for cutting corners along the way — it can work, but it's a real gamble if the process gets evaluated too. Document at least a minimum of your reasoning, in case the final output alone doesn't fully convince.",
-                "vectors": {
-                    "information_bandwidth": -0.5,
-                    "execution_rigor": -1.0,
-                    "chaos_tolerance": 2.0,
-                    "cognitive_endurance": 0.5
-                }
+                "text": "Mostly background noise. I ignore whatever rules I disagree with and bet on a flashy result making them forget.",
+                "label": "THE OUTCOME GAMBLER",
+                "advice": "You're betting that a strong final result buys forgiveness for a broken process - sometimes true, but a real gamble if anyone actually evaluates the process too. Keep at least a minimal trail of your reasoning along the way, in case the outcome alone doesn't fully close the case.",
+                "vectors": {"information_bandwidth": -0.5, "execution_rigor": -1.0, "chaos_tolerance": 2.0, "cognitive_endurance": 0.5}
             },
             "C": {
-                "text": "I clash with them constantly. If their rules or feedback don't make perfect logical sense, I will argue with them.",
-                "label": "Coherence-Seeking Dissident",
-                "advice": "You need rules and feedback to actually make logical sense, or you'll push back — a real demand for intellectual consistency. It does drain energy you could spend elsewhere though. Pick your battles: save the arguing for what really matters, and let the rest go.",
-                "vectors": {
-                    "information_bandwidth": 1.5,
-                    "execution_rigor": 2.0,
-                    "chaos_tolerance": -1.5,
-                    "cognitive_endurance": 0.0
-                }
+                "text": "I need their rules to actually make sense, or I will argue - genuinely, not just to be difficult.",
+                "label": "THE COHERENCE ENFORCER",
+                "advice": "You hold authority to a standard of internal logical consistency, and inconsistency genuinely bothers you enough to push back - a real demand for coherence, not defiance for its own sake. It does drain energy you could spend elsewhere though. Pick your battles deliberately: save the pushback for what actually matters, and let the rest go unchallenged.",
+                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 2.0, "chaos_tolerance": -1.5, "cognitive_endurance": 0.0}
             },
             "D": {
-                "text": "I avoid them like the plague. I don't care about their validation; I just want them to leave me alone so I can build cool stuff.",
-                "label": "Autonomous Insular Mind",
-                "advice": "You'd rather be left alone to build, without chasing outside validation — that protects your focus well. The flip side is that your instincts resist collaboration or external feedback. Every so often, force yourself to share unfinished work, just to get used to feedback along the way rather than only at the end.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": -2.0,
-                    "chaos_tolerance": 1.5,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "I'd honestly rather they just left me alone. I don't need their approval, I just want the space to build.",
+                "label": "THE VALIDATION-INDEPENDENT",
+                "advice": "You don't chase outside approval, which protects your focus from other people's opinions remarkably well. The flip side is that your instincts may resist collaboration or feedback even when it would genuinely help. Every so often, force yourself to share something unfinished - not for approval, just to stay practiced at receiving input along the way, not only at the very end.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": -2.0, "chaos_tolerance": 1.5, "cognitive_endurance": 1.0}
             }
         }
     },
     {
         "id": "q12",
         "section": "Phase 04: The Internal Drive",
-        "question": "Which kind of test actually proves how smart you are?",
+        "question": "Pick the ONE evaluation format that would actually prove - to you, not to anyone else - that you're genuinely good at this.",
         "options": {
             "A": {
-                "text": "A heavy, multi-stage theoretical exam that tests deep concepts with perfectly phrased, unambiguous questions.",
-                "label": "Axiomatic Depth-Processor",
-                "advice": "You excel at building complex mental models inside a clearly defined, noise-free space — you want real conceptual rigor. The flip side is possible freezing when reality gets messy or ambiguous. Deliberately practice on fuzzy, no-single-answer cases to build that flexibility.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": 1.5,
-                    "chaos_tolerance": -1.0,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "A long, heavy theoretical exam with perfectly precise questions and zero ambiguity in what's being asked.",
+                "label": "THE PRECISION-DEPTH PROCESSOR",
+                "advice": "You want to be tested in a clean, noise-free space where deep conceptual models can actually be judged fairly - real intellectual rigor, no room for luck. The flip side is possible freezing when the real world doesn't hand you that clean a setup. Deliberately practice on fuzzy, multiple-valid-answer cases to build the flexibility a perfectly-worded exam never demands of you.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.5, "chaos_tolerance": -1.0, "cognitive_endurance": 1.5}
             },
             "B": {
-                "text": "A high-stakes live coding challenge. Judge me on my raw speed, debugging under fire, and getting it done before the buzzer.",
-                "label": "High-Arousal Speed-Processor",
-                "advice": "Your working memory peaks under pressure with tight feedback loops — you thrive in the moment. That mode favors speed over long-term maintainability. Get in the habit of coming back afterward to clean up what you built in a rush.",
-                "vectors": {
-                    "information_bandwidth": -0.5,
-                    "execution_rigor": -0.5,
-                    "chaos_tolerance": 2.0,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "A live, timed coding or problem-solving sprint - judge my speed and how I debug under fire.",
+                "label": "THE AROUSAL-OPTIMIZED PERFORMER",
+                "advice": "Following the Yerkes-Dodson relationship between arousal and performance, your working memory seems to actually peak under pressure with a tight feedback loop, rather than degrade - genuinely uncommon. That mode favors speed over long-term maintainability, though. Build the habit of returning afterward to clean up whatever you built in the rush.",
+                "vectors": {"information_bandwidth": -0.5, "execution_rigor": -0.5, "chaos_tolerance": 2.0, "cognitive_endurance": 1.0}
             },
             "C": {
-                "text": "A massive, heavily audited portfolio built over months, showing off perfectly optimized code with zero vulnerabilities.",
-                "label": "Endurance-Oriented Refiner",
-                "advice": "You go the distance, refining relentlessly until it's close to perfect — real endurance. Your actual challenge is recognizing when something is 'good enough,' so you don't fall into an endless refinement loop.",
-                "vectors": {
-                    "information_bandwidth": 1.0,
-                    "execution_rigor": 2.5,
-                    "chaos_tolerance": -1.5,
-                    "cognitive_endurance": 2.5
-                }
+                "text": "A massive portfolio built over months, judged on how flawlessly optimized and audited it is by the end.",
+                "label": "THE LONG-HORIZON REFINER",
+                "advice": "You want to prove endurance and refinement over time, not a single moment of performance - real, sustained rigor. Your actual challenge is recognizing 'good enough': without a clear stopping rule, refinement can become an endless loop that never quite ships. Set the finish line before you start, not after you feel done.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 2.5, "chaos_tolerance": -1.5, "cognitive_endurance": 2.5}
             },
             "D": {
-                "text": "Drop me into a broken, undocumented legacy codebase and tell me to fix a crisis using whatever unhinged methods I want.",
-                "label": "Entropy-Thriving Navigator",
-                "advice": "You're comfortable in the chaos of a broken, undocumented system where the usual rules no longer apply — a real asset in a crisis. Outside of urgency, on routine tasks, your focus can drop fast. Look for small irregularities or challenges inside repetitive work to keep your attention engaged.",
-                "vectors": {
-                    "information_bandwidth": 1.5,
-                    "execution_rigor": -2.0,
-                    "chaos_tolerance": 2.5,
-                    "cognitive_endurance": 0.5
-                }
+                "text": "Drop me into a broken, undocumented mess with no instructions and tell me to fix it with whatever I've got.",
+                "label": "THE CRISIS-CALIBRATED SOLVER",
+                "advice": "You want to be judged in exactly the conditions where the rulebook has already failed - a real asset in genuine emergencies, where the usual playbook doesn't apply anyway. Outside of urgency, on routine, well-documented tasks, your focus can drop off fast. Look for small irregularities to chase even inside repetitive work, to keep some of that crisis-engagement alive.",
+                "vectors": {"information_bandwidth": 1.5, "execution_rigor": -2.0, "chaos_tolerance": 2.5, "cognitive_endurance": 0.5}
             }
         }
     },
+
+    # ---------- Questions 13 à 24 ----------
     {
         "id": "q13",
         "section": "Subsystem 04: The Internal Drive",
-        "question": "You get a terribly low grade or review on a script you spent days refining. What is your raw, immediate reaction?",
+        "question": "You get a genuinely bad grade or review on something you poured real effort into. What's the raw, unfiltered reaction in the first 60 seconds?",
         "options": {
             "A": {
-                "text": "I immediately look at the exact grading criteria, pinpoint the specific technical flaws, and adjust my approach for the next run.",
-                "label": "Analytical Telemetry-Filter",
-                "advice": "You turn negative feedback into concrete technical data rather than a personal blow — a real asset for improving fast. Just watch that this very analytical process doesn't filter out qualitative or human feedback that also matters.",
-                "vectors": {
-                    "information_bandwidth": 1.5,
-                    "execution_rigor": 1.0,
-                    "chaos_tolerance": 0.5,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "I go straight to the exact criteria, pinpoint the specific technical flaws, and start planning the fix.",
+                "label": "THE TASK-INVOLVED PROCESSOR",
+                "advice": "In achievement goal theory terms, you're task-involved rather than ego-involved - feedback lands as data about the work, not a verdict on you, which is exactly what lets you improve fast. Just watch that this very analytical filter doesn't screen out qualitative or human feedback that isn't reducible to a criteria checklist.",
+                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 1.0, "chaos_tolerance": 0.5, "cognitive_endurance": 1.5}
             },
             "B": {
-                "text": "A quick flash of intense frustration, which I bury by immediately jumping into a completely different project to forget the failure.",
-                "label": "Affect-Regulating Task-Switcher",
-                "advice": "You handle frustration by quickly switching to a different project — it protects your energy in the moment, but it can skip real reflection on what went wrong. Before switching, take two minutes to jot down what you're taking away from that setback.",
-                "vectors": {
-                    "information_bandwidth": -0.5,
-                    "execution_rigor": -0.5,
-                    "chaos_tolerance": 1.5,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "A sharp flash of frustration, then I bury it fast by jumping straight into something completely different.",
+                "label": "THE FRUSTRATION-DEFLECTOR",
+                "advice": "Switching tasks protects your energy in the moment, but it also skips the reflection step that would actually prevent a repeat - the feeling gets managed, but the lesson doesn't land. Before switching, take two minutes to write down one concrete thing you're taking from the setback, even a small one.",
+                "vectors": {"information_bandwidth": -0.5, "execution_rigor": -0.5, "chaos_tolerance": 1.5, "cognitive_endurance": 1.0}
             },
             "C": {
-                "text": "It feels like a devastating blow to my self-worth. I obsessively dissect my work to prove the reviewer is completely wrong.",
-                "label": "Ego-Integrated Perfectionist",
-                "advice": "A bad evaluation can hit you hard and make you want to prove the reviewer wrong — a very human reaction to something you put real effort into. Try to separate the critique of the work from your own worth: it's the work being judged, not you.",
-                "vectors": {
-                    "information_bandwidth": 1.0,
-                    "execution_rigor": 2.0,
-                    "chaos_tolerance": -2.0,
-                    "cognitive_endurance": -0.5
-                }
+                "text": "It feels like a verdict on my actual worth, and my first instinct is to prove the reviewer flat-out wrong.",
+                "label": "THE EGO-INVOLVED PROCESSOR",
+                "advice": "This is ego-involvement in the classic sense: the critique of the work reads as a critique of you, which makes it hit much harder than the feedback alone warrants - a very human reaction to something you genuinely cared about. Try explicitly separating the two out loud: 'the work has a flaw' is a completely different sentence from 'I am the flaw'.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 2.0, "chaos_tolerance": -2.0, "cognitive_endurance": -0.5}
             },
             "D": {
-                "text": "Total detachment. The grading system is arbitrary and broken anyway; I know my worth, and external opinions don't matter.",
-                "label": "Self-Referential Shield",
-                "advice": "You hold your course by trusting your own judgment over a grading system you see as arbitrary — that protects your creative confidence. Just be careful not to shut out outside feedback entirely: it can sometimes point to a real blind spot.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": -1.5,
-                    "chaos_tolerance": 2.0,
-                    "cognitive_endurance": 0.5
-                }
+                "text": "Total shrug. The grading system is arbitrary anyway, I know what I built, and their opinion doesn't move me much.",
+                "label": "THE INTERNALLY-ANCHORED SHIELD",
+                "advice": "Your sense of quality is anchored to your own judgment rather than an external evaluator, which protects your confidence from a single bad review - genuinely useful armor. Just keep the door open a crack: some outside feedback, even from a system you don't fully trust, occasionally points at a real blind spot worth hearing.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": -1.5, "chaos_tolerance": 2.0, "cognitive_endurance": 0.5}
             }
         }
     },
     {
         "id": "q14",
         "section": "Subsystem 04: The Internal Drive",
-        "question": "What is your biggest competitive advantage when everything goes completely wrong during an engineering crisis?",
+        "question": "Full-blown crisis - something's broken and everyone's stressed. What's the ONE thing you bring to the table that other people in the room genuinely don't?",
         "options": {
             "A": {
-                "text": "Instantly seeing the underlying abstract pattern that connects several seemingly unrelated bugs.",
-                "label": "Top-Down Pattern Recognizer",
-                "advice": "You quickly spot the link between several seemingly unrelated bugs, which lets you get to the real cause without tracing everything step by step — a real strength in synthesis. Keep trusting that instinct, while double-checking the details when the stakes are high.",
-                "vectors": {
-                    "information_bandwidth": 2.5,
-                    "execution_rigor": 1.0,
-                    "chaos_tolerance": 0.0,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "I spot the hidden pattern linking three 'unrelated' bugs before anyone else even starts tracing them individually.",
+                "label": "THE PATTERN SYNTHESIZER",
+                "advice": "You jump straight to the underlying structure connecting scattered symptoms, skipping a lot of the step-by-step tracing others need - real strength in fast synthesis under pressure. Keep trusting that instinct, but double-check the specific details when the stakes are genuinely high; a fast pattern-match is still a guess until verified.",
+                "vectors": {"information_bandwidth": 2.5, "execution_rigor": 1.0, "chaos_tolerance": 0.0, "cognitive_endurance": 1.0}
             },
             "B": {
-                "text": "Staying completely calm and keeping your focus when everyone else around you is panicking.",
-                "label": "Low-Reactivity Operator",
-                "advice": "You stay emotionally steady while everyone around you panics, which keeps your thinking clear in the middle of a crisis — a genuinely valuable trait in any team. That's a real strength worth highlighting.",
-                "vectors": {
-                    "information_bandwidth": -0.5,
-                    "execution_rigor": 0.0,
-                    "chaos_tolerance": 2.5,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "I just... don't panic, while everyone around me visibly is. My head stays clear the whole time.",
+                "label": "THE LOW-REACTIVITY ANCHOR",
+                "advice": "You maintain a stable physiological baseline under acute stress while people around you spike - genuinely valuable on any team, since panic is contagious and calm can be too. This steadiness is a real, transferable asset worth naming explicitly on a team, not just something you quietly do.",
+                "vectors": {"information_bandwidth": -0.5, "execution_rigor": 0.0, "chaos_tolerance": 2.5, "cognitive_endurance": 1.5}
             },
             "C": {
-                "text": "Finding a tiny, well-hidden error deep inside thousands of lines of messy legacy code through pure stubborn focus.",
-                "label": "Sustained Micro-Auditor",
-                "advice": "You can track down a tiny hidden error in a massive, messy codebase with impressive patience — real sustained attention. That's a valuable skill, as long as you don't burn out on it without taking breaks.",
-                "vectors": {
-                    "information_bandwidth": 0.5,
-                    "execution_rigor": 3.0,
-                    "chaos_tolerance": -1.0,
-                    "cognitive_endurance": 2.0
-                }
+                "text": "Pure stubborn patience - I'll dig through thousands of lines of garbage code until I find the one broken thing.",
+                "label": "THE SUSTAINED MICRO-AUDITOR",
+                "advice": "You can hold sustained, granular attention on a tedious search far longer than most people can - real cognitive endurance under boredom, not just under excitement. That's genuinely valuable, as long as you build in forced breaks; this kind of focus can run you into the ground without you noticing until after the crisis is over.",
+                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 3.0, "chaos_tolerance": -1.0, "cognitive_endurance": 2.0}
             },
             "D": {
-                "text": "Coming up with ten wild, unconventional workarounds that break the rules but somehow save the day.",
-                "label": "Lateral Heuristic Explorer",
-                "advice": "Facing a broken system, you quickly propose several unconventional solutions outside the standard playbook — real creativity under pressure. Just make sure to document those quick fixes once the crisis is over, so others can understand and maintain the result.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": -2.0,
-                    "chaos_tolerance": 2.5,
-                    "cognitive_endurance": 0.5
-                }
+                "text": "I throw out ten weird, rule-breaking workarounds in the first five minutes, and one of them usually actually works.",
+                "label": "THE LATERAL IMPROVISER",
+                "advice": "You generate unconventional solutions outside the standard playbook fast - genuinely valuable creativity exactly when the standard playbook has already failed. Document the hack once the fire's out, though; a brilliant improvisation nobody can explain later just becomes next month's mystery bug.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": -2.0, "chaos_tolerance": 2.5, "cognitive_endurance": 0.5}
             }
         }
     },
     {
         "id": "q15",
         "section": "Subsystem 04: The Internal Drive",
-        "question": "What is the main reason you suddenly lose all motivation to finish a project?",
+        "question": "You were genuinely excited about a project when it started. Now you can't make yourself touch it. What specifically killed it - not deadlines, the actual feeling?",
         "options": {
             "A": {
-                "text": "The interesting conceptual problems are solved, and now it's just boring optimization, tweaking, and cleanup.",
-                "label": "Concept-Satiated Mind",
-                "advice": "Once the interesting conceptual problem is solved, the optimizing and cleanup that's left bores you fast — your motivation comes mainly from discovery. That's normal, but try treating the finishing phase as its own skill worth building, not just a chore.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": 0.0,
-                    "chaos_tolerance": 0.5,
-                    "cognitive_endurance": -0.5
-                }
+                "text": "The interesting part is solved. What's left is just boring cleanup and optimization, and that part never hooked me.",
+                "label": "THE NOVELTY-DEPLETED MIND",
+                "advice": "Your engagement was tied to discovery specifically - once the conceptual problem is solved, the competence need self-determination theory describes gets a lot less satisfying to feed through mere polishing. Try explicitly treating the finishing phase as its own skill to get good at, not a chore tacked onto the 'real' work.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 0.0, "chaos_tolerance": 0.5, "cognitive_endurance": -0.5}
             },
             "B": {
-                "text": "The feedback loops are too slow; I need to see quick results and frequent validation to stay engaged.",
-                "label": "Feedback-Dependent Processor",
-                "advice": "You need quick results and frequent feedback to stay engaged — a long project with a slow feedback loop can make you disengage. Deliberately break big projects into small steps with a visible result each time, even on something that takes a while overall.",
-                "vectors": {
-                    "information_bandwidth": -0.5,
-                    "execution_rigor": -0.5,
-                    "chaos_tolerance": 1.5,
-                    "cognitive_endurance": 0.5
-                }
+                "text": "It just stopped showing me progress fast enough. No visible wins for a while, and my brain checked out.",
+                "label": "THE FEEDBACK-STARVED MIND",
+                "advice": "Your competence need specifically runs on frequent, visible confirmation that it's working - a long stretch with no clear signal reads as failure to your system, even when real progress is happening underneath. Deliberately break long projects into small steps with a visible checkpoint each time, even on things that inherently take a while.",
+                "vectors": {"information_bandwidth": -0.5, "execution_rigor": -0.5, "chaos_tolerance": 1.5, "cognitive_endurance": 0.5}
             },
             "C": {
-                "text": "I make one foundational mistake or fall slightly behind schedule, making the whole project feel 'ruined' in my eyes.",
-                "label": "Binary Perfectionist",
-                "advice": "One mistake or a small delay can make the whole project feel ruined to you — a very high standard for yourself. Try seeing a project as a sum of independent parts: one flawed piece doesn't erase the value of the rest.",
-                "vectors": {
-                    "information_bandwidth": 0.5,
-                    "execution_rigor": 2.0,
-                    "chaos_tolerance": -2.0,
-                    "cognitive_endurance": 0.0
-                }
+                "text": "I made one dumb mistake early on and now the whole thing just feels tainted, even if the rest is fine.",
+                "label": "THE CONTAMINATION-SENSITIVE MIND",
+                "advice": "One flaw is coloring your judgment of the entire project - a genuinely high internal standard, but a costly all-or-nothing read of your own work. Try treating a project as a sum of independent parts: one flawed piece doesn't retroactively erase the value sitting in the rest of it.",
+                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 2.0, "chaos_tolerance": -2.0, "cognitive_endurance": 0.0}
             },
             "D": {
-                "text": "The constraints are too rigid. I'm locked into a strict framework and forbidden from experimenting with new tools.",
-                "label": "Autonomy-Seeking Mind",
-                "advice": "A framework that's too rigid, with no room to experiment, kills your motivation — you need freedom to really invest yourself. When the framework is imposed, look for a small margin (a tool, a method) you can still choose yourself: it's often enough to bring the drive back.",
-                "vectors": {
-                    "information_bandwidth": 1.5,
-                    "execution_rigor": -1.5,
-                    "chaos_tolerance": 2.0,
-                    "cognitive_endurance": 0.5
-                }
+                "text": "Someone locked me into a rigid framework mid-project and now I'm forbidden from touching it the way I actually wanted to.",
+                "label": "THE AUTONOMY-STARVED MIND",
+                "advice": "Your autonomy need - the third self-determination theory pillar - is specifically what got cut off, and that alone is enough to kill motivation even when the topic itself still interests you. When a framework is genuinely imposed, look for the smallest margin you can still control (one tool, one method) - it's often enough to bring the drive back.",
+                "vectors": {"information_bandwidth": 1.5, "execution_rigor": -1.5, "chaos_tolerance": 2.0, "cognitive_endurance": 0.5}
             }
         }
     },
     {
         "id": "q16",
         "section": "Subsystem 04: The Internal Drive",
-        "question": "When you have to do a highly repetitive, boring task like manual data formatting or basic testing, you:",
+        "question": "Truly boring, repetitive task ahead - manual formatting, basic testing, the stuff with zero intellectual reward. What actually happens?",
         "options": {
             "A": {
-                "text": "Zone out, grit your teeth, and just push through the work mechanically until it is finished.",
-                "label": "Volitional Task-Sustainer",
-                "advice": "You can push through a repetitive, boring task by gritting your teeth to the end — real self-control. Just check now and then whether that task could actually be automated: your energy might be better spent elsewhere.",
-                "vectors": {
-                    "information_bandwidth": 0.5,
-                    "execution_rigor": 1.5,
-                    "chaos_tolerance": -0.5,
-                    "cognitive_endurance": 2.0
-                }
+                "text": "I zone out, grit my teeth, and mechanically push through until it's over, no matter how long it takes.",
+                "label": "THE VOLITIONAL SUSTAINER",
+                "advice": "You can force a repetitive task to completion through raw self-regulation even with zero intrinsic reward - a real conscientiousness trait most people lack. Just check periodically whether the task could actually be automated; your endurance is valuable, and shouldn't be spent on something a script could do instead.",
+                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 1.5, "chaos_tolerance": -0.5, "cognitive_endurance": 2.0}
             },
             "B": {
-                "text": "Rush through it as fast as possible, accepting typos and sloppy mistakes just to get it off your plate.",
-                "label": "Low-Stimulation Truncator",
-                "advice": "You'd rather rush through a boring task, even at the cost of some mistakes, than spend real time on it — understandable, but it can introduce quiet errors. Build in a quick 2-minute review right after, specifically for this kind of task.",
-                "vectors": {
-                    "information_bandwidth": -1.0,
-                    "execution_rigor": -1.5,
-                    "chaos_tolerance": 1.5,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "I rush it as fast as humanly possible, typos and sloppy mistakes included, just to get it off my plate.",
+                "label": "THE LOW-TOLERANCE TRUNCATOR",
+                "advice": "You have a genuinely low tolerance for boredom, so you sacrifice accuracy for speed to escape the task faster - understandable, but it quietly introduces errors that cost more time later than the rushing saved. Build in a fixed two-minute review immediately after, specifically reserved for this category of task.",
+                "vectors": {"information_bandwidth": -1.0, "execution_rigor": -1.5, "chaos_tolerance": 1.5, "cognitive_endurance": 1.0}
             },
             "C": {
-                "text": "Spend four hours writing a complex automation script, even if doing it manually would have only taken an hour.",
-                "label": "Abstraction-Seeking Automator",
-                "advice": "Faced with a repetitive task, you'd rather build a tool to automate it, even if it takes longer than doing it by hand — a real engineer's instinct. Just make sure this isn't sometimes an elegant way of avoiding a harder task instead.",
-                "vectors": {
-                    "information_bandwidth": 1.5,
-                    "execution_rigor": 2.0,
-                    "chaos_tolerance": -1.0,
-                    "cognitive_endurance": 0.5
-                }
+                "text": "I disappear for four hours building an automation script, even though doing it by hand would've taken one.",
+                "label": "THE ABSTRACTION-SEEKING AUTOMATOR",
+                "advice": "Faced with repetition, your instinct is to eliminate it structurally rather than tolerate it - a real engineer's reflex, and often the right long-term call. Just check honestly whether this is sometimes an elegant, technically-impressive way of avoiding a harder, less automatable task instead.",
+                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 2.0, "chaos_tolerance": -1.0, "cognitive_endurance": 0.5}
             },
             "D": {
-                "text": "Procrastinate endlessly and make careless mistakes because your brain absolutely rebels against boring work.",
-                "label": "Novelty-Gated Focus",
-                "advice": "Repetitive work really makes you check out, to the point of careless mistakes — your brain needs novelty to stay engaged. Try turning the task into a small game or a timed challenge, just enough to add a bit of stimulation.",
-                "vectors": {
-                    "information_bandwidth": 1.0,
-                    "execution_rigor": -2.0,
-                    "chaos_tolerance": 1.0,
-                    "cognitive_endurance": -1.0
-                }
+                "text": "I put it off for days, and when I finally do it, careless mistakes creep in because my brain is actively resisting.",
+                "label": "THE BOREDOM-INTOLERANT MIND",
+                "advice": "Genuinely repetitive work triggers real disengagement for you, to the point where even careless mistakes start creeping in - your system needs stimulation to stay reliable. Try gamifying it deliberately: a timer challenge, a small self-competition, anything that reintroduces just enough novelty to hold your attention.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": -2.0, "chaos_tolerance": 1.0, "cognitive_endurance": -1.0}
             }
         }
     },
     {
         "id": "q17",
-        "section": "Subsystem 04: The Internal Drive",
-        "question": "An assignment is completely open-ended ('Build whatever you want as long as it solves the problem'). Your immediate reflex is:",
+        "section": "Subsystem 05: The Cognitive Edge",
+        "question": "You hit a problem genuinely too hard for you - real effort, still stuck. What's the very first sentence that runs through your head?",
         "options": {
             "A": {
-                "text": "Anxious paralysis. You spend days trying to design the perfect scope and system boundaries before writing any code.",
-                "label": "Unbounded-Scope Deliberator",
-                "advice": "A completely open-ended assignment can freeze you: without clear limits, you spend a lot of time trying to define the perfect scope before starting. Set a hard time limit on that planning stage, then start even if the scope isn't 100% locked down.",
-                "vectors": {
-                    "information_bandwidth": 1.5,
-                    "execution_rigor": 1.5,
-                    "chaos_tolerance": -1.0,
-                    "cognitive_endurance": 0.5
-                }
+                "text": "\"I'm just not built for this kind of thing\" - like it reveals something fixed about what I'm capable of.",
+                "label": "THE FIXED-ABILITY READER",
+                "advice": "This is the core signature of what Carol Dweck calls a fixed mindset: difficulty is read as evidence about a stable trait ('I'm not a math person') rather than as evidence about the strategy or effort level. The strongest available reframe isn't fake positivity - it's precision: 'I can't do this YET, with the approach I've tried so far.' The word 'yet' is doing real cognitive work there, not just softening the sentence.",
+                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 0.5, "chaos_tolerance": -1.5, "cognitive_endurance": -0.5}
             },
             "B": {
-                "text": "Immediate action. You pick the very first idea that crosses your mind and start building it without weighing options.",
-                "label": "Choice-Reduction Executer",
-                "advice": "Given total freedom, you quickly pick the first idea that comes to mind and get moving — that avoids paralysis and builds momentum. Just take ten minutes before diving in to check that this first idea actually answers the real question.",
-                "vectors": {
-                    "information_bandwidth": -0.5,
-                    "execution_rigor": -0.5,
-                    "chaos_tolerance": 1.5,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "\"Okay, what I tried clearly isn't the right approach - what else could I try?\" - genuinely, without much emotional charge.",
+                "label": "THE STRATEGY-REVISER",
+                "advice": "You default to a growth-mindset read almost automatically: struggle is information about the method, not a verdict about you. This is a real, documented advantage for long-term learning - people who read difficulty this way persist longer and generalize better across new problems. Keep an eye out for the rare moment when a genuine skill gap, not just a strategy gap, actually needs outside help.",
+                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 1.5, "chaos_tolerance": 0.5, "cognitive_endurance": 1.5}
             },
             "C": {
-                "text": "Over-analyzing the grader. You try to reverse-engineer what the evaluator secretly wants so you can perfectly match their hidden criteria.",
-                "label": "Intent-Decoding Mind",
-                "advice": "You spend time trying to guess what the evaluator really wants behind a vague prompt — a real analytical skill. Just watch that this search for the 'hidden right answer' doesn't stop you from exploring an idea you actually care about.",
-                "vectors": {
-                    "information_bandwidth": 0.5,
-                    "execution_rigor": 2.5,
-                    "chaos_tolerance": -1.0,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "Weirdly, kind of excited - a problem that's actually hard for me feels more interesting than an easy one ever does.",
+                "label": "THE DIFFICULTY-SEEKER",
+                "advice": "You're drawn toward what learning researchers call desirable difficulty - a challenge that stretches you registers as engaging rather than threatening. That's a genuine long-term learning advantage. The only trap: make sure you're actually building skill on the hard problem, not just enjoying the sensation of struggling without ever resolving it.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.0, "chaos_tolerance": 1.5, "cognitive_endurance": 2.0}
             },
             "D": {
-                "text": "Total creative freedom. You brainstorm dozens of wild paths and pick the most unconventional tools just to experiment.",
-                "label": "Divergent Mind-Explorer",
-                "advice": "An open prompt genuinely energizes you and you explore plenty of original directions. The risk is spreading yourself too thin and over-complicating the project. Once you've picked an idea, set a clear scope so the project doesn't keep expanding endlessly.",
-                "vectors": {
-                    "information_bandwidth": 2.5,
-                    "execution_rigor": -2.0,
-                    "chaos_tolerance": 2.5,
-                    "cognitive_endurance": 0.0
-                }
+                "text": "\"This is probably a badly-designed problem\" - my brain looks to blame the problem before it looks at my approach.",
+                "label": "THE EXTERNAL-ATTRIBUTION DEFAULT",
+                "advice": "Your default explanation for difficulty points outward - the problem, the teacher, the material - rather than at your own strategy. This protects your confidence in the short term, but it can also quietly block the strategy-revision that would actually solve it. Before concluding the problem is broken, try explicitly listing two different approaches you haven't tried yet.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": -1.0, "chaos_tolerance": 1.0, "cognitive_endurance": 0.0}
             }
         }
     },
     {
         "id": "q18",
         "section": "Subsystem 05: The Cognitive Edge",
-        "question": "Look at your personal files, desktop, and note-taking apps. What does your organization actually look like?",
+        "question": "Open your actual desktop, downloads folder, and notes app right now (mentally, if not literally). What does the REAL state of it say about how you offload memory?",
         "options": {
             "A": {
-                "text": "Perfect, highly organized folders sorted by year, topic, and priority, using strict naming rules.",
-                "label": "The Structural Shield",
-                "advice": "Perfectly organized folders give you real mental clarity and lower your day-to-day stress. Just check that this tidying doesn't become, over time, a comfortable way to avoid harder intellectual work.",
-                "vectors": {
-                    "information_bandwidth": 1.0,
-                    "execution_rigor": 2.0,
-                    "chaos_tolerance": -1.5,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "Perfectly organized folders, strict naming, sorted by year and topic - I trust the system more than my own memory.",
+                "label": "THE EXTERNALIZED-MEMORY ARCHITECT",
+                "advice": "You've deliberately built an external structure to carry cognitive load your working memory doesn't have to hold - genuinely smart, and it lowers day-to-day stress. Just check periodically that maintaining the system hasn't quietly become a comfortable substitute for the harder intellectual work it's supposed to support.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 2.0, "chaos_tolerance": -1.5, "cognitive_endurance": 1.5}
             },
             "B": {
-                "text": "A massive, chaotic 'Downloads' folder and a messy desktop. You rely entirely on the search bar to find anything.",
-                "label": "The Fluid Searcher",
-                "advice": "You move fast without spending time filing things, trusting the search bar to find anything — a real time-saver day to day. Still, keep a minimal backup or structure so you're not stuck if an important file becomes hard to find right when it matters.",
-                "vectors": {
-                    "information_bandwidth": -0.5,
-                    "execution_rigor": -1.0,
-                    "chaos_tolerance": 2.0,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "A chaotic downloads folder and a messy desktop - I rely completely on search to find anything, ever.",
+                "label": "THE SEARCH-RELIANT MIND",
+                "advice": "You skip filing overhead entirely and trust retrieval-on-demand instead - a genuine time-saver day to day, and not actually irrational given how good search has gotten. The real risk is a single critical file becoming hard to find at the exact moment it matters most. Keep one minimal backup system for anything truly important, nothing more.",
+                "vectors": {"information_bandwidth": -0.5, "execution_rigor": -1.0, "chaos_tolerance": 2.0, "cognitive_endurance": 1.0}
             },
             "C": {
-                "text": "A highly detailed personal wiki or Obsidian vault filled with interconnected notes and clean markdown syntax.",
-                "label": "The Conceptual Weaver",
-                "advice": "You naturally think in webs of connected ideas rather than lists — a real strength in synthesis. Make sure now and then to turn those connections into an actual concrete output, not just notes that keep piling up.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": 1.5,
-                    "chaos_tolerance": -0.5,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "A dense personal wiki of interlinked notes - my thinking basically lives as a web of connections, not a list.",
+                "label": "THE NETWORKED THINKER",
+                "advice": "You naturally externalize ideas as a web of connections rather than a linear list, which is a real strength for synthesis and spotting non-obvious links. Make sure, every so often, to convert that web into one concrete, finished output - the connections are valuable, but a note graph that never resolves into anything is still just notes.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.5, "chaos_tolerance": -0.5, "cognitive_endurance": 1.5}
             },
             "D": {
-                "text": "A total digital wasteland. Files are scattered randomly across different drives, clouds, and desktops with zero system.",
-                "label": "The Pure Present",
-                "advice": "Your files are scattered around with no real system — you live in the present, with no filing overhead weighing on you. Set up a minimal safety net, so you don't lose valuable time hunting for an important file right when you're under pressure.",
-                "vectors": {
-                    "information_bandwidth": 1.0,
-                    "execution_rigor": -2.5,
-                    "chaos_tolerance": 1.5,
-                    "cognitive_endurance": -0.5
-                }
+                "text": "Total scatter across random drives and clouds with zero system - genuinely no idea where half of it is.",
+                "label": "THE PRESENT-FOCUSED MIND",
+                "advice": "You're not carrying any filing overhead at all - no system to maintain means no system weighing on you day to day, and there's a real cognitive lightness in that. Set up one minimal safety net for anything that would actually hurt to lose, so you're not hunting for a critical file at the worst possible moment.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": -2.5, "chaos_tolerance": 1.5, "cognitive_endurance": -0.5}
             }
         }
     },
     {
         "id": "q19",
         "section": "Subsystem 05: The Cognitive Edge",
-        "question": "What do you actually need to feel truly satisfied at the end of a long, deep work session?",
+        "question": "You close the laptop after a genuinely long, deep work session. For it to actually feel WORTH it, what specifically has to have happened?",
         "options": {
             "A": {
-                "text": "Finally clicking with a highly complex, abstract concept and integrating it into how you see things.",
-                "label": "The Epiphany Junkie",
-                "advice": "What genuinely satisfies you is the click of finally understanding a complex idea — your reward is mostly intellectual. Protect that curiosity, while remembering that even the best idea needs to be put into practice to have real impact.",
-                "vectors": {
-                    "information_bandwidth": 2.5,
-                    "execution_rigor": 1.0,
-                    "chaos_tolerance": 0.0,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "A hard, abstract concept finally clicked and I can feel it's actually integrated into how I think now.",
+                "label": "THE INSIGHT-REWARDED MIND",
+                "advice": "Your reward comes from the moment of genuine conceptual integration - psychologically closer to what flow theory describes as intrinsic reward from the activity itself than from any external marker of success. Protect that curiosity deliberately, while remembering the best idea still needs to be applied somewhere to have actual impact beyond your own head.",
+                "vectors": {"information_bandwidth": 2.5, "execution_rigor": 1.0, "chaos_tolerance": 0.0, "cognitive_endurance": 1.5}
             },
             "B": {
-                "text": "Crossing off 15 different tasks from your to-do list, seeing clear, rapid progress.",
-                "label": "The Velocity Engine",
-                "advice": "Seeing a long list of tasks checked off gives you a real sense of fast, visible progress. Just watch that these small wins don't pull your attention away from a bigger goal that takes longer to reach.",
-                "vectors": {
-                    "information_bandwidth": -0.5,
-                    "execution_rigor": 0.5,
-                    "chaos_tolerance": 1.5,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "A long list of tasks crossed off, with visible, countable proof that I moved fast.",
+                "label": "THE VELOCITY-REWARDED MIND",
+                "advice": "You're wired for frequent, countable progress signals - crossing items off genuinely satisfies a real psychological need for visible momentum. Just watch that chasing small, fast wins doesn't quietly pull attention away from a bigger goal that only pays off after a longer stretch with fewer checkboxes along the way.",
+                "vectors": {"information_bandwidth": -0.5, "execution_rigor": 0.5, "chaos_tolerance": 1.5, "cognitive_endurance": 1.5}
             },
             "C": {
-                "text": "Spending 8 hours of pure, uninterrupted focus at your desk without breaking character or wasting a single minute.",
-                "label": "The Endurance Monotrope",
-                "advice": "Staying focused for hours without a break gives you a real sense of accomplishment through sheer effort. Just be careful not to confuse the physical exhaustion of sitting a long time with actual strategic productivity.",
-                "vectors": {
-                    "information_bandwidth": 0.5,
-                    "execution_rigor": 2.5,
-                    "chaos_tolerance": -1.0,
-                    "cognitive_endurance": 2.5
-                }
+                "text": "Hours of pure, unbroken focus without breaking character once - the sheer sustained effort itself is the win.",
+                "label": "THE ENDURANCE-REWARDED MIND",
+                "advice": "Sustained, uninterrupted effort itself feels like the accomplishment to you, independent of what it actually produced. That's real endurance, but be careful not to confuse the physical fatigue of sitting a long time with genuine strategic output - the two don't always overlap as much as the feeling suggests.",
+                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 2.5, "chaos_tolerance": -1.0, "cognitive_endurance": 2.5}
             },
             "D": {
-                "text": "Building a concrete, functional tool or standalone module completely from scratch.",
-                "label": "The Artifact Creator",
-                "advice": "Building something concrete and functional from scratch gives you a real sense of tangible usefulness. Build some patience too for the less exciting maintenance and fixing that comes with the same work.",
-                "vectors": {
-                    "information_bandwidth": 1.5,
-                    "execution_rigor": -1.0,
-                    "chaos_tolerance": 2.0,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "Something concrete and functional exists now that didn't exist this morning, built entirely from scratch.",
+                "label": "THE ARTIFACT-REWARDED MIND",
+                "advice": "You need a tangible, functional output - not an insight, not a checklist, an actual thing - to register the session as worthwhile. That's a real drive toward usefulness. Build some patience for the less exciting maintenance work that inevitably follows creating something, since it's a genuinely different (and less satisfying) skill than building it in the first place.",
+                "vectors": {"information_bandwidth": 1.5, "execution_rigor": -1.0, "chaos_tolerance": 2.0, "cognitive_endurance": 1.0}
             }
         }
     },
     {
         "id": "q20",
         "section": "Subsystem 05: The Cognitive Edge",
-        "question": "During a high-stakes, high-pressure presentation or oral evaluation, how does your brain handle the stress?",
+        "question": "High-stakes oral evaluation, real pressure. Not what you WANT to happen - what actually happens to your thinking in that room?",
         "options": {
             "A": {
-                "text": "You become intensely logical and structured. You recall facts perfectly but sound cold and lose all conversational warmth.",
-                "label": "The Ice-Cold Logic",
-                "advice": "Under the pressure of an oral evaluation, you get very logical and structured, even if it comes across as cold and less warm. Your facts stay solid, but try to deliberately add a bit of warmth so you don't lose your audience.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": 1.5,
-                    "chaos_tolerance": -0.5,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "I get intensely logical and precise, but I sound noticeably colder and lose all natural warmth in how I speak.",
+                "label": "THE PRESSURE-SHARPENED ANALYST",
+                "advice": "Under acute pressure, your system prioritizes precision and logic and deprioritizes social warmth almost automatically - your facts stay genuinely solid, but the delivery reads as cold to an audience that's also judging tone, not just content. Deliberately script in one warm or human moment beforehand, since it won't surface on its own under pressure.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.5, "chaos_tolerance": -0.5, "cognitive_endurance": 1.0}
             },
             "B": {
-                "text": "Your mind sharpens aggressively. You retrieve obscure facts and make brilliant, quick comebacks you didn't know you had in you.",
-                "label": "The Crisis Catalyst",
-                "advice": "Acute pressure sharpens you rather than blocking you: you find answers and ideas you didn't know you had. Enjoy that energy, but plan real recovery time afterward to avoid exhaustion once the pressure lifts.",
-                "vectors": {
-                    "information_bandwidth": 0.0,
-                    "execution_rigor": -0.5,
-                    "chaos_tolerance": 2.5,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "I somehow get sharper - pulling out obscure facts and quick comebacks I genuinely didn't know I had access to.",
+                "label": "THE ACUTE-STRESS CATALYST",
+                "advice": "Acute pressure appears to sharpen your retrieval rather than block it - you access material under stress that stays locked away when calm, a real and somewhat rare pattern. Enjoy that edge, but plan genuine recovery time afterward; this kind of spike tends to be followed by a real energy crash once the pressure lifts.",
+                "vectors": {"information_bandwidth": 0.0, "execution_rigor": -0.5, "chaos_tolerance": 2.5, "cognitive_endurance": 1.5}
             },
             "C": {
-                "text": "You blank out completely under pressure, getting stuck in a mental freeze until the stressful situation is over.",
-                "label": "The Overload Freeze",
-                "advice": "Intense stress can freeze you completely until the situation passes — a common reaction to high stakes, not a lack of skill. Build a small pre-performance ritual (breathing, reviewing one key point) to give yourself an anchor before it starts.",
-                "vectors": {
-                    "information_bandwidth": 0.5,
-                    "execution_rigor": 2.0,
-                    "chaos_tolerance": -2.5,
-                    "cognitive_endurance": -0.5
-                }
+                "text": "Full blank-out. My mind genuinely goes empty until the pressure passes, no matter how well I knew the material beforehand.",
+                "label": "THE THREAT-FREEZE RESPONDER",
+                "advice": "This is a genuine acute stress response, not a knowledge gap - when perceived threat outweighs perceived resources (Lazarus's stress appraisal model), the system can freeze regardless of preparation. A small pre-performance ritual - a specific breath pattern, silently reviewing one anchor fact - gives your system something concrete to hold onto before the freeze has a chance to take over.",
+                "vectors": {"information_bandwidth": 0.5, "execution_rigor": 2.0, "chaos_tolerance": -2.5, "cognitive_endurance": -0.5}
             },
             "D": {
-                "text": "You get intense tunnel vision, hyper-focusing on one tiny detail while completely losing track of your main point.",
-                "label": "The Micro-Lock",
-                "advice": "Anxiety sometimes makes you zoom in on one detail and lose sight of your main point. Practice deliberately pausing now and then to reconnect with the bigger picture of what you're saying.",
-                "vectors": {
-                    "information_bandwidth": 1.0,
-                    "execution_rigor": -1.5,
-                    "chaos_tolerance": 1.5,
-                    "cognitive_endurance": 0.5
-                }
+                "text": "I get weirdly zoomed into one tiny detail and completely lose track of the actual main point I was making.",
+                "label": "THE TUNNEL-VISION RESPONDER",
+                "advice": "Anxiety is narrowing your attentional field down to a single detail at the cost of the bigger structure - a documented effect of stress on attention, not a sign you didn't prepare enough. Practice deliberately pausing mid-answer to explicitly restate your main point out loud - it forces a zoom-out your stressed brain won't do on its own.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": -1.5, "chaos_tolerance": 1.5, "cognitive_endurance": 0.5}
             }
         }
     },
     {
         "id": "q21",
         "section": "Subsystem 05: The Cognitive Edge",
-        "question": "Strip away all professional buzzwords. How does your brain actually function when you are working?",
+        "question": "Drop the professional language completely. If your brain, while working, were an actual machine, which one is it?",
         "options": {
             "A": {
-                "text": "A high-speed train locked onto fixed rails. Incredibly fast and efficient, but completely lost if forced off the tracks.",
-                "label": "The Sequential Train",
-                "advice": "You move fast and efficiently along a well-defined path, but can feel lost the moment you're pushed off it. When facing an unclear or uncertain area, deliberately build small intermediate steps to recreate a sense of a marked path.",
-                "vectors": {
-                    "information_bandwidth": 1.5,
-                    "execution_rigor": 2.0,
-                    "chaos_tolerance": -1.5,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "A high-speed train locked on fixed rails - incredibly fast on the track, completely lost the second it's forced off.",
+                "label": "THE SEQUENTIAL-TRACK MIND",
+                "advice": "You move fast and efficiently along a clearly defined path, but the moment the path disappears, so does your momentum - this isn't fragility, it's a genuinely different processing mode than improvisation. When facing genuine uncertainty, deliberately build small intermediate checkpoints to recreate the sense of a marked path, even an artificial one.",
+                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 2.0, "chaos_tolerance": -1.5, "cognitive_endurance": 1.5}
             },
             "B": {
-                "text": "An overclocked computer with 70 open browser tabs, where three are frozen and the fan is screaming.",
-                "label": "The Concurrent Overclocker",
-                "advice": "You run several ideas in parallel in your head, which lets you handle complex environments. Watch your mental load, and batch similar tasks together to limit the fatigue that comes from switching context too often.",
-                "vectors": {
-                    "information_bandwidth": 0.5,
-                    "execution_rigor": -1.0,
-                    "chaos_tolerance": 2.0,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "An overclocked computer running 70 tabs at once, three of them frozen, fan screaming the whole time.",
+                "label": "THE PARALLEL-PROCESS MIND",
+                "advice": "You genuinely run several ideas simultaneously rather than one at a time - real capacity for complex, multi-threaded environments. Keep an eye on total load though, and batch similar tasks together deliberately; the fatigue you feel isn't from any one task, it's from the constant switching between them.",
+                "vectors": {"information_bandwidth": 0.5, "execution_rigor": -1.0, "chaos_tolerance": 2.0, "cognitive_endurance": 1.0}
             },
             "C": {
-                "text": "A deep-sea submarine exploring a single trench for weeks, completely cut off from the surface weather.",
-                "label": "The Deep Trench Diver",
-                "advice": "You go deep into one subject, cut off from everything else, to produce dense work — a real strength in concentration. Set up regular check-ins with the outside world so you're not caught off guard if priorities shift while you're deep in it.",
-                "vectors": {
-                    "information_bandwidth": 1.0,
-                    "execution_rigor": 2.5,
-                    "chaos_tolerance": -1.0,
-                    "cognitive_endurance": 2.5
-                }
+                "text": "A deep-sea submarine exploring one trench for weeks straight, completely cut off from whatever's happening at the surface.",
+                "label": "THE ISOLATED-DEPTH MIND",
+                "advice": "You go deep into one subject at the cost of everything else happening around you - real strength in producing dense, thorough work. Set up scheduled check-ins with 'the surface' so you're not blindsided by a shifted priority or missed deadline while you were completely submerged in the depth.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 2.5, "chaos_tolerance": -1.0, "cognitive_endurance": 2.5}
             },
             "D": {
-                "text": "A customized multi-tool with a few bizarre attachments that don't fit the standard frame but solve weird, rare problems.",
-                "label": "The Edge-Case Alchemist",
-                "advice": "You use unconventional methods to solve rare problems that standard approaches don't cover — a real edge on edge cases. That talent is even more valuable paired with solid rigor on the more standard cases too.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": -2.0,
-                    "chaos_tolerance": 2.5,
-                    "cognitive_endurance": 0.0
-                }
+                "text": "A weird custom multi-tool with attachments that don't fit any standard frame but somehow solve the rare problems.",
+                "label": "THE NON-STANDARD MIND",
+                "advice": "You solve the problems that don't fit standard tools - a real edge specifically on edge cases most systems weren't built to handle. That talent gets even more valuable paired with solid rigor on the ordinary, common cases too - the rare wins matter less if the everyday baseline isn't solid.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": -2.0, "chaos_tolerance": 2.5, "cognitive_endurance": 0.0}
             }
         }
     },
     {
         "id": "q22",
         "section": "Subsystem 05: The Cognitive Edge",
-        "question": "What is your absolute deepest fear regarding your long-term academic or career path?",
+        "question": "Ten years from now, worst-case scenario for your actual career - not 'failure' in general, the SPECIFIC version that genuinely scares you.",
         "options": {
             "A": {
-                "text": "Getting stuck in a mind-numbing routine, working on simple, repetitive projects that require no deep architectural thinking.",
-                "label": "The Stagnation Phobia",
-                "advice": "Your biggest fear is getting stuck in a routine with no real intellectual stimulation. Choose, as much as you can, projects and environments that guarantee some regular complexity and novelty.",
-                "vectors": {
-                    "information_bandwidth": 2.5,
-                    "execution_rigor": 1.0,
-                    "chaos_tolerance": 0.0,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "Stuck in a routine so simple it requires no real thinking anymore, doing the same thing on repeat.",
+                "label": "THE STAGNATION-AVERSE",
+                "advice": "The absence of intellectual stimulation is the actual threat in your imagined future, not failure itself - a self-concept built around continuous growth. Choose environments and projects, as much as realistically possible, that guarantee some regular complexity - routine without any complexity is the specific thing your future self needs to avoid.",
+                "vectors": {"information_bandwidth": 2.5, "execution_rigor": 1.0, "chaos_tolerance": 0.0, "cognitive_endurance": 1.0}
             },
             "B": {
-                "text": "Slowing down, losing your execution speed, and getting outperformed by younger, faster peers who spot your mistakes.",
-                "label": "The Velocity Anxiety",
-                "advice": "You measure your worth by how fast you move, and the idea of slowing down worries you. Try grounding your confidence in deep expertise too — the kind that's built over time and doesn't depend on speed alone.",
-                "vectors": {
-                    "information_bandwidth": -0.5,
-                    "execution_rigor": -0.5,
-                    "chaos_tolerance": 1.5,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "Slower and outperformed by people younger and faster than me who catch my mistakes before I do.",
+                "label": "THE VELOCITY-ANXIOUS",
+                "advice": "You've tied a big part of your self-concept to speed relative to others, and losing that edge feels like losing your whole identity in the field. Try deliberately grounding your confidence in depth of expertise too - the kind that's built slowly over years and genuinely doesn't erode the way raw speed eventually does for everyone.",
+                "vectors": {"information_bandwidth": -0.5, "execution_rigor": -0.5, "chaos_tolerance": 1.5, "cognitive_endurance": 1.5}
             },
             "C": {
-                "text": "Realizing after months of intense development that your polished, flawless creation solves a problem that absolutely nobody in the real world cares about.",
-                "label": "The Phantom Effort Dread",
-                "advice": "You worry about pouring a lot of energy into a technically flawless project that, in the end, answers no real need. Test your ideas early, even roughly, with real people before polishing further.",
-                "vectors": {
-                    "information_bandwidth": 1.0,
-                    "execution_rigor": 2.0,
-                    "chaos_tolerance": -1.5,
-                    "cognitive_endurance": 2.0
-                }
+                "text": "Spending months building something technically flawless that literally nobody in the real world actually needed.",
+                "label": "THE RELEVANCE-ANXIOUS",
+                "advice": "Your fear isn't about skill, it's about wasted effort on the wrong problem - a very legitimate concern that skilled people underestimate all the time. Test ideas early and roughly with real people before polishing anything; the earlier the reality-check, the less time you risk on a beautifully built answer to a question nobody asked.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 2.0, "chaos_tolerance": -1.5, "cognitive_endurance": 2.0}
             },
             "D": {
-                "text": "Being locked into a single narrow specialization for a decade, permanently losing the ability to pivot to other fields.",
-                "label": "The Confinement Panic",
-                "advice": "The idea of specializing in one field for a long time feels more like a trap than an expertise to you. Keep in mind that real mastery in one area often gives you the keys to understand other areas more easily later.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": -1.5,
-                    "chaos_tolerance": 2.0,
-                    "cognitive_endurance": 0.5
-                }
+                "text": "Locked into one narrow specialty for a decade, permanently losing the ability to pivot anywhere else.",
+                "label": "THE CONFINEMENT-AVERSE",
+                "advice": "Specialization reads to you as a trap, not an achievement - identity built on breadth rather than depth in one lane. Worth keeping in mind: genuine mastery in one area often gives you the pattern-recognition keys that make picking up other areas later far easier, not harder - depth and breadth aren't actually as opposed as the fear suggests.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": -1.5, "chaos_tolerance": 2.0, "cognitive_endurance": 0.5}
             }
         }
     },
     {
         "id": "q23",
         "section": "Subsystem 05: The Cognitive Edge",
-        "question": "The exact moment a brilliant new project idea pops into your head, your immediate instinct is to:",
+        "question": "The exact second a genuinely exciting project idea hits you, what does your body/hands actually do - before you've thought it through?",
         "options": {
             "A": {
-                "text": "Open a blank file and immediately map out the entire system architecture, database schema, and flowcharts.",
-                "label": "The Upfront Architect",
-                "advice": "Faced with a new idea, your instinct is to map out the whole system before writing any code — that reduces your uncertainty. Set a hard time limit on that design phase, so you don't wear yourself out before ever testing it against reality.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": 1.5,
-                    "chaos_tolerance": -0.5,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "Open a blank file and start mapping out the whole architecture before I've written a single line of real code.",
+                "label": "THE PLANNING-ORIENTED ACTOR",
+                "advice": "In Julius Kuhl's action control theory terms, you lean planning-oriented - reducing uncertainty through structure before you commit any real energy to execution. Set a hard time cap on that design phase specifically; past a certain point, more planning stops reducing uncertainty and starts just delaying contact with reality.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.5, "chaos_tolerance": -0.5, "cognitive_endurance": 1.0}
             },
             "B": {
-                "text": "Open your code editor and hack together a messy, raw prototype in two hours just to see it work.",
-                "label": "The Empirical Hacker",
-                "advice": "You'd rather hack together a working prototype in a couple of hours to see if the idea holds up — a real learning-by-doing instinct. Keep a running note of your design choices along the way, so you don't get lost in technical debt later.",
-                "vectors": {
-                    "information_bandwidth": -0.5,
-                    "execution_rigor": -0.5,
-                    "chaos_tolerance": 2.0,
-                    "cognitive_endurance": 1.0
-                }
+                "text": "Straight into the editor, hacking together something messy and half-working in the next two hours, no plan.",
+                "label": "THE ACTION-ORIENTED EXECUTOR",
+                "advice": "You default to action-orientation - moving directly into execution to test the idea against reality as fast as possible, a genuinely strong learning-by-doing instinct. Keep a running log of the choices you make along the way; without it, the speed that makes this mode powerful can bury you in technical debt you can't retrace later.",
+                "vectors": {"information_bandwidth": -0.5, "execution_rigor": -0.5, "chaos_tolerance": 2.0, "cognitive_endurance": 1.0}
             },
             "C": {
-                "text": "Search GitHub and research indices immediately to see if anyone else has already built it, ensuring it's completely original.",
-                "label": "The Novelty Guard",
-                "advice": "Before diving in, you check whether the idea already exists elsewhere, to make sure it's genuinely original. Just watch that this check doesn't become an excuse to drop an idea simply because something similar already exists.",
-                "vectors": {
-                    "information_bandwidth": 1.5,
-                    "execution_rigor": 2.5,
-                    "chaos_tolerance": -1.0,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "Search everywhere first to check if it's already been built, before letting myself get attached to the idea.",
+                "label": "THE NOVELTY-VERIFIER",
+                "advice": "You gate your own excitement behind an originality check - protecting yourself from investing in something that turns out to be redundant. Just watch that this check doesn't become an excuse to drop a genuinely good idea just because something loosely similar already exists; execution and angle matter as much as raw novelty.",
+                "vectors": {"information_bandwidth": 1.5, "execution_rigor": 2.5, "chaos_tolerance": -1.0, "cognitive_endurance": 1.5}
             },
             "D": {
-                "text": "Keep the idea completely inside your head for weeks, letting it mix and mutate with other random thoughts before sharing it.",
-                "label": "The Silent Incubator",
-                "advice": "You let an idea sit quietly for a while before sharing it, which often leads to more thought-out projects. Still, try sharing a checkpoint now and then, to keep your momentum and get outside feedback.",
-                "vectors": {
-                    "information_bandwidth": 2.5,
-                    "execution_rigor": -2.0,
-                    "chaos_tolerance": 1.5,
-                    "cognitive_endurance": 0.0
-                }
+                "text": "Nothing visible at all - it just sits quietly in my head for weeks, mutating on its own before I ever mention it.",
+                "label": "THE INCUBATION-ORIENTED MIND",
+                "advice": "You let ideas sit in a kind of unconscious incubation period before acting - this often produces more thought-out, better-integrated projects than immediate action would. The risk is that an idea can incubate indefinitely and never actually surface. Try sharing a rough checkpoint on a deadline you set yourself, just to force the idea back into the open before it quietly dies there.",
+                "vectors": {"information_bandwidth": 2.5, "execution_rigor": -2.0, "chaos_tolerance": 1.5, "cognitive_endurance": 0.0}
             }
         }
     },
     {
         "id": "q24",
         "section": "Subsystem 05: The Cognitive Edge",
-        "question": "If you had to pick the single core value that defines your technical identity and standard of work, it is:",
+        "question": "Strip it down to one single value. When you look at a piece of your own finished work, what's the ONE thing that has to be true for you to actually call it good?",
         "options": {
             "A": {
-                "text": "Architectural Elegance: Designing clean, scalable systems that grow beautifully without needing messy patches.",
-                "label": "The Coherence Purist",
-                "advice": "What matters most to you is a clean system built to last. Just watch that this pursuit of elegance doesn't delay delivery when the situation actually calls for a working compromise.",
-                "vectors": {
-                    "information_bandwidth": 2.0,
-                    "execution_rigor": 1.5,
-                    "chaos_tolerance": -0.5,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "It's clean and coherent enough that it could grow later without turning into a pile of patches.",
+                "label": "THE COHERENCE PURIST",
+                "advice": "Architectural elegance - a system built to last and scale cleanly - is your actual bar for quality, more than speed or completeness. Just watch that the pursuit of elegance doesn't delay delivery in situations that genuinely call for a working compromise today over a perfect structure next month.",
+                "vectors": {"information_bandwidth": 2.0, "execution_rigor": 1.5, "chaos_tolerance": -0.5, "cognitive_endurance": 1.5}
             },
             "B": {
-                "text": "Pure Execution: Shipping working code on time, beating the deadline, and getting the job done no matter what.",
-                "label": "The Relentless Shipper",
-                "advice": "Your priority is shipping something that works, on time, whatever it takes. Plan regular time to clean up the technical debt you pick up along the way.",
-                "vectors": {
-                    "information_bandwidth": -0.5,
-                    "execution_rigor": -0.5,
-                    "chaos_tolerance": 2.5,
-                    "cognitive_endurance": 1.5
-                }
+                "text": "It actually shipped, on time, and it works - full stop, everything else is secondary.",
+                "label": "THE RELENTLESS SHIPPER",
+                "advice": "Your bar for quality is functional and on-time delivery - genuinely the metric that matters most in fast-moving, real-world contexts. Plan regular time specifically to clean up the technical debt this priority naturally accumulates, since 'ship it' as a permanent default eventually costs you speed later, not just polish.",
+                "vectors": {"information_bandwidth": -0.5, "execution_rigor": -0.5, "chaos_tolerance": 2.5, "cognitive_endurance": 1.5}
             },
             "C": {
-                "text": "Uncompromising Quality: Hunting down every single edge case and optimizing performance until it runs with flawless precision.",
-                "label": "The Precision Sentinel",
-                "advice": "You hunt down every edge case until it's fully precise — a real commitment to quality. Keep in mind that in a fast-moving environment, a working result delivered on time often beats a perfect one that arrives too late.",
-                "vectors": {
-                    "information_bandwidth": 1.0,
-                    "execution_rigor": 3.0,
-                    "chaos_tolerance": -1.5,
-                    "cognitive_endurance": 2.0
-                }
+                "text": "Every edge case I could think of has been hunted down and it runs with genuinely flawless precision.",
+                "label": "THE PRECISION SENTINEL",
+                "advice": "Your bar for 'good' is exhaustive correctness - hunting down every edge case is a real, uncommon commitment to quality most people don't sustain. Keep in mind that in fast-moving contexts, a working result delivered on time often beats a technically perfect one that ships too late to matter.",
+                "vectors": {"information_bandwidth": 1.0, "execution_rigor": 3.0, "chaos_tolerance": -1.5, "cognitive_endurance": 2.0}
             },
             "D": {
-                "text": "Radical Innovation: Questioning the usual ways of doing things, breaking standard rules, and discovering completely unexpected solutions.",
-                "label": "The Paradigm Disruptor",
-                "advice": "You question the usual way of doing things in search of unexpected solutions — a real strength in innovation. Team up with people who are rigorous on execution to turn your bold ideas into something concrete.",
-                "vectors": {
-                    "information_bandwidth": 2.5,
-                    "execution_rigor": -2.5,
-                    "chaos_tolerance": 2.0,
-                    "cognitive_endurance": 0.5
-                }
+                "text": "It does something genuinely unexpected - breaks the usual way this kind of thing gets solved.",
+                "label": "THE PARADIGM DISRUPTOR",
+                "advice": "Your actual bar for quality is originality - a solution that questions the standard approach entirely, not just executes it well. Genuinely valuable for innovation, but pair up with people who bring rigorous execution; bold, unconventional ideas need a partner who can turn them into something concrete and reliable, not just impressive on paper.",
+                "vectors": {"information_bandwidth": 2.5, "execution_rigor": -2.5, "chaos_tolerance": 2.0, "cognitive_endurance": 0.5}
             }
         }
     }
 ]
+
+
+
+with st.expander("🔧 Developer Shortcut (bypass le questionnaire pour tester)"):
+    cheat_code = st.text_input("Code :", type="password", key="cheat_code_input")
+    if st.button("Appliquer le profil de test"):
+        if cheat_code == "XIN2":
+            st.session_state.core_vectors = {
+                "information_bandwidth": 2.5,
+                "execution_rigor": 0.5,
+                "chaos_tolerance": 1.0,
+                "cognitive_endurance": 2.0,
+            }
+            st.session_state.flags["scan_completed"] = True
+            st.session_state.flags["chatbot_unlocked"] = True
+            st.session_state.current_q_idx = ALL_QUESTIONS 
+            st.success("Profil THE INTRINSICALLY DRIVEN appliqué !")
+            st.rerun()
+        elif cheat_code:
+            st.error("Code incorrect.")

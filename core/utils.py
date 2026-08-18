@@ -35,16 +35,29 @@ def is_plausible_gemini_key(key: str) -> bool:
     return len(key) >= 20 and " " not in key
 
 
-def extract_json_block(text: str):
+def extract_json_block(text):
     """
     Extrait un objet ou une liste JSON depuis une réponse LLM, même si le
     modèle a entouré le JSON de ```json ... ``` ou de texte parasite.
     Retourne None si aucun JSON valide n'a pu être extrait — à toujours
     vérifier côté appelant avant d'utiliser le résultat.
     Utilisé par 06_Quiz_Generator.py et 07_Planning_Generator.py.
+
+    FIX: `text` n'est pas garanti d'être une string — response.content de
+    langchain_google_genai peut parfois être une liste de blocs de contenu
+    au lieu d'un texte brut. Avant, cette fonction plantait avec
+    "AttributeError: 'list' object has no attribute 'strip'" dans ce cas.
+    On repasse maintenant systématiquement par extract_text() en sécurité,
+    au lieu de compter sur chaque page appelante pour le faire elle-même.
     """
     import json
     import re
+
+    if not text:
+        return None
+
+    if not isinstance(text, str):
+        text = extract_text(text)
 
     if not text:
         return None
