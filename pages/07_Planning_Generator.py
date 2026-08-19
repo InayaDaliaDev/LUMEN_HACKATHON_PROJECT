@@ -1,15 +1,12 @@
 import streamlit as st
 import re
-from core.utils import is_plausible_gemini_key, extract_json_block
+from core.utils import is_plausible_gemini_key, extract_json_block, extract_text
 
-# ==============================================================================
-# 0. HARDENED DEPENDENCY INJECTION
-# ==============================================================================
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
     from langchain_core.messages import HumanMessage
 except ImportError:
-    st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: `pip install langchain langchain-google-genai google-generativeai`")
+    st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: pip install langchain langchain-google-genai google-generativeai")
     st.stop()
 
 try:
@@ -20,7 +17,8 @@ except ImportError:
 
 
 # ==============================================================================
-# 1. ACCÈS CONDITIONNÉ AU SCAN COGNITIF (même garde-fou que 03_Mr.Brown.py)
+# 1. ACCESS CONTROL — gated on flags.scan_completed, works with the dev
+# shortcut cheat code from 01_Assessment.py as well as a real completed scan.
 # ==============================================================================
 if not st.session_state.get("flags", {}).get("scan_completed"):
     st.error("🛑 ACCESS DENIED: Neural baseline not established. Complete the diagnostic scan first.")
@@ -50,11 +48,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<p class="roadmap-header">📅 The Neural Roadmap</p>', unsafe_allow_html=True)
-st.write(f"Planning **réellement** personnalisé pour **{pseudo}** — basé sur ton rythme, tes disponibilités et ce que tu as concrètement à faire, pas juste sur 4 scores.")
+st.markdown('<p class="roadmap-header">📅 The Roadmap</p>', unsafe_allow_html=True)
+st.write(f"A real, personalized plan for **{pseudo}** — built around your actual rhythm, availability, and what you have to get done, not just 4 generic scores.")
 st.divider()
 
-with st.expander("📊 Ton profil cognitif (utilisé comme modulateur secondaire, pas comme base)"):
+with st.expander("📊 Your cognitive profile (used as a secondary tone modulator, not the main input)"):
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Information Bandwidth", f"{int(core_vectors.get('information_bandwidth', 0))} pts")
     col2.metric("Execution Rigor", f"{int(core_vectors.get('execution_rigor', 0))} pts")
@@ -65,7 +63,7 @@ st.divider()
 
 
 # ==============================================================================
-# 3. SIDEBAR — CLÉ API & MODÈLE
+# 3. SIDEBAR — API KEY & MODEL
 # ==============================================================================
 with st.sidebar:
     st.markdown("### 🎛️ Engine Control Matrix")
@@ -74,7 +72,14 @@ with st.sidebar:
         value=st.session_state.get("gemini_api_key", ""),
         type="password",
         placeholder="AIzaSy...",
-        help="Partagée entre tous les modules Lumen pour cette session."
+        help=(
+            "**How to get your key (free):**\n\n"
+            "1. Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey)\n"
+            "2. Sign in with a Google account\n"
+            "3. Click **'Create API key'**\n"
+            "4. Paste it here (it starts with `AIza...`)\n\n"
+            "It's never stored anywhere except in your browser session for this app."
+        )
     ).strip()
 
     selected_model = st.selectbox(
@@ -88,143 +93,131 @@ gemini_api_key = st.session_state.get("gemini_api_key", "")
 
 
 # ==============================================================================
-# 4. QUESTIONNAIRE DE PERSONNALISATION RÉELLE
+# 4. REAL PERSONALIZATION FORM
 # ==============================================================================
-# UPGRADE : le planning se basait uniquement sur les 4 scores cognitifs — il ne
-# savait rien du rythme réel de l'utilisateur, de ses tâches concrètes ou de
-# ses contraintes. Ce formulaire collecte l'info qui compte vraiment ; les
-# scores cognitifs ne servent plus qu'à moduler le TON des directives.
-st.subheader("🧬 Configure ton planning")
+st.subheader("🧬 Set up your plan")
 
 with st.form("planning_prefs_form"):
     col_a, col_b = st.columns(2)
 
     with col_a:
         chronotype = st.selectbox(
-            "Ton rythme naturel :",
+            "Your natural rhythm:",
             options=[
-                "🌅 Matinal — productif tôt, à plat en soirée",
-                "🌙 Oiseau de nuit — lent le matin, productif tard",
-                "🔄 Ça varie beaucoup selon les jours",
+                "🌅 Morning person — sharp early, flat by evening",
+                "🌙 Night owl — slow to start, sharp late",
+                "🔄 It varies a lot day to day",
             ],
         )
 
         daily_hours = st.slider(
-            "Combien d'heures peux-tu réellement consacrer à ça par jour ?",
+            "How many hours can you realistically give this per day?",
             min_value=1, max_value=10, value=3,
-            help="Sois honnête — un planning basé sur 8h/jour que tu ne tiens pas ne sert à rien."
+            help="Be honest — a plan based on 8h/day you won't actually do is useless."
         )
 
-        plan_length = st.slider("Durée du planning (en jours)", 3, 21, 12)
+        # FIX: max lowered from 21 to 7. A shorter window is both more
+        # realistic for a study/work plan and far more reliable for the
+        # model to generate correctly-structured JSON for in one shot.
+        plan_length = st.slider("Plan length (in days)", 1, 7, 5)
 
     with col_b:
         preferred_slots = st.multiselect(
-            "Créneaux où tu es réellement disponible :",
-            options=["Tôt le matin", "Matinée", "Après-midi", "Soirée", "Tard le soir"],
-            default=["Après-midi", "Soirée"],
+            "Time slots you're actually available:",
+            options=["Early morning", "Mid-morning", "Afternoon", "Evening", "Late night"],
+            default=["Afternoon", "Evening"],
         )
 
         break_style = st.selectbox(
-            "Ton style de pause :",
+            "Your break style:",
             options=[
-                "Pauses courtes et fréquentes (ex: 5 min toutes les 25 min)",
-                "Pauses longues et espacées (ex: 30 min après 2h de travail)",
-                "Pas de préférence particulière",
+                "Short, frequent breaks (e.g. 5 min every 25 min)",
+                "Long, spaced-out breaks (e.g. 30 min after 2h of work)",
+                "No strong preference",
             ],
         )
 
         energy_note = st.selectbox(
-            "Après une session de travail intense, tu es plutôt :",
+            "After a demanding work session, you're usually:",
             options=[
-                "Encore chaud, je peux enchaîner",
-                "Vidé, j'ai besoin d'une vraie coupure",
-                "Ça dépend du sujet",
+                "Still fired up, I can keep going",
+                "Drained, I need a real break",
+                "It depends on the topic",
             ],
         )
 
     tasks_raw = st.text_area(
-        "Ce que tu as concrètement à faire pendant cette période (une tâche par ligne) :",
-        placeholder="ex:\nRéviser le chapitre sur les suites pour le contrôle de maths\nAvancer le module de scoring de NutriMatch\nPréparer 30 min de présentation pour le hackathon",
+        "What you actually need to get done in this window (one task per line):",
+        placeholder="e.g.\nReview the chapter on sequences for the math test\nMove forward on the scoring module for my app\nPrepare a 30-min presentation for the hackathon",
         height=130,
     )
 
     deadline_note = st.text_input(
-        "Une échéance précise à respecter dans cette période ? (optionnel)",
-        placeholder="ex: contrôle de maths le jour 5, rendu hackathon le jour 12"
+        "A specific deadline to hit within this window? (optional)",
+        placeholder="e.g. math test on day 3, hackathon submission on day 7"
     )
 
     fixed_constraints = st.text_input(
-        "Contraintes fixes qui bouffent du temps (optionnel) :",
-        placeholder="ex: cours tous les matins jusqu'à 16h, entraînement le mardi et jeudi soir"
+        "Fixed constraints that eat into your time? (optional)",
+        placeholder="e.g. classes every morning until 4pm, training on Tuesday and Thursday evenings"
     )
 
-    submitted = st.form_submit_button("Générer mon Planning Personnalisé ⚡", type="primary", use_container_width=True)
+    submitted = st.form_submit_button("Generate My Personalized Plan ⚡", type="primary", use_container_width=True)
 
 
 # ==============================================================================
-# 5. GÉNÉRATION DU PLANNING
+# 5. GENERATION
 # ==============================================================================
 def generate_roadmap(
-    pseudo: str,
-    vectors: dict,
-    api_key: str,
-    model: str,
-    timeout: int,
-    plan_length: int,
-    chronotype: str,
-    daily_hours: int,
-    preferred_slots: list,
-    break_style: str,
-    energy_note: str,
-    tasks_raw: str,
-    deadline_note: str,
-    fixed_constraints: str,
+    pseudo, vectors, api_key, model, timeout, plan_length,
+    chronotype, daily_hours, preferred_slots, break_style,
+    energy_note, tasks_raw, deadline_note, fixed_constraints,
 ):
-    tasks_block = tasks_raw.strip() if tasks_raw.strip() else "(aucune tâche précise fournie — propose un contenu générique de progression)"
-    slots_block = ", ".join(preferred_slots) if preferred_slots else "(non précisé)"
-    deadline_block = deadline_note.strip() if deadline_note.strip() else "(aucune échéance précise)"
-    constraints_block = fixed_constraints.strip() if fixed_constraints.strip() else "(aucune contrainte fixe signalée)"
+    tasks_block = tasks_raw.strip() if tasks_raw.strip() else "(no specific tasks given — propose generic, realistic progression content)"
+    slots_block = ", ".join(preferred_slots) if preferred_slots else "(not specified)"
+    deadline_block = deadline_note.strip() if deadline_note.strip() else "(no specific deadline)"
+    constraints_block = fixed_constraints.strip() if fixed_constraints.strip() else "(no fixed constraints given)"
 
-    prompt = f"""Tu es le moteur de planification stratégique de Lumen. Crée un planning d'exécution CONCRET et RÉALISTE sur exactement {plan_length} jours pour {pseudo}.
+    prompt = f"""You are Lumen's planning engine. Build a CONCRETE, REALISTIC execution plan over exactly {plan_length} days for {pseudo}.
 
-[CONTRAINTES RÉELLES DE L'UTILISATEUR — PRIORITAIRES sur tout le reste]
-- Rythme naturel : {chronotype}
-- Heures disponibles par jour : {daily_hours}h (ne dépasse JAMAIS ce budget horaire par jour)
-- Créneaux réellement disponibles : {slots_block}
-- Style de pause préféré : {break_style}
-- Après une session intense : {energy_note}
-- Contraintes fixes à respecter : {constraints_block}
-- Échéance(s) à viser : {deadline_block}
+[USER'S REAL CONSTRAINTS — TAKE PRIORITY OVER EVERYTHING ELSE]
+- Natural rhythm: {chronotype}
+- Hours available per day: {daily_hours}h (NEVER exceed this daily budget)
+- Actually available time slots: {slots_block}
+- Preferred break style: {break_style}
+- After an intense session: {energy_note}
+- Fixed constraints to respect: {constraints_block}
+- Deadline(s) to hit: {deadline_block}
 
-[TÂCHES CONCRÈTES À RÉPARTIR SUR LA PÉRIODE]
+[CONCRETE TASKS TO DISTRIBUTE ACROSS THE PLAN]
 {tasks_block}
 
-[MODULATION SECONDAIRE — scores cognitifs 0-100, à utiliser uniquement pour ajuster le TON et la marge de sécurité, jamais pour remplacer les contraintes ci-dessus]
+[SECONDARY MODULATION — cognitive scores 0-100, use ONLY to adjust tone and pacing margin, never to override the constraints above]
 - Information Bandwidth: {vectors.get('information_bandwidth', 0)}
 - Execution Rigor: {vectors.get('execution_rigor', 0)}
 - Chaos Tolerance: {vectors.get('chaos_tolerance', 0)}
 - Cognitive Endurance: {vectors.get('cognitive_endurance', 0)}
 
-[RÈGLES]
-1. Place les tâches fournies sur des jours précis, en respectant les échéances si indiquées.
-2. Ne planifie jamais plus que le budget horaire quotidien indiqué.
-3. Respecte les créneaux disponibles et les contraintes fixes.
-4. Intègre le style de pause demandé directement dans les blocs (pas juste en note à part).
-5. Si aucune tâche précise n'est fournie, construis un contenu de progression générique cohérent avec le profil.
+[RULES]
+1. Place the given tasks on specific days, respecting deadlines when given.
+2. Never schedule more than the stated daily hour budget.
+3. Respect the available time slots and fixed constraints.
+4. Build the requested break style directly into the time blocks, not as a separate note.
+5. If no specific tasks were given, build generic but realistic progression content consistent with the profile.
 
-Réponds STRICTEMENT en JSON valide, sans aucun texte avant ou après, au format suivant :
+Respond with STRICT valid JSON only, no text before or after, in exactly this shape:
 {{
   "days": [
     {{
       "day": 1,
-      "title": "titre court du jour",
+      "title": "short day title",
       "blocks": [
-        {{"time": "ex: 17h-18h30", "task": "tâche concrète", "note": "précision courte ou type de pause associée"}}
+        {{"time": "e.g. 5pm-6:30pm", "task": "concrete task", "note": "short note or break type"}}
       ]
     }}
   ]
 }}
-Le tableau "days" doit contenir exactement {plan_length} éléments, un par jour."""
+The "days" array must contain exactly {plan_length} elements, one per day."""
 
     fallback_chain = [model, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
     models_to_try = []
@@ -243,7 +236,13 @@ Le tableau "days" doit contenir exactement {plan_length} éléments, un par jour
                 max_retries=1,
             )
             response = llm.invoke([HumanMessage(content=prompt)])
-            return response.content, None
+            # FIX: response.content isn't guaranteed to be a plain string —
+            # it can come back as a list of content blocks, which crashed
+            # extract_json_block() downstream ("'list' object has no
+            # attribute 'strip'"). Piping it through extract_text() first
+            # makes this explicit and matches the pattern used in the other
+            # AI pages (Mr. Brown, What If, The Old Days).
+            return extract_text(response.content), None
         except Exception as e:
             last_exception = e
             continue
@@ -253,11 +252,11 @@ Le tableau "days" doit contenir exactement {plan_length} éléments, un par jour
 
 if submitted:
     if not is_plausible_gemini_key(gemini_api_key):
-        st.error("⚠️ Renseigne une clé API Gemini valide dans la barre latérale avant de continuer.")
+        st.error("⚠️ Enter a valid Gemini API key in the sidebar before continuing.")
     elif not preferred_slots:
-        st.warning("Sélectionne au moins un créneau où tu es disponible.")
+        st.warning("Pick at least one time slot you're available.")
     else:
-        with st.spinner("Construction de ton planning personnalisé..."):
+        with st.spinner("Building your personalized plan..."):
             raw_response, error = generate_roadmap(
                 pseudo, core_vectors, gemini_api_key, selected_model, request_timeout,
                 plan_length, chronotype, daily_hours, preferred_slots, break_style,
@@ -266,36 +265,36 @@ if submitted:
 
         if error is not None:
             if HAS_GOOGLE_EXCEPTIONS and isinstance(error, google_exceptions.PermissionDenied):
-                st.error("❌ Clé API rejetée. Vérifie qu'elle est correcte et active.")
+                st.error("❌ API key rejected. Check that it's correct and active.")
             elif HAS_GOOGLE_EXCEPTIONS and isinstance(error, google_exceptions.ResourceExhausted):
-                st.error("❌ Quota Gemini dépassé. Réessaie dans quelques instants.")
+                st.error("❌ Gemini quota exceeded. Try again in a moment.")
             else:
-                st.error(f"❌ La génération a échoué sur tous les modèles disponibles : {error}")
+                st.error(f"❌ Generation failed on every available model: {error}")
         else:
             roadmap_data = extract_json_block(raw_response)
             if roadmap_data and isinstance(roadmap_data, dict) and roadmap_data.get("days"):
                 st.session_state["roadmap_data"] = roadmap_data
                 st.session_state["roadmap_raw"] = None
-                st.success("Planning généré avec succès !")
+                st.success("Plan generated successfully!")
             else:
                 st.session_state["roadmap_data"] = None
                 st.session_state["roadmap_raw"] = raw_response
-                st.warning("Le planning a été généré mais le format JSON attendu n'a pas pu être analysé — affichage brut ci-dessous.")
+                st.warning("The plan was generated but the expected JSON format couldn't be parsed — showing raw output below.")
 
 
 # ==============================================================================
-# 6. AFFICHAGE DU PLANNING
+# 6. DISPLAY
 # ==============================================================================
 roadmap_data = st.session_state.get("roadmap_data")
 
 if roadmap_data:
     st.divider()
-    st.subheader("🗺️ Ton planning personnalisé")
+    st.subheader("🗺️ Your personalized plan")
 
     for day in roadmap_data.get("days", []):
         day_num = day.get("day", "?")
         title = day.get("title", "")
-        with st.expander(f"Jour {day_num} — {title}", expanded=(day_num == 1)):
+        with st.expander(f"Day {day_num} — {title}", expanded=(day_num == 1)):
             blocks = day.get("blocks", [])
             if blocks:
                 for block in blocks:
@@ -307,11 +306,10 @@ if roadmap_data:
                     if note:
                         st.caption(note)
             else:
-                # Repli si le modèle renvoie l'ancien format "directives"
                 for directive in day.get("directives", []):
                     st.markdown(f"- {directive}")
 
 elif st.session_state.get("roadmap_raw"):
     st.divider()
-    st.subheader("🗺️ Résultat brut (non structuré)")
+    st.subheader("🗺️ Raw output (unstructured)")
     st.markdown(st.session_state["roadmap_raw"])

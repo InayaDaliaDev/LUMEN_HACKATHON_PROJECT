@@ -172,9 +172,7 @@ for item in rendered_advices:
         st.info(f"**Directive:** {item['advice']}")
 
 st.write("")
-bash
 
-cat << 'EOF'
 nav_col1, nav_col2 = st.columns(2)
 with nav_col1:
     if st.session_state.flags.get("chatbot_unlocked"):
@@ -184,4 +182,3 @@ with nav_col1:
 with nav_col2:
     if st.button("See the full Builder Blueprint 🧬", type="primary", use_container_width=True):
         st.switch_page("pages/02_Advices.py")
-EOF

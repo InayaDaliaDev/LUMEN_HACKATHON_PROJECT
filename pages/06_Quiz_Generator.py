@@ -1,14 +1,11 @@
 import streamlit as st
-from core.utils import is_plausible_gemini_key, extract_json_block
+from core.utils import is_plausible_gemini_key, extract_json_block, extract_text
 
-# ==============================================================================
-# 0. HARDENED DEPENDENCY INJECTION (même pattern que 03_Mr.Brown.py)
-# ==============================================================================
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
     from langchain_core.messages import HumanMessage
 except ImportError:
-    st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: `pip install langchain langchain-google-genai google-generativeai`")
+    st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: pip install langchain langchain-google-genai google-generativeai")
     st.stop()
 
 try:
@@ -16,6 +13,14 @@ try:
     HAS_GOOGLE_EXCEPTIONS = True
 except ImportError:
     HAS_GOOGLE_EXCEPTIONS = False
+
+# FIX: added PDF support. pypdf must be in requirements.txt for this to work
+# once deployed — see the note at the end of this file.
+try:
+    from pypdf import PdfReader
+    HAS_PDF_SUPPORT = True
+except ImportError:
+    HAS_PDF_SUPPORT = False
 
 
 # ==============================================================================
@@ -33,13 +38,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<p class="quiz-header">🧩 Neural Quiz Generator</p>', unsafe_allow_html=True)
-st.write("Glisse un texte ou un document, et Lumen génère un quiz d'évaluation personnalisé basé sur ton contenu.")
+st.markdown('<p class="quiz-header">🧩 Quiz Forge</p>', unsafe_allow_html=True)
+st.write("Drop in your notes, a course PDF, or paste text directly — Lumen turns it into a graded quiz on the spot.")
 st.divider()
 
 
 # ==============================================================================
-# 2. SIDEBAR — CLÉ API & MODÈLE (même convention que les autres pages IA)
+# 2. SIDEBAR — API KEY & MODEL
 # ==============================================================================
 with st.sidebar:
     st.markdown("### 🎛️ Engine Control Matrix")
@@ -48,64 +53,113 @@ with st.sidebar:
         value=st.session_state.get("gemini_api_key", ""),
         type="password",
         placeholder="AIzaSy...",
-        help="Partagée entre tous les modules Lumen pour cette session."
+        help=(
+            "**How to get your key (free):**\n\n"
+            "1. Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey)\n"
+            "2. Sign in with a Google account\n"
+            "3. Click **'Create API key'**\n"
+            "4. Paste it here (it starts with `AIza...`)\n\n"
+            "It's never stored anywhere except in your browser session for this app."
+        )
     ).strip()
 
     selected_model = st.selectbox(
         "Inference Model:",
         options=["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.5-flash"],
         index=0,
-        help="gemini-2.5-flash offre le meilleur compromis qualité/fiabilité."
+        help="gemini-2.5-flash is the best balance of quality and reliability."
     )
 
-    num_questions = st.slider("Nombre de questions", 3, 10, 5, 1)
+    num_questions = st.slider("Number of questions", 3, 15, 5, 1)
     request_timeout = st.slider("Request Timeout (s)", 10, 120, 45, 5)
 
 gemini_api_key = st.session_state.get("gemini_api_key", "")
 
 
 # ==============================================================================
-# 3. SAISIE DU CONTENU SOURCE
+# 3. SOURCE CONTENT INPUT
 # ==============================================================================
-uploaded_file = st.file_uploader("Dépose un fichier texte (.txt ou .md)", type=["txt", "md"])
-raw_text = st.text_area("Ou colle ton contenu directement ici :", height=200)
+accepted_types = ["txt", "md"]
+if HAS_PDF_SUPPORT:
+    accepted_types.append("pdf")
+else:
+    st.warning("⚠️ PDF support isn't available right now (missing `pypdf` dependency) — only .txt and .md files work. Text pasting below still works regardless.")
+
+uploaded_file = st.file_uploader(
+    f"Drop a file ({', '.join(t.upper() for t in accepted_types)})",
+    type=accepted_types
+)
+raw_text = st.text_area("Or paste your content directly here:", height=200)
+
+
+def extract_pdf_text(file) -> str:
+    """Extract text from an uploaded PDF using pypdf. Returns '' on failure
+    rather than raising, so a corrupt/scanned PDF doesn't crash the page."""
+    try:
+        reader = PdfReader(file)
+        pages_text = []
+        for page in reader.pages:
+            page_text = page.extract_text() or ""
+            if page_text.strip():
+                pages_text.append(page_text)
+        return "\n\n".join(pages_text)
+    except Exception:
+        return ""
+
 
 content = ""
 if uploaded_file is not None:
-    try:
-        content = uploaded_file.read().decode("utf-8", errors="ignore")
-    except Exception:
-        st.error("Impossible de lire ce fichier. Vérifie qu'il s'agit bien d'un fichier texte valide.")
+    file_name = uploaded_file.name.lower()
+    if file_name.endswith(".pdf"):
+        if not HAS_PDF_SUPPORT:
+            st.error("PDF support isn't installed on this deployment. Try a .txt or .md file, or paste the text instead.")
+        else:
+            with st.spinner("Extracting text from PDF..."):
+                content = extract_pdf_text(uploaded_file)
+            if not content.strip():
+                st.error("Couldn't extract any text from this PDF — it might be a scanned image rather than real text. Try pasting the text manually instead.")
+    else:
+        try:
+            content = uploaded_file.read().decode("utf-8", errors="ignore")
+        except Exception:
+            st.error("Couldn't read this file. Make sure it's a valid text file.")
 elif raw_text:
     content = raw_text.strip()
 
-# Garde-fou : un texte trop long gaspille des tokens et augmente le risque de
-# timeout. On tronque proprement plutôt que de planter en pleine génération.
-MAX_CHARS = 12000
+# FIX: limit raised from 12,000 to 40,000 characters (~8-10k words) — the
+# previous limit was too small for a real course PDF, which was the main
+# complaint. Gemini's context window comfortably handles this; the limit
+# here is mainly to keep prompt cost and latency reasonable, not a hard
+# model constraint.
+MAX_CHARS = 40000
 if len(content) > MAX_CHARS:
-    st.warning(f"Le contenu dépasse {MAX_CHARS} caractères — seul le début sera utilisé pour générer le quiz.")
+    st.warning(f"Content exceeds {MAX_CHARS:,} characters — only the beginning will be used to generate the quiz.")
     content = content[:MAX_CHARS]
 
+if content:
+    word_count = len(content.split())
+    st.caption(f"📄 {word_count:,} words loaded and ready.")
+
 
 # ==============================================================================
-# 4. GÉNÉRATION DU QUIZ (avec fallback de modèles, même logique que les autres pages)
+# 4. QUIZ GENERATION (with model fallback, same pattern as other AI pages)
 # ==============================================================================
 def generate_quiz(source_text: str, api_key: str, model: str, timeout: int, n_questions: int):
-    prompt = f"""À partir du texte suivant, génère exactement {n_questions} questions à choix multiples (QCM) qui testent la compréhension du contenu, pas juste la mémorisation de détails superficiels.
+    prompt = f"""From the following text, generate exactly {n_questions} multiple-choice questions (MCQ) that test real comprehension of the material, not just superficial detail recall.
 
-Réponds STRICTEMENT en JSON valide, sans aucun texte avant ou après, au format suivant :
+Respond with STRICT valid JSON only, no text before or after, in exactly this shape:
 {{
   "questions": [
     {{
-      "question": "texte de la question",
+      "question": "question text",
       "options": {{"A": "...", "B": "...", "C": "...", "D": "..."}},
       "correct": "A",
-      "explanation": "courte explication de la bonne réponse"
+      "explanation": "short explanation of the correct answer"
     }}
   ]
 }}
 
-TEXTE:
+TEXT:
 {source_text}"""
 
     fallback_chain = [model, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
@@ -125,7 +179,10 @@ TEXTE:
                 max_retries=1,
             )
             response = llm.invoke([HumanMessage(content=prompt)])
-            return response.content, None
+            # FIX: response.content isn't guaranteed to be a plain string —
+            # piping through extract_text() first avoids the
+            # "'list' object has no attribute 'strip'" crash seen before.
+            return extract_text(response.content), None
         except Exception as e:
             last_exception = e
             continue
@@ -133,45 +190,44 @@ TEXTE:
     return None, last_exception
 
 
-if st.button("Générer le Quiz 🚀", type="primary", use_container_width=True):
+if st.button("Generate Quiz 🚀", type="primary", use_container_width=True):
     if not is_plausible_gemini_key(gemini_api_key):
-        st.error("⚠️ Renseigne une clé API Gemini valide dans la barre latérale avant de continuer.")
+        st.error("⚠️ Enter a valid Gemini API key in the sidebar before continuing.")
     elif not content:
-        st.warning("Fournis un texte ou un fichier avant de générer le quiz.")
+        st.warning("Provide some text or a file before generating the quiz.")
     else:
-        with st.spinner("Analyse du contenu et génération des questions en cours..."):
+        with st.spinner("Analyzing content and generating questions..."):
             raw_response, error = generate_quiz(content, gemini_api_key, selected_model, request_timeout, num_questions)
 
         if error is not None:
             if HAS_GOOGLE_EXCEPTIONS and isinstance(error, google_exceptions.PermissionDenied):
-                st.error("❌ Clé API rejetée. Vérifie qu'elle est correcte et active.")
+                st.error("❌ API key rejected. Check that it's correct and active.")
             elif HAS_GOOGLE_EXCEPTIONS and isinstance(error, google_exceptions.ResourceExhausted):
-                st.error("❌ Quota Gemini dépassé. Réessaie dans quelques instants.")
+                st.error("❌ Gemini quota exceeded. Try again in a moment.")
             else:
-                st.error(f"❌ La génération a échoué sur tous les modèles disponibles : {error}")
+                st.error(f"❌ Generation failed on every available model: {error}")
         else:
             quiz_data = extract_json_block(raw_response)
             if quiz_data and isinstance(quiz_data, dict) and quiz_data.get("questions"):
                 st.session_state["generated_quiz_data"] = quiz_data
                 st.session_state["quiz_answers"] = {}
                 st.session_state["quiz_graded"] = False
-                st.success("Quiz généré avec succès !")
+                st.session_state["generated_quiz_raw"] = None
+                st.success("Quiz generated successfully!")
             else:
-                # Repli : le JSON n'a pas pu être parsé, on garde quand même le
-                # texte brut plutôt que de perdre la génération.
                 st.session_state["generated_quiz_data"] = None
                 st.session_state["generated_quiz_raw"] = raw_response
-                st.warning("Le quiz a été généré mais le format JSON attendu n'a pas pu être analysé — affichage brut ci-dessous.")
+                st.warning("The quiz was generated but the expected JSON format couldn't be parsed — showing raw output below.")
 
 
 # ==============================================================================
-# 5. AFFICHAGE INTERACTIF DU QUIZ
+# 5. INTERACTIVE QUIZ DISPLAY
 # ==============================================================================
 quiz_data = st.session_state.get("generated_quiz_data")
 
 if quiz_data:
     st.divider()
-    st.subheader("📝 Ton Quiz Personnalisé")
+    st.subheader("📝 Your Quiz")
 
     questions = quiz_data.get("questions", [])
     quiz_answers = st.session_state.setdefault("quiz_answers", {})
@@ -192,7 +248,7 @@ if quiz_data:
         quiz_answers[i] = selected
         st.write("")
 
-    if st.button("Corriger ✅", use_container_width=True):
+    if st.button("Check Answers ✅", use_container_width=True):
         st.session_state["quiz_graded"] = True
 
     if st.session_state.get("quiz_graded"):
@@ -202,13 +258,13 @@ if quiz_data:
             user_answer = quiz_answers.get(i)
             if user_answer == correct:
                 score += 1
-                st.success(f"Q{i + 1} : Correct ✅ — {q.get('explanation', '')}")
+                st.success(f"Q{i + 1}: Correct ✅ — {q.get('explanation', '')}")
             else:
-                st.error(f"Q{i + 1} : Incorrect ❌ — Bonne réponse : {correct}) {q.get('options', {}).get(correct, '')}. {q.get('explanation', '')}")
+                st.error(f"Q{i + 1}: Incorrect ❌ — Correct answer: {correct}) {q.get('options', {}).get(correct, '')}. {q.get('explanation', '')}")
 
-        st.metric("Score final", f"{score} / {len(questions)}")
+        st.metric("Final Score", f"{score} / {len(questions)}")
 
 elif st.session_state.get("generated_quiz_raw"):
     st.divider()
-    st.subheader("📝 Résultat brut (non structuré)")
+    st.subheader("📝 Raw output (unstructured)")
     st.markdown(st.session_state["generated_quiz_raw"])

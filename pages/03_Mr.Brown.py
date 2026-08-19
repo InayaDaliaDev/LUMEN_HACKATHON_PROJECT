@@ -149,7 +149,15 @@ with st.sidebar:
         "Gemini Authentication Key:",
         value=st.session_state.get("gemini_api_key", ""),
         type="password",
-        help="Shared across all Lumen pages for this session. Never logged or displayed."
+        help=(
+            "**How to obtain your key (free) :**\n\n"
+            "1. Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey)\n"
+            "2. Sign in with a Google account\n"
+            "3. Click on **'Create API key'**\n"
+            "4. Copy-paste the key here (it starts with `AIza...`)\n\n"
+            "It is never stored or sent anywhere else than to Google — "
+            "uniquement gardée en mémoire le temps de ta session."
+        )
     ).strip()
 
     selected_model = st.selectbox(
@@ -377,6 +385,7 @@ if prompt := st.chat_input(f"Enter your academic roadblock, {pseudo}..."):
             "weakest_label": vector_labels.get(weakest_key, weakest_key),
             "detailed_choices": detailed_choices_block,
         }
+
         full_response, error_message = stream_turn(input_state, build_config(), message_placeholder)
         if error_message:
             st.error(error_message)

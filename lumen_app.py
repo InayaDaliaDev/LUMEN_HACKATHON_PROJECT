@@ -88,19 +88,15 @@ def home_view():
 # ROUTING CONFIGURATION (Arborescence)
 # ---------------------------------------------------------
 # Vue d'accueil liée à la fonction home_view
-home_page = st.Page(home_view, title="00 // Entry Protocol", icon="🚨", default=True)
+home_page = st.Page(home_view, title="Entry Protocol", icon="🚨", default=True)
 
-# Pages secondaires (fichiers dans le dossier pages/)
-# FIX: chemins remis à jour après ton renommage de fichiers
-# (05_What_If→04, 06_TheOldDays→05, 07_Quiz_Generator→06, 08_Planning_Generator→07).
-assessment_page = st.Page("pages/01_Assessment.py", title="01 // Neural Assessment", icon="🔍")
-advices_page = st.Page("pages/02_Advices.py", title="02 // Strategic Countermeasures", icon="📊")
-chatbot_page = st.Page("pages/03_Mr.Brown.py", title="03 // Containment AI", icon="💬")
-what_if_page = st.Page("pages/04_What_If.py", title="04 // Simulation Engine", icon="🔮")
-old_days_page = st.Page("pages/05_TheOldDays.py", title="05 // Temporal Logs", icon="⏳")
-quiz_page = st.Page("pages/06_Quiz_Generator.py", title="06 // Quiz Generator", icon="🧩")
-planning_page = st.Page("pages/07_Planning_Generator.py", title="07 // Neural Roadmap", icon="📅")
-
+assessment_page = st.Page("pages/01_Assessment.py", title="The Scan", icon="🔍")
+advices_page = st.Page("pages/02_Advices.py", title="The Blueprint", icon="📊")
+chatbot_page = st.Page("pages/03_Mr.Brown.py", title="Mr. Brown", icon="💬")
+what_if_page = st.Page("pages/04_What_If.py", title="What If", icon="🔮")
+old_days_page = st.Page("pages/05_TheOldDays.py", title="The Old Days", icon="⏳")
+quiz_page = st.Page("pages/06_Quiz_Generator.py", title="Quiz Forge", icon="🧩")
+planning_page = st.Page("pages/07_Planning_Generator.py", title="The Roadmap", icon="📅")
 # Initialisation du menu de navigation
 pg = st.navigation([
     home_page,
