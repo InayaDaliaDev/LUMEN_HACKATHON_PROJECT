@@ -1,5 +1,6 @@
 import streamlit as st
 from core.utils import is_plausible_gemini_key, extract_json_block, extract_text
+import pypdf
 
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
