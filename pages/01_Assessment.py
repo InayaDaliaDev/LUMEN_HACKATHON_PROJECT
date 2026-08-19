@@ -29,6 +29,28 @@ if st.session_state.current_q_idx > TOTAL_QUESTIONS:
 
 
 # ==============================================================================
+# DEV SHORTCUT (test uniquement — a retirer ou cacher avant la vraie demo jury)
+# ==============================================================================
+with st.expander("🔧 Developer Shortcut (bypass le questionnaire pour tester)"):
+    cheat_code = st.text_input("Code :", type="password", key="cheat_code_input")
+    if st.button("Appliquer le profil de test"):
+        if cheat_code == "XIN2":
+            st.session_state.core_vectors = {
+                "information_bandwidth": 2.5,
+                "execution_rigor": 0.5,
+                "chaos_tolerance": 1.0,
+                "cognitive_endurance": 2.0,
+            }
+            st.session_state.flags["scan_completed"] = True
+            st.session_state.flags["chatbot_unlocked"] = True
+            st.session_state.current_q_idx = TOTAL_QUESTIONS
+            st.success("Profil THE INTRINSICALLY DRIVEN appliqué !")
+            st.rerun()
+        elif cheat_code:
+            st.error("Code incorrect.")
+
+
+# ==============================================================================
 # PHASE 2: QUESTIONNAIRE LOOP
 # ==============================================================================
 if st.session_state.current_q_idx < TOTAL_QUESTIONS:
@@ -172,13 +194,16 @@ for item in rendered_advices:
         st.info(f"**Directive:** {item['advice']}")
 
 st.write("")
+st.write("")
 
 nav_col1, nav_col2 = st.columns(2)
 with nav_col1:
     if st.session_state.flags.get("chatbot_unlocked"):
         st.success("🔓 AI Mentor unlocked.")
-        if st.button("Talk to Mr. Brown 🤖", use_container_width=True):
+        # FIX: pointait vers "pages/Chatbot.py" (inexistant) -> le vrai fichier est 03_Mr.Brown.py
+        if st.button("Talk to SYNAPSE 🤖", type="primary", use_container_width=True):
             st.switch_page("pages/03_Mr.Brown.py")
 with nav_col2:
-    if st.button("See the full Builder Blueprint 🧬", type="primary", use_container_width=True):
+    # FIX: pointait vers "pages/Advices.py" (inexistant) -> le vrai fichier est 02_Advices.py
+    if st.button("See the full Builder Blueprint 🧬", use_container_width=True):
         st.switch_page("pages/02_Advices.py")
