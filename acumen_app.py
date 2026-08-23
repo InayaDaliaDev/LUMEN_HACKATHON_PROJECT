@@ -1,6 +1,6 @@
 import streamlit as st
 from core.centralstate import init_session_state  # FIX: était "core.state" (fichier inexistant -> ModuleNotFoundError)
-from core.disclaimer import render_lumen_disclaimer
+from core.disclaimer import render_acumen_disclaimer
 
 # 1. Initialisation de l'état
 init_session_state()
@@ -10,7 +10,7 @@ init_session_state()
 # 1. PAGE CONFIGURATION
 # ------------------------------------------------------------------------------
 st.set_page_config(
-    page_title="Lumen - Mind Scan",
+    page_title="Acumen - Mind Scan",
     page_icon="🧠",
     layout="wide"
 )
@@ -30,8 +30,8 @@ st.set_page_config(
 # 3. HOME / INTRODUCTION VIEW
 # ------------------------------------------------------------------------------
 def home_view():
-    render_lumen_disclaimer()
-    st.title("👋 Welcome to Lumen")
+    render_acumen_disclaimer()
+    st.title("👋 Welcome to Acumen")
     st.subheader("We need to know who we're talking to. Set up your profile before diving in.")
 
     st.markdown("""

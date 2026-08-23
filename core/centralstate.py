@@ -12,7 +12,7 @@
 # gemini_api_key a aussi été ajouté ici : il était réinitialisé en double dans
 # 03_Mr.Brown.py, 05_What_If.py et 06_TheOldDays.py avec le même bloc
 # "if not in session_state / lire st.secrets". Comme init_session_state()
-# tourne à chaque navigation (lumen_app.py est le script routeur exécuté
+# tourne à chaque navigation (acumen_app.py est le script routeur exécuté
 # avant chaque pg.run()), le centraliser ici supprime cette triplication.
 from typing import Dict, Any
 import streamlit as st
@@ -54,7 +54,7 @@ DEFAULT_STATE: Dict[str, Any] = {
 def init_session_state() -> None:
     """
     Initialise l'espace d'état de Streamlit de manière idempotente.
-    À appeler une seule fois tout en haut de `lumen_app.py`.
+    À appeler une seule fois tout en haut de `acumen_app.py`.
     Les dicts imbriqués sont copiés pour éviter que deux sessions ne
     partagent accidentellement le même objet mutable.
     """

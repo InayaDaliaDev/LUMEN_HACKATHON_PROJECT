@@ -32,7 +32,7 @@ try:
 except ImportError:
     HAS_GOOGLE_EXCEPTIONS = False
 
-# FIX: st.set_page_config() retiré — déjà appelé une fois dans lumen_app.py.
+# FIX: st.set_page_config() retiré — déjà appelé une fois dans acumen_app.py.
 # Un second appel ici levait une StreamlitAPIException à chaque navigation
 # vers cette page.
 
@@ -175,7 +175,7 @@ with st.sidebar:
         "Gemini Authentication Key:",
         value=st.session_state.get("gemini_api_key", ""),
         type="password",
-        help="Shared across Lumen modules. Never logged or exposed."
+        help="Shared across Acumen modules. Never logged or exposed."
     ).strip()
 
     selected_model = st.selectbox(

@@ -33,6 +33,8 @@ with st.expander("🔧 Developer Shortcut (bypass le questionnaire pour tester)"
     cheat_code = st.text_input("Code :", type="password", key="cheat_code_input")
     if st.button("Appliquer le profil de test"):
         if cheat_code == "XIN2":
+            st.session_state.answers = {}
+            st.session_state.dev_mode = True
             st.session_state.core_vectors = {
                 "information_bandwidth": 2.5,
                 "execution_rigor": 0.5,
@@ -108,7 +110,7 @@ if not st.session_state.flags.get("scan_completed"):
     st.error("🛑 Assessment incomplete or session expired.")
     st.markdown("You need to complete the full scan before viewing your Builder Profile.")
     if st.button("⬅️ Return to start"):
-        st.switch_page("lumen_app.py")
+        st.switch_page("acumen_app.py")
     st.stop()
 
 # FIX: cette page bloquait avant sur "answers vide" sans distinguer le cas

@@ -40,7 +40,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<p class="quiz-header">🧩 Quiz Forge</p>', unsafe_allow_html=True)
-st.write("Drop in your notes, a course PDF, or paste text directly — Lumen turns it into a graded quiz on the spot.")
+st.write("Drop in your notes, a course PDF, or paste text directly — Acumen turns it into a graded quiz on the spot.")
 st.divider()
 
 

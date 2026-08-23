@@ -305,7 +305,7 @@ st.divider()
 col_foot1, col_foot2 = st.columns([3, 1])
 
 with col_foot1:
-    st.caption("LUMEN Metacognitive Profiler • Runs entirely on your own answers, no external API needed for this page.")
+    st.caption("ACUMEN Metacognitive Profiler • Runs entirely on your own answers, no external API needed for this page.")
 
 with col_foot2:
     if st.button("Start Over 🔄", use_container_width=True, type="secondary"):

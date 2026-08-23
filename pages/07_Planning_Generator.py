@@ -178,7 +178,7 @@ def generate_roadmap(
     deadline_block = deadline_note.strip() if deadline_note.strip() else "(no specific deadline)"
     constraints_block = fixed_constraints.strip() if fixed_constraints.strip() else "(no fixed constraints given)"
 
-    prompt = f"""You are Lumen's planning engine. Build a CONCRETE, REALISTIC execution plan over exactly {plan_length} days for {pseudo}.
+    prompt = f"""You are Acumen's planning engine. Build a CONCRETE, REALISTIC execution plan over exactly {plan_length} days for {pseudo}.
 
 [USER'S REAL CONSTRAINTS — TAKE PRIORITY OVER EVERYTHING ELSE]
 - Natural rhythm: {chronotype}

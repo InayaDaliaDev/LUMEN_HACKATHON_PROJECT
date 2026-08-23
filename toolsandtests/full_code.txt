@@ -1,22 +1,22 @@
 
 ==================================================
-FILE: lumen_app.py
+FILE: acumen_app.py
 ==================================================
 
 import streamlit as st
 from core.centralstate import init_session_state  # FIX: était "core.state" (fichier inexistant -> ModuleNotFoundError)
-from core.disclaimer import render_lumen_disclaimer
+from core.disclaimer import render_acumen_disclaimer
 
 # 1. Initialisation de l'état
 init_session_state()
 
 # 2. Affichage du disclaimer tout en haut de la page principale
-render_lumen_disclaimer()
+render_acumen_disclaimer()
 # ------------------------------------------------------------------------------
 # 1. PAGE CONFIGURATION
 # ------------------------------------------------------------------------------
 st.set_page_config(
-    page_title="Lumen - Mind Scan",
+    page_title="Acumen - Mind Scan",
     page_icon="🧠",
     layout="wide"
 )
@@ -36,7 +36,7 @@ st.set_page_config(
 # 3. HOME / INTRODUCTION VIEW
 # ------------------------------------------------------------------------------
 def home_view():
-    st.title("👋 Welcome to Lumen")
+    st.title("👋 Welcome to Acumen")
     st.subheader("We need to know who we're talking to. Set up your profile before diving in.")
 
     st.markdown("""
@@ -137,7 +137,7 @@ FILE: core\centralstate.py
 # gemini_api_key a aussi été ajouté ici : il était réinitialisé en double dans
 # 03_Mr.Brown.py, 05_What_If.py et 06_TheOldDays.py avec le même bloc
 # "if not in session_state / lire st.secrets". Comme init_session_state()
-# tourne à chaque navigation (lumen_app.py est le script routeur exécuté
+# tourne à chaque navigation (acumen_app.py est le script routeur exécuté
 # avant chaque pg.run()), le centraliser ici supprime cette triplication.
 from typing import Dict, Any
 import streamlit as st
@@ -179,7 +179,7 @@ DEFAULT_STATE: Dict[str, Any] = {
 def init_session_state() -> None:
     """
     Initialise l'espace d'état de Streamlit de manière idempotente.
-    À appeler une seule fois tout en haut de `lumen_app.py`.
+    À appeler une seule fois tout en haut de `acumen_app.py`.
     Les dicts imbriqués sont copiés pour éviter que deux sessions ne
     partagent accidentellement le même objet mutable.
     """
@@ -228,10 +228,10 @@ FILE: core\disclaimer.py
 import streamlit as st
 
 
-def render_lumen_disclaimer() -> None:
+def render_acumen_disclaimer() -> None:
     """
     Affiche un avertissement cynique, réaliste et drôle en haut de l'application
-    pour rappeler aux utilisateurs que Lumen n'est pas un substitut à l'éducation
+    pour rappeler aux utilisateurs que Acumen n'est pas un substitut à l'éducation
     réelle, ni à un avis professionnel (médical, psychologique ou pédagogique).
     """
     with st.container():
@@ -239,7 +239,7 @@ def render_lumen_disclaimer() -> None:
             """
             > 🚨 **System Warning: Not a Life Coach (Yet).**
             >
-            > Look, Lumen is a brilliant piece of software, but let's be real—it's still software.
+            > Look, Acumen is a brilliant piece of software, but let's be real—it's still software.
             > This app won't magically do your homework, replace years of actual studying, or fix your sleep schedule.
             > If you're expecting a certified diploma or professional psychological validation out of a few
             > click-through buttons, you might want to rethink your life choices.
@@ -252,7 +252,7 @@ def render_lumen_disclaimer() -> None:
             >
             > If something here ever touches on your mental health, wellbeing, or a decision that actually
             > matters, go talk to a real, qualified human — a teacher, a doctor, a counselor, a parent.
-            > Lumen is a tool for reflection and productivity, not a substitute for any of them.
+            > Acumen is a tool for reflection and productivity, not a substitute for any of them.
             >
             > Proceed at your own risk, trust your own brain, and don't blame the code if reality hits hard. ☕
             """,
@@ -269,7 +269,7 @@ FILE: core\scoring.py
 from typing import Dict, List, Any
 from data.question import ALL_QUESTIONS
 
-# Définition explicite des 4 axes cognitifs de Lumen
+# Définition explicite des 4 axes cognitifs de Acumen
 COGNITIVE_AXES: List[str] = [
     "information_bandwidth",
     "execution_rigor",
@@ -1798,7 +1798,7 @@ if not st.session_state.flags.get("scan_completed"):
     st.error("🛑 Assessment incomplete or session expired.")
     st.markdown("You need to complete the full scan before viewing your Builder Profile.")
     if st.button("⬅️ Return to start"):
-        st.switch_page("lumen_app.py")
+        st.switch_page("acumen_app.py")
     st.stop()
 
 if not st.session_state.answers:
@@ -2205,7 +2205,7 @@ st.divider()
 col_foot1, col_foot2 = st.columns([3, 1])
 
 with col_foot1:
-    st.caption("LUMEN Metacognitive Profiler • Runs entirely on your own answers, no external API needed for this page.")
+    st.caption("ACUMEN Metacognitive Profiler • Runs entirely on your own answers, no external API needed for this page.")
 
 with col_foot2:
     if st.button("Start Over 🔄", use_container_width=True, type="secondary"):
@@ -2262,7 +2262,7 @@ except ImportError:
 if 'answers' not in st.session_state or not st.session_state.get('answers'):
     st.error("🛑 ACCESS DENIED: Neural baseline not established. Complete the diagnostic scan first.")
     if st.button("🚀 Initiate Assessment", type="primary", use_container_width=True):
-        st.switch_page("lumen_app.py")
+        st.switch_page("acumen_app.py")
     st.stop()
 
 user_profile = st.session_state.get("user_profile", {}) or {}
@@ -2451,7 +2451,7 @@ st.divider()
 # ==============================================================================
 # UPGRADE : is_plausible_gemini_key() vient maintenant de core/utils.py, et
 # gemini_api_key est déjà initialisée par core.centralstate.init_session_state()
-# (appelée dans lumen_app.py à chaque navigation) — plus besoin de la
+# (appelée dans acumen_app.py à chaque navigation) — plus besoin de la
 # réinitialiser ici à la main.
 
 if "brown_thread_id" not in st.session_state:
@@ -2464,7 +2464,7 @@ with st.sidebar:
         "Gemini Authentication Key:",
         value=st.session_state.get("gemini_api_key", ""),
         type="password",
-        help="Shared across all Lumen pages for this session. Never logged or displayed."
+        help="Shared across all Acumen pages for this session. Never logged or displayed."
     ).strip()
 
     selected_model = st.selectbox(
@@ -2773,7 +2773,7 @@ from core.utils import extract_text, is_plausible_gemini_key
 # ==============================================================================
 # 0. CONFIGURATION DE LA PAGE
 # ==============================================================================
-# FIX: st.set_page_config() a été retiré ici — lumen_app.py l'appelle déjà une
+# FIX: st.set_page_config() a été retiré ici — acumen_app.py l'appelle déjà une
 # fois avant pg.run(). Un second appel dans une sous-page lève une
 # StreamlitAPIException ("set_page_config() can only be called once per app").
 # Si tu veux un titre/icône d'onglet différent pour cette page précise, il faut
@@ -3283,7 +3283,7 @@ try:
 except ImportError:
     HAS_GOOGLE_EXCEPTIONS = False
 
-# FIX: st.set_page_config() retiré — déjà appelé une fois dans lumen_app.py.
+# FIX: st.set_page_config() retiré — déjà appelé une fois dans acumen_app.py.
 # Un second appel ici levait une StreamlitAPIException à chaque navigation
 # vers cette page.
 
@@ -3426,7 +3426,7 @@ with st.sidebar:
         "Gemini Authentication Key:",
         value=st.session_state.get("gemini_api_key", ""),
         type="password",
-        help="Shared across Lumen modules. Never logged or exposed."
+        help="Shared across Acumen modules. Never logged or exposed."
     ).strip()
 
     selected_model = st.selectbox(
@@ -3588,7 +3588,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<p class="quiz-header">🧩 Neural Quiz Generator</p>', unsafe_allow_html=True)
-st.write("Glisse un texte ou un document, et Lumen génère un quiz d'évaluation personnalisé basé sur ton contenu.")
+st.write("Glisse un texte ou un document, et Acumen génère un quiz d'évaluation personnalisé basé sur ton contenu.")
 st.divider()
 
 
@@ -3602,7 +3602,7 @@ with st.sidebar:
         value=st.session_state.get("gemini_api_key", ""),
         type="password",
         placeholder="AIzaSy...",
-        help="Partagée entre tous les modules Lumen pour cette session."
+        help="Partagée entre tous les modules Acumen pour cette session."
     ).strip()
 
     selected_model = st.selectbox(
@@ -3844,7 +3844,7 @@ with st.sidebar:
         value=st.session_state.get("gemini_api_key", ""),
         type="password",
         placeholder="AIzaSy...",
-        help="Partagée entre tous les modules Lumen pour cette session."
+        help="Partagée entre tous les modules Acumen pour cette session."
     ).strip()
 
     selected_model = st.selectbox(
@@ -3861,7 +3861,7 @@ gemini_api_key = st.session_state.get("gemini_api_key", "")
 # 4. GÉNÉRATION DU PLANNING (fallback de modèles, même logique que les autres pages)
 # ==============================================================================
 def generate_roadmap(pseudo: str, vectors: dict, api_key: str, model: str, timeout: int):
-    prompt = f"""En tant qu'IA stratégique de Lumen, crée un planning d'apprentissage et d'exécution optimisé sur exactement 12 jours pour un utilisateur nommé {pseudo}.
+    prompt = f"""En tant qu'IA stratégique de Acumen, crée un planning d'apprentissage et d'exécution optimisé sur exactement 12 jours pour un utilisateur nommé {pseudo}.
 
 Voici ses scores cognitifs (0 à 100) :
 - Information Bandwidth: {vectors.get('information_bandwidth', 0)}

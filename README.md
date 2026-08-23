@@ -1,6 +1,6 @@
-# 🧠 LUMEN
+# 🧠 ACUMEN
 
-**🔗 Live app:** https://lumenhackathonproject-zl2krm44mqm5we6d2arztr.streamlit.app/
+**🔗 Live app:** https://acumenhackathonproject-zl2krm44mqm5we6d2arztr.streamlit.app/
 
 > *Built by a student, for students*
 
@@ -21,13 +21,13 @@ Most educational tools treat every brain as identical.
 - Some need absolute silence; others need background chatter to focus.
 - Generic advice fails most students — not because they're lazy, but because they're running a different **operating system** and never get to see their own source code.
 
-**LUMEN exists to change that.**
+**ACUMEN exists to change that.**
 
 ---
 
 ## 🚀 The Solution
 
-LUMEN is a **cognitive self-understanding engine**: it maps how you actually think, then hands you tools that are grounded in your specific profile — not generic platitudes.
+ACUMEN is a **cognitive self-understanding engine**: it maps how you actually think, then hands you tools that are grounded in your specific profile — not generic platitudes.
 
 | Step | Module | What it does |
 | :--- | :--- | :--- |
@@ -66,8 +66,8 @@ LUMEN is a **cognitive self-understanding engine**: it maps how you actually thi
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/your-username/lumen.git
-cd lumen
+git clone https://github.com/your-username/acumen.git
+cd acumen
 ```
 
 ### 2. Create a virtual environment (recommended)
@@ -82,7 +82,7 @@ pip install -r requirements.txt
 ```
 
 ### 4. Set up your Gemini API key
-LUMEN uses Google's Gemini API for the mentor, quiz, roadmap, and simulation engines.
+ACUMEN uses Google's Gemini API for the mentor, quiz, roadmap, and simulation engines.
 
 **Option A (recommended for local testing):** create `.streamlit/secrets.toml`:
 ```toml
@@ -95,16 +95,16 @@ Get a free Gemini API key at [Google AI Studio](https://aistudio.google.com/).
 
 ### 5. Run the app
 ```bash
-streamlit run lumen_app.py
+streamlit run acumen_app.py
 ```
-⚠️ The entry point is `lumen_app.py`, not `app.py`.
+⚠️ The entry point is `acumen_app.py`, not `app.py`.
 
 ---
 
 ## 📂 Project Structure
 ```
-LUMEN_HACKATHON_PROJECT/
-├── lumen_app.py               # Entry point + navigation + profile setup
+ACUMEN_HACKATHON_PROJECT/
+├── acumen_app.py               # Entry point + navigation + profile setup
 ├── requirements.txt
 ├── README.md
 │
@@ -165,7 +165,7 @@ LUMEN_HACKATHON_PROJECT/
 ## 🔒 Privacy & Ethics
 - **No live persistence** — all answers, profiles, and chat histories currently live in `st.session_state` and are destroyed when you close the browser tab. A Supabase project has been provisioned for a possible future opt-in "save my profile" feature, but **it isn't connected to the app yet** — nothing you enter is written to it today.
 - No tracking, no analytics, no third-party cookies.
-- **Honest disclaimer, shown on entry:** LUMEN is a self-reflection tool inspired by educational psychology — not a clinically validated psychometric instrument, and nobody behind it is a licensed psychologist, therapist, or doctor. Use it as a mirror, not a diagnosis. If something ever touches on your mental health or wellbeing, talk to a real, qualified person.
+- **Honest disclaimer, shown on entry:** ACUMEN is a self-reflection tool inspired by educational psychology — not a clinically validated psychometric instrument, and nobody behind it is a licensed psychologist, therapist, or doctor. Use it as a mirror, not a diagnosis. If something ever touches on your mental health or wellbeing, talk to a real, qualified person.
 
 ---
 
@@ -183,7 +183,7 @@ LUMEN_HACKATHON_PROJECT/
 ## 👤 Team
 Built solo by a 15-year-old developer, originally for the Prometheus July AI Challenge and extended further for **ReverieHacks 2026**.
 
-> "I built LUMEN because I was tired of hearing 'just focus' from people who didn't know how my brain worked. Now I can show them."
+> "I built ACUMEN because I was tired of hearing 'just focus' from people who didn't know how my brain worked. Now I can show them."
 
 ---
 

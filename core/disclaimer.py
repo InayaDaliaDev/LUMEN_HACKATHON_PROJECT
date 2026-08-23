@@ -4,10 +4,10 @@
 import streamlit as st
 
 
-def render_lumen_disclaimer() -> None:
+def render_acumen_disclaimer() -> None:
     """
     Affiche un avertissement cynique, réaliste et drôle en haut de l'application
-    pour rappeler aux utilisateurs que Lumen n'est pas un substitut à l'éducation
+    pour rappeler aux utilisateurs que Acumen n'est pas un substitut à l'éducation
     réelle, ni à un avis professionnel (médical, psychologique ou pédagogique).
     """
     with st.container():
@@ -15,7 +15,7 @@ def render_lumen_disclaimer() -> None:
             """
             > 🚨 **System Warning: Not a Life Coach (Yet).**
             >
-            > Look, Lumen is a brilliant piece of software, but let's be real—it's still software.
+            > Look, Acumen is a brilliant piece of software, but let's be real—it's still software.
             > This app won't magically do your homework, replace years of actual studying, or fix your sleep schedule.
             > If you're expecting a certified diploma or professional psychological validation out of a few
             > click-through buttons, you might want to rethink your life choices.
@@ -28,7 +28,7 @@ def render_lumen_disclaimer() -> None:
             >
             > If something here ever touches on your mental health, wellbeing, or a decision that actually
             > matters, go talk to a real, qualified human — a teacher, a doctor, a counselor, a parent.
-            > Lumen is a tool for reflection and productivity, not a substitute for any of them.
+            > Acumen is a tool for reflection and productivity, not a substitute for any of them.
             >
             > Proceed at your own risk, trust your own brain, and don't blame the code if reality hits hard. ☕
             """,
