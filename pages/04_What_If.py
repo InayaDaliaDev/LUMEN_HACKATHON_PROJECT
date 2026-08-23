@@ -3,31 +3,16 @@ import time
 import re
 import uuid
 from typing import Annotated, TypedDict
-# UPGRADE : extract_text() et is_plausible_gemini_key() vivent maintenant dans
-# core/utils.py au lieu d'être dupliquées dans chaque page IA.
 from core.utils import extract_text, is_plausible_gemini_key
-
-# ==============================================================================
-# 0. CONFIGURATION DE LA PAGE
-# ==============================================================================
-# FIX: st.set_page_config() a été retiré ici — lumen_app.py l'appelle déjà une
-# fois avant pg.run(). Un second appel dans une sous-page lève une
-# StreamlitAPIException ("set_page_config() can only be called once per app").
-# Si tu veux un titre/icône d'onglet différent pour cette page précise, il faut
-# le gérer autrement (Streamlit ne permet pas de changer ces valeurs après coup).
 
 KICKOFF_MARKER = "[WHAT_IF_INTERNAL_KICKOFF] Open the divergence point with vivid, uncompromising realism."
 
-
-# ==============================================================================
-# 1. VÉRIFICATION DES DÉPENDANCES CRITIQUES
-# ==============================================================================
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
     from langchain_core.messages import HumanMessage, AIMessage, trim_messages
     from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 except ImportError:
-    st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: `pip install langchain langchain-google-genai google-generativeai`")
+    st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: pip install langchain langchain-google-genai google-generativeai")
     st.stop()
 
 try:
@@ -35,7 +20,7 @@ try:
     from langgraph.graph.message import add_messages
     from langgraph.checkpoint.memory import MemorySaver
 except ImportError:
-    st.error("⚠️ CRITICAL FAULT: Missing LangGraph. Execute: `pip install langgraph`")
+    st.error("⚠️ CRITICAL FAULT: Missing LangGraph. Execute: pip install langgraph")
     st.stop()
 
 try:
@@ -45,12 +30,26 @@ except ImportError:
     HAS_GOOGLE_EXCEPTIONS = False
 
 
-# ==============================================================================
-# 2. GESTION DU PROFIL UTILISATEUR & PARAMÈTRES DE SESSION
-# ==============================================================================
+if not st.session_state.get("flags", {}).get("scan_completed"):
+    st.error("🛑 ACCESS DENIED: Neural baseline not established. Complete the diagnostic scan first.")
+    if st.button("🚀 Initiate Assessment", type="primary", use_container_width=True):
+        st.switch_page("pages/01_Assessment.py")
+    st.stop()
+
 user_profile = st.session_state.get("user_profile", {}) or {}
-traveler_raw = user_profile.get("pseudo", "Traveler")
-traveler_name = re.sub(r"[^\w\s\-']", "", str(traveler_raw)).strip()[:60] or "Traveler"
+traveler_raw = user_profile.get("pseudo", "Operator")
+traveler_name = re.sub(r"[^\w\s\-']", "", str(traveler_raw)).strip()[:60] or "Operator"
+
+core_vectors = st.session_state.get("core_vectors", {}) or {}
+vector_labels = {
+    "information_bandwidth": "Information Bandwidth",
+    "execution_rigor": "Execution Rigor",
+    "chaos_tolerance": "Chaos Tolerance",
+    "cognitive_endurance": "Cognitive Endurance"
+}
+vector_totals = {k: float(core_vectors.get(k, 0.0)) for k in vector_labels}
+strongest_key = max(vector_totals, key=vector_totals.get) if vector_totals else "information_bandwidth"
+weakest_key = min(vector_totals, key=vector_totals.get) if vector_totals else "cognitive_endurance"
 
 if "whatif_thread_id" not in st.session_state:
     st.session_state.whatif_thread_id = str(uuid.uuid4())
@@ -59,114 +58,78 @@ if "whatif_awaiting_opening" not in st.session_state:
     st.session_state.whatif_awaiting_opening = False
 
 
-# ==============================================================================
-# 3. INTERFACE VISUELLE : DESIGN SYSTEM "AND WHAT IF?!"
-# ==============================================================================
 st.markdown("""
 <style>
-    .whatif-title {
-        background: linear-gradient(90deg, #38BDF8 0%, #818CF8 50%, #C084FC 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-weight: 900;
-        font-size: 2.7rem;
-        letter-spacing: -1.2px;
-        margin-bottom: 0px;
-    }
-    .whatif-subtitle {
-        color: #94A3B8;
-        font-size: 1.05rem;
-        margin-bottom: 25px;
-    }
-    .scenario-box {
-        background-color: #121216;
-        border: 1px solid #2A2A35;
-        padding: 22px;
-        border-radius: 14px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-        margin-bottom: 20px;
-    }
-    .pill-tag {
-        background-color: #1E1E28;
-        color: #38BDF8;
-        border: 1px solid #334155;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        display: inline-block;
-        margin-right: 8px;
-    }
+    .whatif-title { background: linear-gradient(90deg, #38BDF8 0%, #818CF8 50%, #C084FC 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; font-size: 2.7rem; letter-spacing: -1.2px; margin-bottom: 0px; }
+    .whatif-subtitle { color: #94A3B8; font-size: 1.05rem; margin-bottom: 25px; }
+    .scenario-box { background-color: #121216; border: 1px solid #2A2A35; padding: 22px; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); margin-bottom: 20px; }
+    .pill-tag { background-color: #1E1E28; color: #38BDF8; border: 1px solid #334155; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: inline-block; margin-right: 8px; }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<h1 class='whatif-title'>And what if?! // Divergence Engine</h1>", unsafe_allow_html=True)
-st.markdown(f"<div class='whatif-subtitle'>Exploring alternate trajectories, lost paths, and systemic shocks with historical and scientific rigor.</div>", unsafe_allow_html=True)
-st.markdown(f"<div><span class='pill-tag'>TRAVELER: {traveler_name.upper()}</span></div>", unsafe_allow_html=True)
+st.markdown("<div class='whatif-subtitle'>Simulating what your actual cognitive profile would face in a specific academic or institutional environment.</div>", unsafe_allow_html=True)
+st.markdown(f"""
+<div>
+<span class='pill-tag'>OPERATOR: {traveler_name.upper()}</span>
+<span class='pill-tag'>STRONGEST: {vector_labels.get(strongest_key, strongest_key).upper()}</span>
+<span class='pill-tag'>WEAKEST: {vector_labels.get(weakest_key, weakest_key).upper()}</span>
+</div>
+""", unsafe_allow_html=True)
 st.write("")
 st.divider()
 
 
-# ==============================================================================
-# 4. BIBLIOTHÈQUE DE SCÉNARIOS CONTREFACTUELS & CONFIGURATION
-# ==============================================================================
 DEFAULT_SCENARIOS = {
-    "Calculus Divergence (Leibniz vs Newton)": "What if Isaac Newton's manuscripts on fluxions were lost in the Great Plague of London in 1665, leaving Gottfried Wilhelm Leibniz as the sole architect and sole public transmitter of calculus across Europe?",
-    "The Alexandria Imperative": "What if the Library of Alexandria was successfully evacuated and relocated under royal patronage in 48 BCE, preserving Hellenistic engineering, automated mechanics, and advanced geometry through late antiquity?",
-    "Babbage's Victorian Information Age": "What if the British Treasury fully funded Charles Babbage’s Analytical Engine in 1834, allowing the construction of mechanical computing decades before the birth of electronic transistors?",
-    "The Silk Road Scientific Synthesis": "What if the Mongol Empire's Pax Mongolica institutionalized a permanent academy of science in Samarkand in the 13th century, fusing Islamic algebra, Chinese printing, and European logic centuries early?",
-    "Custom Divergence Point": "Enter your own custom historical or scientific pivot point..."
+    "Elite University — Total Autonomy": "What if you enrolled in a highly competitive university with almost no structure — no mandatory attendance, no weekly checkpoints, success measured purely by a handful of high-stakes exams at year's end?",
+    "Ultra-Structured Program": "What if you enrolled in a tightly structured program with weekly assignments, constant instructor check-ins, and a rigid, closely monitored curriculum with little room to deviate?",
+    "High-Stakes Startup / Hackathon Track": "What if you dropped traditional coursework for six months to join a high-pressure startup accelerator, judged purely on shipped output and live pitches, with no syllabus and no safety net?",
+    "Open-Ended Research Track": "What if you were placed on a research track with a single, genuinely open-ended problem to work on for an entire year, minimal guidance, and a real risk of producing nothing usable?",
+    "Custom Divergence Point": "Enter your own academic or institutional 'what if' scenario...",
 }
 
 with st.container():
     st.markdown("<div class='scenario-box'>", unsafe_allow_html=True)
     st.markdown("### 🌀 Define the Divergence Point")
-    
-    selected_preset = st.selectbox(
-        "Choose a Preset Scenario or Craft Your Own:",
-        list(DEFAULT_SCENARIOS.keys())
-    )
-    
+
+    selected_preset = st.selectbox("Choose a Preset Scenario or Craft Your Own:", list(DEFAULT_SCENARIOS.keys()))
+
     if selected_preset == "Custom Divergence Point":
         divergence_premise = st.text_area(
-            "Specify your 'What if?!' question in detail:",
-            value="What if Nikola Tesla's Wardenclyffe Tower was fully funded in 1901, establishing a global wireless energy grid?",
+            "Describe the academic or institutional environment you want to test your profile against:",
+            value="What if you had to lead a team of 5 on a real client project with a 2-week deadline, no manager, and no prior experience managing people?",
             height=90
         )
     else:
         divergence_premise = DEFAULT_SCENARIOS[selected_preset]
         st.info(f"**Core Premise:** {divergence_premise}")
-        
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ==============================================================================
-# 5. SIDEBAR — MATRICE DE CONTRÔLE & CLÉ API
-# ==============================================================================
-# UPGRADE : gemini_api_key est déjà initialisée par
-# core.centralstate.init_session_state() — plus besoin du bloc manuel ici.
 with st.sidebar:
     st.markdown("### 🎛️ Engine Control Matrix")
     st.session_state.gemini_api_key = st.text_input(
         "Gemini API Key:",
-        value=st.session_state.gemini_api_key,
+        value=st.session_state.get("gemini_api_key", ""),
         type="password",
         placeholder="AIzaSy...",
-        help="Securely stored for this session."
+        help=(
+            "**How to get your key (free):**\n\n"
+            "1. Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey)\n"
+            "2. Sign in with a Google account\n"
+            "3. Click **'Create API key'**\n"
+            "4. Paste it here (it starts with `AIza...`)\n\n"
+            "It's never stored anywhere except in your browser session for this app."
+        )
     ).strip()
 
     selected_model = st.selectbox(
         "Inference Model:",
-        options=[
-            "gemini-2.5-flash",
-            "gemini-2.5-flash-lite",
-            "gemini-1.5-flash",
-            "gemini-2.0-flash",
-            "gemini-flash-latest"
-        ],
+        options=["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.5-flash", "gemini-flash-latest"],
         index=0
     )
-    
+
     temperature = st.slider("Divergence Creativity (Temperature):", 0.0, 1.0, 0.7, 0.05)
     request_timeout = st.slider("Request Timeout (s)", 10, 120, 45, 5)
 
@@ -176,35 +139,38 @@ with st.sidebar:
         st.session_state.whatif_awaiting_opening = False
         st.rerun()
 
-gemini_api_key = st.session_state.gemini_api_key
+gemini_api_key = st.session_state.get("gemini_api_key", "")
 
 
-# ==============================================================================
-# 6. LANGGRAPH STATE MACHINE & NARRATIVE ENGINE
-# ==============================================================================
 class WhatIfState(TypedDict):
     messages: Annotated[list, add_messages]
     premise: str
     traveler: str
+    strongest_label: str
+    weakest_label: str
     turn_count: int
     timeline_phase: str
 
 
 PHASE_DESCRIPTIONS = {
     "genesis": (
-        "PHASE — GENESIS OF DIVERGENCES: The divergence point has just triggered. "
-        "Describe the immediate aftermath with visceral, sensory, and intellectual realism. "
-        "Show how institutions, contemporary minds, and daily life shift in response to this new reality. "
-        "Do not offer generic welcomes; drop the traveler right into the shifting timeline."
+        "PHASE — OPENING: The divergence point has just triggered - the operator is now inside this "
+        "environment. Describe the immediate reality with visceral, sensory, concrete detail: what the "
+        "first day actually looks like, what's expected of them, what nobody warned them about. Ground "
+        "this specifically in how someone with THIS operator's cognitive profile would actually experience "
+        "it - don't write a generic orientation scene. Do not offer a welcome message; drop them straight in."
     ),
     "shock": (
-        "PHASE — SYSTEMIC SHOCK & RESISTANCE: React sharply to what the traveler just introduced or asked. "
-        "Introduce realistic resistance, unintended consequences, intellectual conflict, or technological bottlenecks "
-        "characteristic of this timeline. Make the stakes concrete and intellectually demanding."
+        "PHASE — FRICTION POINT: Introduce a concrete, specific complication that hits the operator's "
+        "weakest cognitive axis directly - not a generic obstacle, one that a person with exactly this "
+        "profile would genuinely struggle with in this exact environment. Make the stakes real and specific, "
+        "not abstract. React sharply to whatever the operator just said or did."
     ),
     "ripple": (
-        "PHASE — RIPPLE EFFECTS & TRAJECTORY: Trace the cascading effects of recent choices across society, "
-        "science, or politics. Keep the simulation immersive, open-ended, and fiercely reactive."
+        "PHASE — RESOLUTION: Trace where this is heading, and land the operator a genuinely usable "
+        "tactical insight - grounded in a real, named strategy (not invented jargon), tied to how their "
+        "specific strongest and weakest axes actually play out in this environment. This should feel like "
+        "the payoff of the simulation, not just more atmosphere."
     )
 }
 
@@ -213,21 +179,25 @@ def build_system_prompt(state: WhatIfState) -> str:
     phase = state.get("timeline_phase", "genesis")
     return f"""
 [ROLE]
-You are CHRONOS-X: an elite Counterfactual Simulation Core. You model alternate histories, lost scientific trajectories, and civilizational divergences with extreme intellectual depth, uncompromising realism, and vivid prose. You avoid cliché phrases, corporate AI filler, and superficial summaries. You treat every counterfactual scenario with rigorous logic and historical plausibility.
+You are CHRONOS-X, an elite Counterfactual Simulation Core. You model how a specific person's actual cognitive profile would play out inside a specific academic or institutional environment - not generic history, not a story about someone else. Every beat of this simulation must be grounded in the operator's real strongest and weakest cognitive axes given below. You avoid cliche phrases, corporate AI filler, and superficial summaries.
 
-[TRAVELER]
-- Designation: {state.get('traveler', 'Traveler')}
+[OPERATOR]
+- Designation: {state.get('traveler', 'Operator')}
+- Strongest cognitive axis: {state.get('strongest_label', '')}
+- Weakest cognitive axis: {state.get('weakest_label', '')}
 
-[DIVERGENCE PREMISE]
-{state.get('premise', 'An alternate historical path.')}
+[ENVIRONMENT PREMISE]
+{state.get('premise', 'An academic or institutional environment.')}
 
 [CURRENT SIMULATION PHASE]
 {PHASE_DESCRIPTIONS.get(phase, PHASE_DESCRIPTIONS['genesis'])}
 
 [RULES]
-- Write with sharp, evocative, literary prose.
-- Never break character, never mention AI or prompts.
-- Challenge the traveler's assumptions and make every decision carry realistic consequences.
+- Write with sharp, evocative, concrete prose - never vague or purely atmospheric with no substance underneath.
+- Every complication and every payoff must trace back to the operator's actual strongest/weakest axes above, not a generic obstacle that could apply to anyone.
+- Never invent pseudo-scientific or fabricated frameworks to sound sophisticated. If you name a strategy, it must be a real, recognizable one, briefly explained.
+- Never break character, never mention AI, prompts, or that this is a simulation.
+- Challenge the operator's assumptions and make every decision carry realistic, specific consequences.
 """
 
 
@@ -253,13 +223,7 @@ def safe_token_counter(msgs) -> int:
 def trimmed_history(messages):
     if not messages:
         return []
-    return trim_messages(
-        messages,
-        strategy="last",
-        token_counter=safe_token_counter,
-        max_tokens=24,
-        start_on="human",
-    )
+    return trim_messages(messages, strategy="last", token_counter=safe_token_counter, max_tokens=24, start_on="human")
 
 
 def make_simulator_node(phase: str):
@@ -272,19 +236,9 @@ def make_simulator_node(phase: str):
 
         active_state = {**state, "timeline_phase": phase}
         system_prompt = build_system_prompt(active_state)
+        prompt_template = ChatPromptTemplate.from_messages([("system", system_prompt), MessagesPlaceholder("history")])
 
-        prompt_template = ChatPromptTemplate.from_messages([
-            ("system", system_prompt),
-            MessagesPlaceholder("history"),
-        ])
-
-        fallback_chain = [
-            model,
-            "gemini-2.5-flash",
-            "gemini-1.5-flash",
-            "gemini-2.0-flash",
-            "gemini-flash-latest"
-        ]
+        fallback_chain = [model, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
         models_to_try = []
         for m in fallback_chain:
             if m not in models_to_try:
@@ -293,13 +247,7 @@ def make_simulator_node(phase: str):
         last_exception = None
         for model_name in models_to_try:
             try:
-                llm = ChatGoogleGenerativeAI(
-                    model=model_name,
-                    google_api_key=api_key,
-                    temperature=temp,
-                    timeout=timeout,
-                    max_retries=1,
-                )
+                llm = ChatGoogleGenerativeAI(model=model_name, google_api_key=api_key, temperature=temp, timeout=timeout, max_retries=1)
                 chain = prompt_template | llm
                 response = chain.invoke({"history": trimmed_history(state.get("messages", []))})
                 return {"messages": [response]}
@@ -321,15 +269,7 @@ def get_whatif_app():
     graph.add_node("ripple_node", make_simulator_node("ripple"))
 
     graph.add_edge(START, "route_timeline_phase")
-    graph.add_conditional_edges(
-        "route_timeline_phase",
-        phase_router,
-        {
-            "genesis": "genesis_node",
-            "shock": "shock_node",
-            "ripple": "ripple_node",
-        },
-    )
+    graph.add_conditional_edges("route_timeline_phase", phase_router, {"genesis": "genesis_node", "shock": "shock_node", "ripple": "ripple_node"})
     graph.add_edge("genesis_node", END)
     graph.add_edge("shock_node", END)
     graph.add_edge("ripple_node", END)
@@ -341,28 +281,20 @@ whatif_app = get_whatif_app()
 SIMULATOR_NODES = {"genesis_node", "shock_node", "ripple_node"}
 
 
-# ==============================================================================
-# 7. MOTEUR DE STREAMING ROBUSTE & GESTION DES ERREURS
-# ==============================================================================
 def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int = 2):
     last_error_message = None
-
     for attempt in range(1, max_attempts + 1):
         full_response = ""
         try:
-            for msg_chunk, metadata in whatif_app.stream(
-                input_state, config, stream_mode="messages"
-            ):
+            for msg_chunk, metadata in whatif_app.stream(input_state, config, stream_mode="messages"):
                 if metadata and metadata.get("langgraph_node") in SIMULATOR_NODES:
                     full_response += extract_text(getattr(msg_chunk, "content", ""))
                     placeholder.markdown(full_response + "▌")
             placeholder.markdown(full_response)
             return full_response, None
-
         except Exception as e:
             transient = False
             user_msg = None
-
             if HAS_GOOGLE_EXCEPTIONS:
                 if isinstance(e, google_exceptions.PermissionDenied):
                     user_msg = "🔒 Access Denied: Invalid or restricted API key."
@@ -376,32 +308,20 @@ def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int 
                 elif isinstance(e, (google_exceptions.DeadlineExceeded, google_exceptions.ServiceUnavailable)):
                     transient = True
                     user_msg = "🌐 Temporary network disruption. Retrying..."
-
             if user_msg is None:
                 transient = True
                 user_msg = f"❌ Simulation Disruption ({type(e).__name__})."
-
             last_error_message = user_msg
-
             if transient and attempt < max_attempts:
                 time.sleep(1.5 * attempt)
                 continue
             else:
                 return None, last_error_message
-
     return None, last_error_message
 
 
 def build_config():
-    return {
-        "configurable": {
-            "thread_id": st.session_state.whatif_thread_id,
-            "api_key": gemini_api_key,
-            "model": selected_model,
-            "temperature": temperature,
-            "timeout": request_timeout,
-        }
-    }
+    return {"configurable": {"thread_id": st.session_state.whatif_thread_id, "api_key": gemini_api_key, "model": selected_model, "temperature": temperature, "timeout": request_timeout}}
 
 
 def get_checkpointed_messages():
@@ -414,16 +334,12 @@ def get_checkpointed_messages():
         return []
 
 
-# ==============================================================================
-# 8. EXÉCUTION DE L'INTERFACE & BOUCLE DE CHAT
-# ==============================================================================
 col_b2, col_b1, col_b3 = st.columns([1, 2, 1])
 with col_b1:
     if st.button("⚡ IGNITE DIVERGENCE TIMELINE", use_container_width=True, type="primary"):
         if not is_plausible_gemini_key(gemini_api_key):
             st.error("⚠️ CRITICAL: A valid Gemini API Key is required to ignite the simulation.")
             st.stop()
-
         st.session_state.whatif_thread_id = str(uuid.uuid4())
         st.session_state.whatif_awaiting_opening = True
         st.rerun()
@@ -433,7 +349,7 @@ current_messages = get_checkpointed_messages()
 for m in current_messages:
     if isinstance(m, HumanMessage):
         if extract_text(m.content) == KICKOFF_MARKER:
-            continue  # Masque le marqueur technique interne
+            continue
         with st.chat_message("user", avatar="👤"):
             st.markdown(extract_text(m.content))
     elif isinstance(m, AIMessage):
@@ -443,7 +359,6 @@ for m in current_messages:
 if st.session_state.whatif_awaiting_opening and not current_messages:
     with st.chat_message("assistant", avatar="⚡"):
         message_placeholder = st.empty()
-
         if not is_plausible_gemini_key(gemini_api_key):
             st.error("⚠️ CRITICAL: Gemini API Key missing or malformed.")
         else:
@@ -451,6 +366,8 @@ if st.session_state.whatif_awaiting_opening and not current_messages:
                 "messages": [HumanMessage(content=KICKOFF_MARKER)],
                 "premise": divergence_premise,
                 "traveler": traveler_name,
+                "strongest_label": vector_labels.get(strongest_key, strongest_key),
+                "weakest_label": vector_labels.get(weakest_key, weakest_key),
             }
             full_resp, err = stream_turn(input_state, build_config(), message_placeholder)
             if err:
@@ -471,11 +388,12 @@ if prompt := st.chat_input("Intervene in the alternate timeline..."):
 
     with st.chat_message("assistant", avatar="⚡"):
         message_placeholder = st.empty()
-
         input_state = {
             "messages": [HumanMessage(content=prompt)],
             "premise": divergence_premise,
             "traveler": traveler_name,
+            "strongest_label": vector_labels.get(strongest_key, strongest_key),
+            "weakest_label": vector_labels.get(weakest_key, weakest_key),
         }
         full_resp, err = stream_turn(input_state, build_config(), message_placeholder)
         if err:

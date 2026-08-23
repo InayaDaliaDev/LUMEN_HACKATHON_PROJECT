@@ -52,11 +52,11 @@ if answers:
     try:
         from data.question import ALL_QUESTIONS
     except ImportError:
-        st.error("Missing database connection to data.question.ALL_QUESTIONS")
+        st.error("⚠️ Missing database connection to data.question.ALL_QUESTIONS")
         st.stop()
 
     if not isinstance(ALL_QUESTIONS, list) or len(ALL_QUESTIONS) == 0:
-        st.error("Question database is empty or malformed. Cannot compute cognitive profile.")
+        st.error("⚠️ Question database is empty or malformed. Cannot compute cognitive profile.")
         st.stop()
 
     all_labels = []
@@ -150,13 +150,12 @@ with st.sidebar:
         value=st.session_state.get("gemini_api_key", ""),
         type="password",
         help=(
-            "**How to obtain your key (free) :**\n\n"
+            "**How to get your key (free):**\n\n"
             "1. Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey)\n"
             "2. Sign in with a Google account\n"
-            "3. Click on **'Create API key'**\n"
-            "4. Copy-paste the key here (it starts with `AIza...`)\n\n"
-            "It is never stored or sent anywhere else than to Google — "
-            "uniquement gardée en mémoire le temps de ta session."
+            "3. Click **'Create API key'**\n"
+            "4. Paste it here (it starts with `AIza...`)\n\n"
+            "It's never stored anywhere except in your browser session for this app."
         )
     ).strip()
 
@@ -164,7 +163,7 @@ with st.sidebar:
         "Language Model Topology:",
         options=["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.5-flash", "gemini-flash-latest"],
         index=0,
-        help="gemini-2.5-flash offre le meilleur compromis qualite/fiabilite."
+        help="gemini-2.5-flash offers the best balance of quality and reliability. Try gemini-3.5-flash if you want noticeably better instruction-following on complex prompts."
     )
 
     temperature = st.slider("Cognitive Drift (Temperature):", 0.0, 1.0, 0.55, 0.05,
@@ -196,6 +195,13 @@ def build_system_prompt(state: MentorState) -> str:
     priority = state.get("selected_techniques") or []
     priority_block = ", ".join(priority) if priority else "(none flagged - pick freely from the library)"
 
+    # UPGRADE : prompt renforce pour mieux exploiter Gemini. Les regles 9 et
+    # 10 sont nouvelles : elles corrigent un vrai probleme observe en test
+    # reel (Gemini inventait son propre jargon type "operational triage
+    # protocol" au lieu de citer une vraie technique de la bibliotheque, et
+    # terminait sur un diagnostic abstrait sans jamais donner d'action
+    # concrete). Les regles 1 a 8 restent celles qui donnaient deja un bon
+    # ton humain et non calibre sur un profil precis.
     return f"""
 [ROLE]
 You are Mr. Brown, an elite, uncompromising, yet deeply invested intellectual mentor and strategist. You work with self-directed students who take ownership of their own learning, whatever subject or field they're actually in - you never assume a specific major, career track, or academic background beyond what's given to you in the CONTEXT below.
@@ -209,6 +215,8 @@ You are Mr. Brown, an elite, uncompromising, yet deeply invested intellectual me
 6. Ground Advice in Named Mechanisms: When you give a piece of advice, name the actual psychological or learning-science mechanism behind it (spacing effect, cognitive load, ego-involvement, desirable difficulty, etc.) before the action step - never a generic productivity tip with no explanation of why it works for this specific person.
 7. Vary Your Structure: Do not default to the same bullet-point or numbered-list scaffold in every response. Write in natural prose when the answer is a single coherent idea; use structure only when the content genuinely has multiple distinct parts. Avoid stock openers like "Great question!" or "Let's break this down:".
 8. No Fluff: Eliminate generic AI filler phrases ("Sure, I can help with that!", "As an AI..."). Start straight with substance.
+9. Never Invent Terminology: You do not have a private vocabulary of made-up frameworks ("operational triage protocol", "cognitive load constraints", or similar impressive-sounding but fabricated terms). If you reference a technique, it MUST be one of the named techniques in THE VERIFIED TECHNIQUE LIBRARY below, referenced explicitly by its actual name, using its actual description as grounding. If none of the library techniques genuinely fit the situation, say so plainly and reason from first principles in plain, ordinary language instead of inventing jargon to sound sophisticated.
+10. Always Land on One Concrete Action: Never end a response on an abstract diagnosis alone, however well-articulated. Every substantive answer must close with ONE specific, concrete next step the person can realistically do in the next 10-15 minutes - tied to their actual situation as they described it, not a generic instruction that could apply to anyone. If they gave you a vague situation with no real specifics to act on, ask what you need before prescribing anything, rather than filling the gap with abstraction.
 
 [TASK]
 Recommend and adapt techniques FROM THE VERIFIED LIBRARY below to the operator's specific dominant archetype and cognitive metrics whenever relevant - never substitute generic advice for a named, explained technique from this library when one applies.
@@ -220,7 +228,7 @@ Recommend and adapt techniques FROM THE VERIFIED LIBRARY below to the operator's
 {priority_block}
 
 [FORMAT]
-Format responses using Markdown, but only where structure genuinely helps - not by default. Write in English with flawless, economical eloquence. Match your response length to the actual weight of the question: a quick check-in deserves a short answer, a real roadblock deserves real depth.
+Format responses using Markdown, but only where structure genuinely helps - not by default. Write in English with flawless, economical eloquence. Match your response length to the actual weight of the question: a quick check-in deserves a short answer, a real roadblock deserves real depth - depth means more concrete specifics and a fuller explanation of the mechanism, not more abstract restatement of the same idea in different words.
 
 [CONTEXT]
 - Operator Name: {state.get('pseudo', 'Operator')}
@@ -305,7 +313,9 @@ def get_checkpointed_messages():
 def seed_greeting_if_new():
     if get_checkpointed_messages():
         return
-    greeting = f"State your business, {pseudo}. I've read your cognitive footprint. What concept, proof, or piece of work are we taking apart today?"
+    # UPGRADE : accueil reecrit pour sonner naturel, pas robotique
+    # ("State your business" -> ton bien plus humain).
+    greeting = f"Alright, {pseudo}. I've looked at your profile — what are you actually stuck on right now?"
     try:
         mentor_app.update_state(build_config(), {"messages": [AIMessage(content=greeting)]})
     except Exception:
@@ -331,20 +341,20 @@ def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int 
             fatal_user_message = None
             if HAS_GOOGLE_EXCEPTIONS:
                 if isinstance(e, google_exceptions.PermissionDenied):
-                    fatal_user_message = "Access denied - the API key is invalid or lacks permission."
+                    fatal_user_message = "🔒 Access denied - the API key is invalid or lacks permission."
                 elif isinstance(e, google_exceptions.Unauthenticated):
-                    fatal_user_message = "Authentication failed - check your API key."
+                    fatal_user_message = "🔒 Authentication failed - check your API key."
                 elif isinstance(e, google_exceptions.InvalidArgument):
-                    fatal_user_message = "Invalid request - check selected model."
+                    fatal_user_message = "⚠️ Invalid request - check selected model."
                 elif isinstance(e, google_exceptions.ResourceExhausted):
                     transient = True
-                    fatal_user_message = "Rate limit or quota reached."
+                    fatal_user_message = "⏳ Rate limit or quota reached."
                 elif isinstance(e, (google_exceptions.DeadlineExceeded, google_exceptions.ServiceUnavailable)):
                     transient = True
-                    fatal_user_message = "Temporary network or service issue."
+                    fatal_user_message = "🌐 Temporary network or service issue."
             if fatal_user_message is None:
                 transient = True
-                fatal_user_message = f"Engine issue ({type(e).__name__}: {str(e)})."
+                fatal_user_message = f"❌ Engine issue ({type(e).__name__}: {str(e)})."
             last_error_message = fatal_user_message
             if transient and attempt < max_attempts:
                 time.sleep(1.0 * attempt)
@@ -385,7 +395,6 @@ if prompt := st.chat_input(f"Enter your academic roadblock, {pseudo}..."):
             "weakest_label": vector_labels.get(weakest_key, weakest_key),
             "detailed_choices": detailed_choices_block,
         }
-
         full_response, error_message = stream_turn(input_state, build_config(), message_placeholder)
         if error_message:
             st.error(error_message)

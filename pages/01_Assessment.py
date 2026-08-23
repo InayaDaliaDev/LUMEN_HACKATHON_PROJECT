@@ -22,8 +22,6 @@ if not isinstance(ALL_QUESTIONS, list) or len(ALL_QUESTIONS) == 0:
     st.stop()
 
 TOTAL_QUESTIONS = len(ALL_QUESTIONS)
-# Defensive clamp: if session state ever ends up out of range (e.g. the
-# question bank shrank between two runs), don't crash — just show the report.
 if st.session_state.current_q_idx > TOTAL_QUESTIONS:
     st.session_state.current_q_idx = TOTAL_QUESTIONS
 
@@ -100,7 +98,6 @@ if st.session_state.current_q_idx < TOTAL_QUESTIONS:
 
                 st.rerun()
 
-    # Block the dashboard below until the assessment is actually finished.
     st.stop()
 
 
@@ -114,7 +111,11 @@ if not st.session_state.flags.get("scan_completed"):
         st.switch_page("lumen_app.py")
     st.stop()
 
-if not st.session_state.answers:
+# FIX: cette page bloquait avant sur "answers vide" sans distinguer le cas
+# du cheat code (qui remplit core_vectors mais jamais answers, puisqu'aucune
+# question n'a été répondue). On laisse passer si soit answers, soit
+# core_vectors (chemin cheat code) contient déjà quelque chose.
+if not st.session_state.answers and not st.session_state.get("core_vectors"):
     st.error("⚠️ No answers found in memory. Please retake the assessment.")
     if st.button("🔄 Retake the assessment"):
         st.session_state.current_q_idx = 0
@@ -132,41 +133,55 @@ pseudo_raw = st.session_state.user_profile.get("pseudo", "Unknown Builder")
 pseudo = re.sub(r"[^\w\s\-']", "", str(pseudo_raw)).strip()[:60] or "Unknown Builder"
 
 st.title(f"🧬 Profile Decrypted: {pseudo}")
-st.write("Turning your 24 answers into an actual cognitive profile...")
-
-core_vectors = {
-    "information_bandwidth": 0.0,
-    "execution_rigor": 0.0,
-    "chaos_tolerance": 0.0,
-    "cognitive_endurance": 0.0
-}
 
 rendered_advices = []
-for q in ALL_QUESTIONS:
-    qid = q.get("id")
-    user_choice_key = st.session_state.answers.get(qid)
-    options = q.get("options", {}) or {}
 
-    if user_choice_key and user_choice_key in options:
-        option_data = options[user_choice_key]
+if st.session_state.answers:
+    # Chemin normal : vraies reponses au questionnaire -> on recalcule tout
+    # depuis data/question.py, comme avant.
+    st.write("Turning your answers into an actual cognitive profile...")
 
-        if isinstance(option_data, dict):
-            for vec_key in core_vectors:
-                try:
-                    core_vectors[vec_key] += float(option_data.get("vectors", {}).get(vec_key, 0.0))
-                except (TypeError, ValueError):
-                    continue
+    core_vectors = {
+        "information_bandwidth": 0.0,
+        "execution_rigor": 0.0,
+        "chaos_tolerance": 0.0,
+        "cognitive_endurance": 0.0
+    }
 
-            rendered_advices.append({
-                "qid": qid,
-                "label": option_data.get("label", "Unknown Pattern"),
-                "advice": option_data.get("advice", "Keep building.")
-            })
+    for q in ALL_QUESTIONS:
+        qid = q.get("id")
+        user_choice_key = st.session_state.answers.get(qid)
+        options = q.get("options", {}) or {}
 
-# Cached here so other pages (Advices, Chatbot, TheOldDays, What_If) could
-# read this instead of recomputing the same sums from scratch each time —
-# available for reuse, doesn't replace their own defensive recomputation.
-st.session_state["core_vectors"] = core_vectors
+        if user_choice_key and user_choice_key in options:
+            option_data = options[user_choice_key]
+
+            if isinstance(option_data, dict):
+                for vec_key in core_vectors:
+                    try:
+                        core_vectors[vec_key] += float(option_data.get("vectors", {}).get(vec_key, 0.0))
+                    except (TypeError, ValueError):
+                        continue
+
+                rendered_advices.append({
+                    "qid": qid,
+                    "label": option_data.get("label", "Unknown Pattern"),
+                    "advice": option_data.get("advice", "Keep building.")
+                })
+
+    st.session_state["core_vectors"] = core_vectors
+
+else:
+    # Chemin cheat code : answers est vide, mais core_vectors a deja ete
+    # injecte par le Developer Shortcut plus haut. On reutilise ces
+    # valeurs telles quelles, sans les ecraser avec des zeros.
+    st.write("Test profile loaded via developer shortcut.")
+    core_vectors = st.session_state.get("core_vectors", {
+        "information_bandwidth": 0.0,
+        "execution_rigor": 0.0,
+        "chaos_tolerance": 0.0,
+        "cognitive_endurance": 0.0
+    })
 
 
 # ==============================================================================
@@ -187,11 +202,19 @@ st.divider()
 # PHASE 6: TACTICAL BRIEFING
 # ==============================================================================
 st.subheader("💡 Tactical Briefing")
-st.markdown("Based on your answers, here's your custom survival guide for this build:")
 
-for item in rendered_advices:
-    with st.expander(f"Pattern detected: {item['label']} (Q-{str(item['qid']).upper()})"):
-        st.info(f"**Directive:** {item['advice']}")
+if rendered_advices:
+    st.markdown("Based on your answers, here's your custom survival guide for this build:")
+    for item in rendered_advices:
+        with st.expander(f"Pattern detected: {item['label']} (Q-{str(item['qid']).upper()})"):
+            st.info(f"**Directive:** {item['advice']}")
+else:
+    # Chemin cheat code : pas de reponses individuelles a detailer.
+    st.info(
+        "No per-question detail available — this profile was loaded via the "
+        "developer shortcut, not a real assessment run. The 4 scores above are "
+        "still real and usable across the app (Mr. Brown, the Roadmap, etc.)."
+    )
 
 st.write("")
 st.write("")
@@ -200,10 +223,8 @@ nav_col1, nav_col2 = st.columns(2)
 with nav_col1:
     if st.session_state.flags.get("chatbot_unlocked"):
         st.success("🔓 AI Mentor unlocked.")
-        # FIX: pointait vers "pages/Chatbot.py" (inexistant) -> le vrai fichier est 03_Mr.Brown.py
-        if st.button("Talk to SYNAPSE 🤖", type="primary", use_container_width=True):
+        if st.button("Talk to Mr. Brown 🤖", use_container_width=True):
             st.switch_page("pages/03_Mr.Brown.py")
 with nav_col2:
-    # FIX: pointait vers "pages/Advices.py" (inexistant) -> le vrai fichier est 02_Advices.py
-    if st.button("See the full Builder Blueprint 🧬", use_container_width=True):
+    if st.button("See the full Builder Blueprint 🧬", type="primary", use_container_width=True):
         st.switch_page("pages/02_Advices.py")
