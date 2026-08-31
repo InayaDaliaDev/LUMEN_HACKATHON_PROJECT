@@ -29,7 +29,7 @@ if st.session_state.current_q_idx > TOTAL_QUESTIONS:
 # ==============================================================================
 # DEV SHORTCUT (test uniquement — a retirer ou cacher avant la vraie demo jury)
 # ==============================================================================
-with st.expander("🔧 Developer Shortcut (bypass le questionnaire pour tester)"):
+with st.expander("Quick code for testing (dev mode)"):
     cheat_code = st.text_input("Code :", type="password", key="cheat_code_input")
     if st.button("Appliquer le profil de test"):
         if cheat_code == "XIN2":
