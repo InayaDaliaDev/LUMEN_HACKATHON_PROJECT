@@ -1,19 +1,12 @@
 import streamlit as st
-import time
 import re
 import uuid
 from typing import Annotated, TypedDict
-# UPGRADE : extract_text() et is_plausible_gemini_key() vivent maintenant dans
-# core/utils.py au lieu d'être dupliquées dans chaque page IA.
 from core.utils import extract_text, is_plausible_gemini_key
+from core.ai_engine import invoke_llm_with_fallback, stream_graph_response
 
-# ==============================================================================
-# 0. HARDENED DEPENDENCY INJECTION & SAFETY CHECKS
-# ==============================================================================
 try:
-    from langchain_google_genai import ChatGoogleGenerativeAI
-    from langchain_core.messages import HumanMessage, AIMessage, trim_messages
-    from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+    from langchain_core.messages import HumanMessage, AIMessage
 except ImportError:
     st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: `pip install langchain langchain-google-genai google-generativeai`")
     st.stop()
@@ -26,15 +19,9 @@ except ImportError:
     st.error("⚠️ CRITICAL FAULT: Missing LangGraph. Execute: `pip install langgraph`")
     st.stop()
 
-try:
-    from google.api_core import exceptions as google_exceptions
-    HAS_GOOGLE_EXCEPTIONS = True
-except ImportError:
-    HAS_GOOGLE_EXCEPTIONS = False
-
-# FIX: st.set_page_config() retiré — déjà appelé une fois dans acumen_app.py.
-# Un second appel ici levait une StreamlitAPIException à chaque navigation
-# vers cette page.
+# FIX: st.set_page_config() retiré — déjà appelé une fois dans le fichier
+# racine. Un second appel ici levait une StreamlitAPIException à chaque
+# navigation vers cette page.
 
 
 # ==============================================================================
@@ -66,48 +53,16 @@ React to the operator's choices within the simulated timeline. Challenge their a
 
 def multiverse_node(state: MultiverseState, config) -> dict:
     cfg = (config or {}).get("configurable", {})
-    api_key = cfg.get("api_key", "")
-    primary_model = cfg.get("model", "gemini-2.5-flash")
-    temp = cfg.get("temperature", 0.7)
-    timeout = cfg.get("timeout", 45)
-
     system_prompt = build_multiverse_prompt(state)
-    prompt_template = ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
-        MessagesPlaceholder("history"),
-    ])
-
-    fallback_chain = [primary_model, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.5-flash"]
-    models_to_try = []
-    for m in fallback_chain:
-        if m not in models_to_try:
-            models_to_try.append(m)
-
-    last_exception = None
-    for model_name in models_to_try:
-        try:
-            llm = ChatGoogleGenerativeAI(
-                model=model_name,
-                google_api_key=api_key,
-                temperature=temp,
-                timeout=timeout,
-                max_retries=1,
-            )
-            chain = prompt_template | llm
-            trimmed_hist = trim_messages(
-                state.get("messages", []), 
-                strategy="last", 
-                token_counter=len, 
-                max_tokens=24, 
-                start_on="human"
-            )
-            response = chain.invoke({"history": trimmed_hist})
-            return {"messages": [response]}
-        except Exception as e:
-            last_exception = e
-            continue
-
-    raise last_exception if last_exception else RuntimeError("Multiverse inference failed across all fallback models.")
+    response = invoke_llm_with_fallback(
+        system_prompt=system_prompt,
+        history_messages=state.get("messages", []),
+        api_key=cfg.get("api_key", ""),
+        model=cfg.get("model", "gemini-2.5-flash"),
+        temperature=cfg.get("temperature", 0.7),
+        timeout=cfg.get("timeout", 45),
+    )
+    return {"messages": [response]}
 
 
 @st.cache_resource
@@ -169,13 +124,18 @@ st.divider()
 with st.sidebar:
     st.markdown("### 🎛️ Engine Matrix (Gemini API)")
 
-    # UPGRADE : gemini_api_key est déjà initialisée par
-    # core.centralstate.init_session_state() — plus besoin du bloc manuel ici.
     st.session_state.gemini_api_key = st.text_input(
         "Gemini Authentication Key:",
         value=st.session_state.get("gemini_api_key", ""),
         type="password",
-        help="Shared across Acumen modules. Never logged or exposed."
+        help=(
+            "**How to get your key (free):**\n\n"
+            "1. Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey)\n"
+            "2. Sign in with a Google account\n"
+            "3. Click **'Create API key'**\n"
+            "4. Paste it here (it starts with `AIza...`)\n\n"
+            "It's never stored anywhere except in your browser session for this app."
+        )
     ).strip()
 
     selected_model = st.selectbox(
@@ -233,7 +193,7 @@ def get_checkpointed_messages():
 
 if st.button("🚀 EXECUTE TIMELINE SIMULATION", type="primary", use_container_width=True):
     st.session_state.multiverse_thread_id = str(uuid.uuid4())
-    
+
     initial_seed = (
         f"**[TIMELINE INITIALIZED]**\n\n"
         f"Parameters locked:\n"
@@ -243,7 +203,7 @@ if st.button("🚀 EXECUTE TIMELINE SIMULATION", type="primary", use_container_w
         f"Operator {pseudo}, the multiverse divergence point is active. "
         f"Describe your initial strategic decision or state your first move to branch the timeline."
     )
-    
+
     cfg = build_config()
     try:
         multiverse_app.update_state(cfg, {"messages": [AIMessage(content=initial_seed)]})
@@ -286,14 +246,16 @@ if prompt := st.chat_input("Interact with the simulation timeline..."):
             "geopolitical_region": geopolitical_region,
         }
 
-        full_response = ""
-        try:
-            for msg_chunk, metadata in multiverse_app.stream(
-                input_state, build_config(), stream_mode="messages"
-            ):
-                if metadata and metadata.get("langgraph_node") == "multiverse_node":
-                    full_response += extract_text(getattr(msg_chunk, "content", ""))
-                    message_placeholder.markdown(full_response + "▌")
-            message_placeholder.markdown(full_response)
-        except Exception as e:
-            st.error(f"❌ Simulation Error: {str(e)}")
+        # FIX: cette page n'avait auparavant aucun retry ni masquage
+        # dev_mode sur ses erreurs (contrairement a Mr. Brown et What If) —
+        # une erreur brute etait toujours affichee a tout le monde. Elle
+        # beneficie maintenant de la meme gestion centralisee.
+        full_response, error_message = stream_graph_response(
+            app=multiverse_app,
+            input_state=input_state,
+            config=build_config(),
+            placeholder=message_placeholder,
+            node_filter={"multiverse_node"},
+        )
+        if error_message:
+            st.error(error_message)

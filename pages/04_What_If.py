@@ -1,16 +1,14 @@
 import streamlit as st
-import time
 import re
 import uuid
 from typing import Annotated, TypedDict
 from core.utils import extract_text, is_plausible_gemini_key
+from core.ai_engine import invoke_llm_with_fallback, stream_graph_response
 
 KICKOFF_MARKER = "[WHAT_IF_INTERNAL_KICKOFF] Open the divergence point with vivid, uncompromising realism."
 
 try:
-    from langchain_google_genai import ChatGoogleGenerativeAI
-    from langchain_core.messages import HumanMessage, AIMessage, trim_messages
-    from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+    from langchain_core.messages import HumanMessage, AIMessage
 except ImportError:
     st.error("⚠️ CRITICAL FAULT: Missing core dependencies. Execute: pip install langchain langchain-google-genai google-generativeai")
     st.stop()
@@ -22,12 +20,6 @@ try:
 except ImportError:
     st.error("⚠️ CRITICAL FAULT: Missing LangGraph. Execute: pip install langgraph")
     st.stop()
-
-try:
-    from google.api_core import exceptions as google_exceptions
-    HAS_GOOGLE_EXCEPTIONS = True
-except ImportError:
-    HAS_GOOGLE_EXCEPTIONS = False
 
 
 if not st.session_state.get("flags", {}).get("scan_completed"):
@@ -216,46 +208,20 @@ def phase_router(state: WhatIfState) -> str:
     return state.get("timeline_phase", "genesis")
 
 
-def safe_token_counter(msgs) -> int:
-    return len(msgs) if isinstance(msgs, list) else 1
-
-
-def trimmed_history(messages):
-    if not messages:
-        return []
-    return trim_messages(messages, strategy="last", token_counter=safe_token_counter, max_tokens=24, start_on="human")
-
-
 def make_simulator_node(phase: str):
     def node(state: WhatIfState, config) -> dict:
         cfg = (config or {}).get("configurable", {})
-        api_key = cfg.get("api_key", "")
-        model = cfg.get("model", "gemini-2.5-flash")
-        timeout = cfg.get("timeout", 45)
-        temp = cfg.get("temperature", 0.7)
-
         active_state = {**state, "timeline_phase": phase}
         system_prompt = build_system_prompt(active_state)
-        prompt_template = ChatPromptTemplate.from_messages([("system", system_prompt), MessagesPlaceholder("history")])
-
-        fallback_chain = [model, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
-        models_to_try = []
-        for m in fallback_chain:
-            if m not in models_to_try:
-                models_to_try.append(m)
-
-        last_exception = None
-        for model_name in models_to_try:
-            try:
-                llm = ChatGoogleGenerativeAI(model=model_name, google_api_key=api_key, temperature=temp, timeout=timeout, max_retries=1)
-                chain = prompt_template | llm
-                response = chain.invoke({"history": trimmed_history(state.get("messages", []))})
-                return {"messages": [response]}
-            except Exception as e:
-                last_exception = e
-                continue
-
-        raise last_exception if last_exception else RuntimeError("All model execution attempts failed.")
+        response = invoke_llm_with_fallback(
+            system_prompt=system_prompt,
+            history_messages=state.get("messages", []),
+            api_key=cfg.get("api_key", ""),
+            model=cfg.get("model", "gemini-2.5-flash"),
+            temperature=cfg.get("temperature", 0.7),
+            timeout=cfg.get("timeout", 45),
+        )
+        return {"messages": [response]}
 
     return node
 
@@ -279,45 +245,6 @@ def get_whatif_app():
 
 whatif_app = get_whatif_app()
 SIMULATOR_NODES = {"genesis_node", "shock_node", "ripple_node"}
-
-
-def stream_turn(input_state: dict, config: dict, placeholder, max_attempts: int = 2):
-    last_error_message = None
-    for attempt in range(1, max_attempts + 1):
-        full_response = ""
-        try:
-            for msg_chunk, metadata in whatif_app.stream(input_state, config, stream_mode="messages"):
-                if metadata and metadata.get("langgraph_node") in SIMULATOR_NODES:
-                    full_response += extract_text(getattr(msg_chunk, "content", ""))
-                    placeholder.markdown(full_response + "▌")
-            placeholder.markdown(full_response)
-            return full_response, None
-        except Exception as e:
-            transient = False
-            user_msg = None
-            if HAS_GOOGLE_EXCEPTIONS:
-                if isinstance(e, google_exceptions.PermissionDenied):
-                    user_msg = "🔒 Access Denied: Invalid or restricted API key."
-                elif isinstance(e, google_exceptions.Unauthenticated):
-                    user_msg = "🔒 Authentication Failed: Check your API key."
-                elif isinstance(e, google_exceptions.InvalidArgument):
-                    user_msg = "⚠️ Invalid Request: Selected model may be unsupported."
-                elif isinstance(e, google_exceptions.ResourceExhausted):
-                    transient = True
-                    user_msg = "⏳ Rate limit reached. Retrying..."
-                elif isinstance(e, (google_exceptions.DeadlineExceeded, google_exceptions.ServiceUnavailable)):
-                    transient = True
-                    user_msg = "🌐 Temporary network disruption. Retrying..."
-            if user_msg is None:
-                transient = True
-                user_msg = f"❌ Simulation Disruption ({type(e).__name__})."
-            last_error_message = user_msg
-            if transient and attempt < max_attempts:
-                time.sleep(1.5 * attempt)
-                continue
-            else:
-                return None, last_error_message
-    return None, last_error_message
 
 
 def build_config():
@@ -369,7 +296,14 @@ if st.session_state.whatif_awaiting_opening and not current_messages:
                 "strongest_label": vector_labels.get(strongest_key, strongest_key),
                 "weakest_label": vector_labels.get(weakest_key, weakest_key),
             }
-            full_resp, err = stream_turn(input_state, build_config(), message_placeholder)
+            full_resp, err = stream_graph_response(
+                app=whatif_app,
+                input_state=input_state,
+                config=build_config(),
+                placeholder=message_placeholder,
+                node_filter=SIMULATOR_NODES,
+                retry_backoff_seconds=1.5,
+            )
             if err:
                 st.error(err)
             else:
@@ -395,7 +329,14 @@ if prompt := st.chat_input("Intervene in the alternate timeline..."):
             "strongest_label": vector_labels.get(strongest_key, strongest_key),
             "weakest_label": vector_labels.get(weakest_key, weakest_key),
         }
-        full_resp, err = stream_turn(input_state, build_config(), message_placeholder)
+        full_resp, err = stream_graph_response(
+            app=whatif_app,
+            input_state=input_state,
+            config=build_config(),
+            placeholder=message_placeholder,
+            node_filter=SIMULATOR_NODES,
+            retry_backoff_seconds=1.5,
+        )
         if err:
             st.error(err)
         else:
